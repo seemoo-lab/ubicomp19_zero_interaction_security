@@ -4,4 +4,4 @@ zia: test
 	python temp_hum_press_shrestha.py
 
 test:
-	nosetests *.py
+	nosetests ble_wifi_truong.py lux_miettinen.py temp_hum_press_shrestha.py util.py
