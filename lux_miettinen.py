@@ -18,6 +18,7 @@ import traceback
 
 SCRIPT = __file__[:-3]
 
+
 ### Parameters of the algorithm
 # Slot size
 SLOT_SIZES = [60, 120]
@@ -29,6 +30,7 @@ THRES_ABS = 10.0
 
 class Measurement:
     """Measurement class - contains individual measurements."""
+
     def __init__(self, value, time):
         """Initialize the measurement"""
         self.value = value
