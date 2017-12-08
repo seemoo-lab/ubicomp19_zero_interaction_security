@@ -22,6 +22,7 @@ from dateutil import parser
 from datetime import datetime
 from math import sqrt, exp
 from multiprocessing import Pool, cpu_count
+from functools import partial
 from glob import glob
 from itertools import combinations
 from json import dumps
@@ -468,9 +469,9 @@ if __name__ == "__main__":
     ble_files = []
 
     # Find all WiFi and BLE result files that are available
-    for wi_file in glob("Sensor-*/wifi/wifi.txt"):
+    for wi_file in glob("Sensor-*/wifi/wifi.txt.blinded"):
         wifi_files.append(wi_file)
-    for ble_file in glob("Sensor-*/ble/ble.txt"):
+    for ble_file in glob("Sensor-*/ble/ble.txt.blinded"):
         ble_files.append(ble_file)
 
     pool = Pool(processes=cpu_count(), maxtasksperchild=1)
@@ -480,11 +481,12 @@ if __name__ == "__main__":
         # Compute features for all combinations of WiFi files.
         # If files 1, 2, 3 are available, this will compute features for:
         # 1-2, 1-3, 2-3
-        pool.imap(process_wifi, combinations(wifi_files, 2))
+        pool.imap(partial(process_wifi, slotsize=slotsize),
+                  combinations(wifi_files, 2))
 
         # Do the same for the BLE results
-        pool.imap(process_ble, combinations(ble_files, 2))
-
+        pool.imap(partial(process_ble, slotsize=slotsize),
+                  combinations(ble_files, 2))
     # Close the pool to new tasks
     pool.close()
     # Wait for all processes to terminate
@@ -758,3 +760,4 @@ def test_sum_squared_ranks_3():
             Measurement("Sterne", -50, datetime.now())]
     assert sum_squared_ranks(pop1, pop2) is None, \
         str(sum_squared_ranks(pop1, pop2)) + " != None"
+
