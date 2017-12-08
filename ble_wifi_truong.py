@@ -26,6 +26,7 @@ from glob import glob
 from itertools import combinations
 from json import dumps
 from util import create_metadata, derive_result_path
+from statistics import mean
 import traceback
 
 
@@ -59,6 +60,7 @@ class Measurement:
 
 class MeasurementPair:
     """Contains pair of two measurements, as required for some evaluations."""
+
     def __init__(self, ident, rssi1, rssi2):
         """initialize the measurement pair with two measurements."""
         self.ident = ident
@@ -150,18 +152,58 @@ def timeslot_list(population, slotsize=10):
         if newdt not in rv:
             rv[newdt] = []
         rv[newdt].append(element)
+    # As per sect. IV.B of the paper, if a single BSSID is found more than once
+    # in the timeslot, its RSSI is set to the mean of all observed values.
+    # As the scan interval is 10 seconds, this can only happen if the slotsize
+    # is bigger than 20
+    if slotsize >= 20:
+        for timeslot in rv:
+            observed_bssids = {}
+            for obs in rv[timeslot]:
+                if obs.ident in observed_bssids:
+                    observed_bssids[obs.ident].append(obs.rssi)
+                else:
+                    observed_bssids[obs.ident] = [obs.rssi]
+            rv[timeslot] = []
+            for ident in observed_bssids:
+                rv[timeslot].append(Measurement(ident,
+                                                mean(observed_bssids[ident]),
+                                                timeslot))
     return rv
 
 
 def read_results(filename):
+    """Read in the results from a data file."""
     rv = []
     with open(filename, 'r') as fo:
+        # Due to a bug in the WiFi stack of the Raspberry Pi, sometimes a
+        # raspberry pi suddenly becomes unable to perform WiFi scans, and
+        # starts throwing errors. The following code detects these errors
+        # and replaces them with placeholder values that indicate to the
+        # later processing code that the sample should be skipped / marked
+        # as broken. The alternative (simply saving an empty sample) is
+        # not satisfactory, as it will give incorrect results on subsequent
+        # computations, which compute intersections / unions and so on.
+        broken_sample = 0
         for line in fo:
+            if broken_sample == 1:
+                broken_sample = 2
+                continue
+            if broken_sample == 2:
+                timestring = line.strip()
+                time = parser.parse(timestring)
+                rv.append(Measurement("-1", 0, time))
+                broken_sample = 0
+                continue
             # Parse out identifier, rssi, md5 and timestamp
             try:
                 ident, rssi, timestring = line.strip().split(" ")
             except ValueError:
-                print("[WARN] Error while parsing line, skipping")
+                if "Interface doesn't support scanning" in line:
+                    broken_sample = 1
+                else:
+                    print("[WARN] Unhandled problem with sample %s, skipping" %
+                          filename)
                 continue
             # Convert RSSI to int
             rssi = int(rssi[:-3])
@@ -171,6 +213,13 @@ def read_results(filename):
             rv.append(Measurement(ident, rssi, time))
     return rv
 
+
+def population_ok(pop):
+    """Check if a population contains an error marker or not."""
+    for e in pop:
+        if e.ident == "-1":
+            return False
+    return True
 
 # ---------------------
 # Statistical functions
@@ -304,11 +353,15 @@ def compute(file1, file2, default=-100, slotsize=10, mode=MODE_WIFI):
             pop1 = ts_pop1[ts]
             # Find matching pop from pop2
             if ts not in ts_pop2:
-                print("[WARN] Timeslot " + tstr + " not in population 2, skipping")
+                # print("[WARN] Timeslot " + tstr + " not in population 2, skipping")
                 # pop2 = []
                 continue
             else:
                 pop2 = ts_pop2[ts]
+
+            if not (population_ok(pop1) and population_ok(pop2)):
+                rv[tstr]["error"] = "Scan error in sample, no feature computed"
+                continue
 
             # Compute features
             rv[tstr]["jaccard"] = jaccard_dist(pop1, pop2, default)
@@ -325,7 +378,7 @@ def compute(file1, file2, default=-100, slotsize=10, mode=MODE_WIFI):
                 # We have already evaluated this timestamp from the "other side"
                 continue
             # Unmatched timestamp (i.e. no values with that timestamp on other end)
-            print("[WARN] Timeslot " + tstr + " not in population 1, skipping")
+            # print("[WARN] Timeslot " + tstr + " not in population 1, skipping")
             # rv[tstr] = {}
             # pop1 = []
             # pop2 = ts_pop2[ts]
@@ -423,7 +476,7 @@ if __name__ == "__main__":
     pool = Pool(processes=cpu_count(), maxtasksperchild=1)
 
     # Compute results for different slot sizes
-    for slotsize in [5, 10, 30]:
+    for slotsize in [10, 30]:
         # Compute features for all combinations of WiFi files.
         # If files 1, 2, 3 are available, this will compute features for:
         # 1-2, 1-3, 2-3
