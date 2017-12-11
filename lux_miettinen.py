@@ -104,7 +104,20 @@ def avg(measurements):
 
 
 def fp_bit(avg1, avg2, delta_rel, delta_abs):
-    if abs(avg1 / avg2 - 1) > delta_rel and abs(avg1 - avg2) > delta_abs:
+    """Compute the fingerprint bit, as per the definition in the paper.
+
+    In a nutshell, we test if both the relative and absolute change between the
+    two epochs exceed a threshold. If so, the fingerprint bit is set to 1,
+    otherwise it is set to zero.
+
+    As the first check requires dividing by the previous average value, which
+    may be zero, we have adapted the formula from the paper to set the previous
+    average to 0.000001 if this is the case, to avoid a division by zero error.
+    """
+    if avg2 == 0:
+        avg2 = 0.000001
+    if (abs(avg1 / avg2 - 1) > delta_rel and
+            abs(avg1 - avg2) > delta_abs):
         return "1"
     return "0"
 
