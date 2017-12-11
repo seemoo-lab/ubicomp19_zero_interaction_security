@@ -474,7 +474,7 @@ if __name__ == "__main__":
     for ble_file in glob("Sensor-*/ble/ble.txt.blinded"):
         ble_files.append(ble_file)
 
-    pool = Pool(processes=cpu_count(), maxtasksperchild=1)
+    pool = Pool(processes=40, maxtasksperchild=1)
 
     # Compute results for different slot sizes
     for slotsize in [10, 30]:

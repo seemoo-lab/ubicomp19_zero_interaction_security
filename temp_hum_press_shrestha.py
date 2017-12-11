@@ -298,7 +298,7 @@ if __name__ == "__main__":
     for bar_file in glob("Sensor-*/sensors/barData"):
         bar_files.append(bar_file)
 
-    pool = Pool(processes=cpu_count(), maxtasksperchild=1)
+    pool = Pool(processes=40, maxtasksperchild=1)
 
     # Compute features for temperature data
     pool.imap(process_temp, combinations(temp_files, 2))

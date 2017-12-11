@@ -189,7 +189,7 @@ if __name__ == "__main__":
     for lux_file in glob("Sensor-*/sensors/luxData.clean"):
         lux_files.append(lux_file)
 
-    pool = Pool(processes=cpu_count(), maxtasksperchild=1)
+    pool = Pool(processes=40, maxtasksperchild=1)
 
     for slotsize in SLOT_SIZES:
         func = partial(process_lux, slotsize=slotsize)
