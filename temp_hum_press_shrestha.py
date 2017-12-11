@@ -119,37 +119,12 @@ def sync_populations(pop1, pop2, sensor1="", sensor2=""):
             fix_index += 1
         else:
             # The difference is unacceptably high, we need to reconcile
-            try:
-                solution_found = False
-                for n in range(1, 5):
-                    # print("[INFO] Stage", n, "reconciliation active")
-                    if acceptable_difference(fixed[fix_index + n],
-                                             move[move_index]):
-                        # Incrementing fix_index by n will result in acceptable
-                        # difference - increment and let next iteration of loop
-                        # deal with the rest
-                        fix_index += n
-                        skipped_samples += n
-                        solution_found = True
-                        break
-                    elif acceptable_difference(fixed[fix_index],
-                                               move[move_index + n]):
-                        # Same for move index
-                        move_index += n
-                        solution_found = True
-                        skipped_samples += n
-                        break
-                if not solution_found:
-                    # That did not work. Increment and hope for the best
-                    # print("[INFO] Could not reconcile, incrementing by one.")
-                    move_index += 1
-                    fix_index += 1
-                    skipped_samples += 2
-            except IndexError:
-                # We have reached the end of one list. Increment indices, the
-                # loop condition will take care of terminating when appropriate
+            # Find the earlier timestamp and increment the index of that list
+            if move[move_index].time < fixed[fix_index].time:
                 move_index += 1
+            else:
                 fix_index += 1
+            skipped_samples += 1
 
     # We have now created two populations that are perfectly synced up.
     # Return them.
