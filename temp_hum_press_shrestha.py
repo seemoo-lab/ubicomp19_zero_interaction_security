@@ -71,7 +71,7 @@ def acceptable_difference(element1, element2):
     return td.days == 0 and td.seconds == 0 and td.microseconds < 200000
 
 
-def sync_populations(pop1, pop2):
+def sync_populations(pop1, pop2, sensor1="", sensor2=""):
     """Determine the offset between population 1 and 2."""
     # First, we need to determine which fo the recordings starts earlier
     offset = 0
@@ -153,7 +153,8 @@ def sync_populations(pop1, pop2):
 
     # We have now created two populations that are perfectly synced up.
     # Return them.
-    print("[INFO] Skipped", skipped_samples, "samples")
+    print("[INFO] Skipped", skipped_samples, "samples. %s %s" %
+          (sensor1, sensor2))
     return (rv[1], rv[2])
 
 
@@ -177,7 +178,7 @@ def compute(file1, file2):
 
         # Split into timeslots
         try:
-            pop1, pop2 = sync_populations(pop1, pop2)
+            pop1, pop2 = sync_populations(pop1, pop2, file1, file2)
         except IndexError:
             print("[ERR ] No sync possible for ", file1, "-", file2)
             return {"error": "No sync possible"}
