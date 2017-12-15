@@ -1,15 +1,23 @@
-function [] = audioJob(filePath1, filePath2, expPath)
+function [] = audioJob(filePath1, filePath2, expPath, tmpPath)
 %AUDIOJOB Summary of this function goes here
 %   Detailed explanation goes here
 
+% Sleep for 1+X seconds to avoid problems when launching many instances
+% at once (See https://de.mathworks.com/matlabcentral/answers/97141-why-am-i-unable-to-start-a-local-matlabpool-from-multiple-matlab-sessions-that-use-a-shared-preferen#comment_181845)
+pause(1+30*rand());
+
 % Enable parallel execution with Parallel Computing Toolbox
-p = gcp('nocreate');
-if isempty(p)
-    parpool('local');
-end
+c = parcluster();
+c.JobStorageLocation = tmpPath;
+p = parpool(c);
+
+%p = gcp('nocreate');
+%if isempty(p)
+%    parpool('local');
+%end
 
 % Version of the script
-scriptVersion = 'v1.1';
+scriptVersion = 'v1.1.1';
 
 % Date format for logs
 dateFormat = 'yyyy-mm-dd HH:MM:SS.FFF';
@@ -311,6 +319,8 @@ end
 
 % Close all open files (just in case)
 fclose('all');
+
+fprintf('Computations finished\n');
 
 exit;
 
