@@ -9,7 +9,7 @@ if isempty(p)
 end
 
 % Version of the script
-scriptVersion = 'v1.0';
+scriptVersion = 'v1.1';
 
 % Date format for logs
 dateFormat = 'yyyy-mm-dd HH:MM:SS.FFF';

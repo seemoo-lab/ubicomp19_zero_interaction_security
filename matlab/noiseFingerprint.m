@@ -56,6 +56,14 @@ nfpS2 = zeros(1, nfpSize);
 
 % Construct noise fingerprints
 for i=1:nfpSize
+
+    if snapshot1(i) == 0
+       snapshot1(i) = 0.000001;
+    end
+
+    if snapshot2(i) == 0
+       snapshot2(i) = 0.000001;
+    end
     
 	% Check noise levels of nL1, formula (3) from Miettinen et al.
     if  abs(snapshot1(i+1)/snapshot1(i)-1) > relThreshold & ...
