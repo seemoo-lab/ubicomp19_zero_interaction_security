@@ -136,7 +136,7 @@ for i=1:nSubfolders
 		sig2 = loadSignal('/opt/code/audio.flac', dataType);
 		
 		% Lenght of outSamples
-		outSamples = round(421.8*Fs);
+		outSamples = round(421.33*Fs);
 		
 		% Out samples are set to zero
 		outVect = int16(zeros(outSamples, 1));
