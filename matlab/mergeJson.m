@@ -207,7 +207,7 @@ for i = 1:nSubfolders
                     delPath = strcat(logPath, '/', resFolderArr(k), ...
                         '/', 'sensor-', sensorIdx, '*.json');
                     
-                    delete(char(delPath));
+                    % delete(char(delPath));
                      
                     % Save the resuting json
                     saveJsonFile(resJsonFile, jsonFiles{1});
