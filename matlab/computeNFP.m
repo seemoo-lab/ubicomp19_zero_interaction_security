@@ -88,12 +88,10 @@ output.results = containers.Map(keySet, valueSet);
 
 % Save the main log file
 fileName = extractBetween(pathS2, 'audio/', '.flac');
-% res = strsplit(pathS1, '/');
-% logPath = strcat(noiseData.expPath, '/', res{1}, '/', res{2}); 
-% mainLogFile = strcat(logPath, '/', noiseData.feature, '/', ...
-%     'sensor-', fileName, '.json');
-
-mainLogFile = strcat(commonData.expPath, '/', 'sensor-', fileName, '.json');
+res = strsplit(pathS1, '/');
+logPath = strcat(noiseData.expPath, '/', res{1}, '/', res{2}); 
+mainLogFile = strcat(logPath, '/', noiseData.feature, '/', ...
+    'sensor-', fileName, '.json');
 
 saveJsonFile(char(mainLogFile), output);
 
