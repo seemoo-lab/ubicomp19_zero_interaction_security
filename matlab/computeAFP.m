@@ -133,49 +133,51 @@ output.results = containers.Map(keySet, valueSet);
 
 % Save the main log file
 fileName = extractBetween(pathS2, 'audio/', '.flac');
-res = strsplit(pathS1, '/');
-logPath = strcat(commonData.expPath, '/', res{1}, '/', res{2}); 
-mainLogFile = strcat(logPath, '/', commonData.feature, '/', ...
-    'sensor-', fileName, '.json');
+% res = strsplit(pathS1, '/');
+% logPath = strcat(commonData.expPath, '/', res{1}, '/', res{2}); 
+% mainLogFile = strcat(logPath, '/', commonData.feature, '/', ...
+%     'sensor-', fileName, '.json');
+
+mainLogFile = strcat(commonData.expPath, '/', 'sensor-', fileName, '.json');
 
 saveJsonFile(mainLogFile, output);
 
-% Flip metadata.source_files for symmetric log file
-tmpStruct = metadata.source_files;
-fileInfo.chunk1 = tmpStruct.chunk2;
-fileInfo.chunk2 = tmpStruct.chunk1;
-metadata.source_files = fileInfo;
-
-% Change the sign of feature.delay_xcorr_sec for symmetric log file
-if sampleDiff ~= 0
-    feature.delay_xcorr_sec = -sampleDiff/commonData.Fs;
-end
-
-% Flip feature.fingerprint_chunk1 and feature.fingerprint_chunk2 for
-% symmetric log file
-feature.fingerprint_chunk1 = afpS2Str;
-feature.fingerprint_chunk2 = afpS1Str;
-
-% Flip feature.vect_energy_chunk1 and feature.vect_energy_chunk1 for
-% symmetric log file
-feature.vect_energy_chunk1 = energyS2;
-feature.vect_energy_chunk2 = energyS1;
-
-% Update hashmap
-valueSet{1} = feature;
-
-% Update output struct
-output.metadata = metadata; 
-output.results = containers.Map(keySet, valueSet);
-
-% Save the symmetric log file
-fileName = extractBetween(pathS1, 'audio/', '.flac');
-res = strsplit(pathS2, '/');
-logPath = strcat(commonData.expPath, '/', res{1}, '/', res{2}); 
-symLogFile = strcat(logPath, '/', commonData.feature, '/', ...
-    'sensor-', fileName, '.json');
-
-saveJsonFile(symLogFile, output);
+% % Flip metadata.source_files for symmetric log file
+% tmpStruct = metadata.source_files;
+% fileInfo.chunk1 = tmpStruct.chunk2;
+% fileInfo.chunk2 = tmpStruct.chunk1;
+% metadata.source_files = fileInfo;
+% 
+% % Change the sign of feature.delay_xcorr_sec for symmetric log file
+% if sampleDiff ~= 0
+%     feature.delay_xcorr_sec = -sampleDiff/commonData.Fs;
+% end
+% 
+% % Flip feature.fingerprint_chunk1 and feature.fingerprint_chunk2 for
+% % symmetric log file
+% feature.fingerprint_chunk1 = afpS2Str;
+% feature.fingerprint_chunk2 = afpS1Str;
+% 
+% % Flip feature.vect_energy_chunk1 and feature.vect_energy_chunk1 for
+% % symmetric log file
+% feature.vect_energy_chunk1 = energyS2;
+% feature.vect_energy_chunk2 = energyS1;
+% 
+% % Update hashmap
+% valueSet{1} = feature;
+% 
+% % Update output struct
+% output.metadata = metadata; 
+% output.results = containers.Map(keySet, valueSet);
+% 
+% % Save the symmetric log file
+% fileName = extractBetween(pathS1, 'audio/', '.flac');
+% res = strsplit(pathS2, '/');
+% logPath = strcat(commonData.expPath, '/', res{1}, '/', res{2}); 
+% symLogFile = strcat(logPath, '/', commonData.feature, '/', ...
+%     'sensor-', fileName, '.json');
+% 
+% saveJsonFile(symLogFile, output);
 
 end
 
