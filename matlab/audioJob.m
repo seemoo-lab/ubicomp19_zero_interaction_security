@@ -1,4 +1,4 @@
-function [] = audioJob(filePath1, filePath2, expPath, tmpPath)
+function [] = audioJob(filePath1, filePath2, expPath, tmpPath, localPath)
 %AUDIOJOB Summary of this function goes here
 %   Detailed explanation goes here
 
@@ -17,7 +17,7 @@ p = parpool(c);
 %end
 
 % Version of the script
-scriptVersion = 'v1.1.1';
+scriptVersion = 'v1.1.2';
 
 % Date format for logs
 dateFormat = 'yyyy-mm-dd HH:MM:SS.FFF';
@@ -185,7 +185,7 @@ dataType = 'double';
 % Compute different audio features per signal basis:
 % 1. Time-frequency distance - TFD (Paper: Truong et al., ZIA'14)
 % 2. Sound-Proof - SPF (Paper: Karapanos et al., Sound-Proof'15)
-% 3. Audido fingerprinting - AFP (Paper: Schürmann and Sigg, Ambient audio'13)
+% 3. Audido fingerprinting - AFP (Paper: Sch??rmann and Sigg, Ambient audio'13)
 % 4. Noise fingerprinting - NFP (Paper: Miettinen et al., ZIP'14)
 
 % Main loop
@@ -271,7 +271,7 @@ for i = 1:length(timeInterval)
     commonData.Fs = Fs;
     commonData.dateFormat = dateFormat;
     commonData.scriptVersion = scriptVersion;
-    commonData.expPath = expPath;
+    commonData.expPath = localPath;
     commonData.feature = strcat(logFolders{1}, '/', ...
         num2str(floor(timeInterval(i)/timeDiv)), timeStr); % TFD folder
     commonData.nAudioChunks = nChunks;
@@ -284,7 +284,15 @@ for i = 1:length(timeInterval)
         computeTFD(sig1{j}, sig2{j}, audioPairDelay(j), ...
         nameSlice1(j), nameSlice2(j), commonData, j);
     end
-
+    
+    % Construct savePath
+    res = strsplit(nameSlice1(nChunks), '/');
+    savePath = strcat(expPath, '/', res{1}, '/', res{2}, '/', ...
+        commonData.feature); 
+    
+    % Merge JSONs and save the result back to the network share
+    localMerge(localPath, nameS2, savePath);
+  
     % Change the feature log folder: SPF
     commonData.feature = strcat(logFolders{2}, '/', ...
         num2str(floor(timeInterval(i)/timeDiv)), timeStr);
@@ -296,17 +304,31 @@ for i = 1:length(timeInterval)
         spfFilterBank, nameSlice1(j), nameSlice2(j), commonData, j);
     end
     
+    % Construct savePath
+    savePath = strcat(expPath, '/', res{1}, '/', res{2}, '/', ...
+        commonData.feature); 
+    
+    % Merge JSONs and save the result back to the network share
+    localMerge(localPath, nameS2, savePath);
+    
 	% Change the feature log folder: AFP
 	commonData.feature = strcat(logFolders{3}, '/', ...
 		num2str(floor(timeInterval(i)/timeDiv)), timeStr);
 
 	% Compute AFP
 	fprintf('Computing AFP...\n');
-	parfor j = 1:nChunks
+    parfor j = 1:nChunks
 		computeAFP(sig1{j}, sig2{j}, audioPairDelay(j), ...
 		afpFilterBank, nameSlice1(j), nameSlice2(j), commonData, j);
-	end
+    end
 	
+    % Construct savePath
+    savePath = strcat(expPath, '/', res{1}, '/', res{2}, '/', ...
+        commonData.feature); 
+    
+    % Merge JSONs and save the result back to the network share
+    localMerge(localPath, nameS2, savePath);
+    
     % Change the feature log folder: NFP
     noiseData.feature = strcat(logFolders{4}, '/', ...
         num2str(floor(timeInterval(i)/timeDiv)), timeStr);
