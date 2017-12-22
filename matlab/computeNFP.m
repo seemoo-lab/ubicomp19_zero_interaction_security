@@ -88,39 +88,41 @@ output.results = containers.Map(keySet, valueSet);
 
 % Save the main log file
 fileName = extractBetween(pathS2, 'audio/', '.flac');
-res = strsplit(pathS1, '/');
-logPath = strcat(noiseData.expPath, '/', res{1}, '/', res{2}); 
-mainLogFile = strcat(logPath, '/', noiseData.feature, '/', ...
-    'sensor-', fileName, '.json');
+% res = strsplit(pathS1, '/');
+% logPath = strcat(noiseData.expPath, '/', res{1}, '/', res{2}); 
+% mainLogFile = strcat(logPath, '/', noiseData.feature, '/', ...
+%     'sensor-', fileName, '.json');
+
+mainLogFile = strcat(commonData.expPath, '/', 'sensor-', fileName, '.json');
 
 saveJsonFile(char(mainLogFile), output);
 
-% Flip metadata.source_files for symmetric log file
-tmpStruct = metadata.source_files;
-fileInfo.file1 = tmpStruct.file2;
-fileInfo.file2 = tmpStruct.file1;
-metadata.source_files = fileInfo;
-
-% Flip feature.fingerprint_file1 and feature.fingerprint_file2 for
-% symmetric log file
-feature.noise_fingerprint1 = nfpS2Str;
-feature.noise_fingerprint2 = nfpS1Str;
-
-% Update hashmap
-valueSet{1} = feature;
-
-% Update output struct
-output.metadata = metadata; 
-output.results = containers.Map(keySet, valueSet);
-
-% Save the symmetric log file
-fileName = extractBetween(pathS1, 'audio/', '.flac');
-res = strsplit(pathS2, '/');
-logPath = strcat(noiseData.expPath, '/', res{1}, '/', res{2}); 
-symLogFile = strcat(logPath, '/', noiseData.feature, '/', ...
-    'sensor-', fileName, '.json');
-
-saveJsonFile(char(symLogFile), output);
+% % Flip metadata.source_files for symmetric log file
+% tmpStruct = metadata.source_files;
+% fileInfo.file1 = tmpStruct.file2;
+% fileInfo.file2 = tmpStruct.file1;
+% metadata.source_files = fileInfo;
+% 
+% % Flip feature.fingerprint_file1 and feature.fingerprint_file2 for
+% % symmetric log file
+% feature.fingerprint_noise_lev1 = nfpS2Str;
+% feature.fingerprint_noise_lev2 = nfpS1Str;
+% 
+% % Update hashmap
+% valueSet{1} = feature;
+% 
+% % Update output struct
+% output.metadata = metadata; 
+% output.results = containers.Map(keySet, valueSet);
+% 
+% % Save the symmetric log file
+% fileName = extractBetween(pathS1, 'audio/', '.flac');
+% res = strsplit(pathS2, '/');
+% logPath = strcat(noiseData.expPath, '/', res{1}, '/', res{2}); 
+% symLogFile = strcat(logPath, '/', noiseData.feature, '/', ...
+%     'sensor-', fileName, '.json');
+% 
+% saveJsonFile(char(symLogFile), output);
 
 end
 
