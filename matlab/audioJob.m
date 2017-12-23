@@ -17,7 +17,7 @@ p = parpool(c);
 %end
 
 % Version of the script
-scriptVersion = 'v1.2.1';
+scriptVersion = 'v1.2.2';
 
 % Date format for logs
 dateFormat = 'yyyy-mm-dd HH:MM:SS.FFF';
