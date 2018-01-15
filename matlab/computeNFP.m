@@ -91,7 +91,7 @@ fileName = extractBetween(pathS2, 'audio/', '.flac');
 res = strsplit(pathS1, '/');
 logPath = strcat(noiseData.expPath, '/', res{1}, '/', res{2}); 
 mainLogFile = strcat(logPath, '/', noiseData.feature, '/', ...
-    'sensor-', fileName, '.json');
+    'Sensor-', fileName, '.json');
 
 saveJsonFile(char(mainLogFile), output);
 
@@ -118,7 +118,7 @@ saveJsonFile(char(mainLogFile), output);
 % res = strsplit(pathS2, '/');
 % logPath = strcat(noiseData.expPath, '/', res{1}, '/', res{2}); 
 % symLogFile = strcat(logPath, '/', noiseData.feature, '/', ...
-%     'sensor-', fileName, '.json');
+%     'Sensor-', fileName, '.json');
 % 
 % saveJsonFile(char(symLogFile), output);
 

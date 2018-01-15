@@ -46,10 +46,10 @@ fileName = extractBetween(pathNl1, 'audio/', '.flac');
 res = strsplit(pathNl1, '/');
 logPath = strcat(noiseData.expPath, '/', res{1}, '/', res{2}); 
 if isempty(noiseData.feature)
-    mainLogFile = strcat(logPath, '/', 'noise-', fileName, '.json');
+    mainLogFile = strcat(logPath, '/', 'Noise-', fileName, '.json');
 else
     mainLogFile = strcat(logPath, '/', noiseData.feature, '/', ...
-    'noise-', fileName, '.json');
+    'Noise-', fileName, '.json');
 end
 
 saveJsonFile(char(mainLogFile), output);
@@ -80,10 +80,10 @@ fileName = extractBetween(pathNl2, 'audio/', '.flac');
 res = strsplit(pathNl2, '/');
 logPath = strcat(noiseData.expPath, '/', res{1}, '/', res{2}); 
 if isempty(noiseData.feature)
-    mainLogFile = strcat(logPath, '/', 'noise-', fileName, '.json');
+    mainLogFile = strcat(logPath, '/', 'Noise-', fileName, '.json');
 else
     mainLogFile = strcat(logPath, '/', noiseData.feature, '/', ...
-    'noise-', fileName, '.json');
+    'Noise-', fileName, '.json');
 end
 
 saveJsonFile(char(mainLogFile), output);
