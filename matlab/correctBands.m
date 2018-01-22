@@ -107,10 +107,83 @@ elseif isfield(inResult, 'xcorr_freq_bands') % Check if the feature is SPF
     end
     
     % Write the result back to .xcorr_freq_bands struct
-    inResult.xcorr_freq_bands = containers.Map(keySet, valueSet); 
-    
+    inResult.xcorr_freq_bands = containers.Map(keySet, valueSet);
 end
-   
+  
+if isfield(inResult, 'fingerprint_noise_lev1')
+    
+    % Adjust fingerprint_noise_lev1
+    noiseBands = inResult.fingerprint_noise_lev1;
+    
+    % Check if we have a structure or not
+    if isstruct(noiseBands) ~= 0
+        
+        % Cell array of noise level bits
+        noiseBandNames = fieldnames(noiseBands);
+    
+        % Key-value pairs for the hashmap
+        keySet = cell(length(noiseBandNames), 1);
+        valueSet = cell(length(noiseBandNames), 1);
+    
+        % Correct noise band names
+        for i=1:length(noiseBandNames)
+        
+            % Remove the first 'x' symbol
+            tmp = noiseBandNames{i}(2:end);
+            
+            % Replace the second '_' with '-'
+            idx = strfind(tmp, '_');
+            tmp(idx(length(idx))) = '-';
+            
+            % Save a new noise band name
+            keySet{i} = tmp;
+         
+            % The bits of the band remain intact
+            valueSet{i} = getfield(noiseBands, noiseBandNames{i});
+        end
+    
+        % Write the result back to .fingerprint_noise_lev1 struct
+        inResult.fingerprint_noise_lev1 = containers.Map(keySet, valueSet);
+    end 
+end
+
+if isfield(inResult, 'fingerprint_noise_lev2')
+    
+    % Adjust fingerprint_noise_lev2
+    noiseBands = inResult.fingerprint_noise_lev2;
+    
+     % Check if we have a structure or not
+    if isstruct(noiseBands) ~= 0
+        
+        % Cell array of noise level bits
+        noiseBandNames = fieldnames(noiseBands);
+    
+        % Key-value pairs for the hashmap
+        keySet = cell(length(noiseBandNames), 1);
+        valueSet = cell(length(noiseBandNames), 1);
+    
+        % Correct noise band names
+        for i=1:length(noiseBandNames)
+        
+            % Remove the first 'x' symbol
+            tmp = noiseBandNames{i}(2:end);
+            
+            % Replace the second '_' with '-'
+            idx = strfind(tmp, '_');
+            tmp(idx(length(idx))) = '-';
+            
+            % Save a new noise band name
+            keySet{i} = tmp;
+         
+            % The bits of the band remain intact
+            valueSet{i} = getfield(noiseBands, noiseBandNames{i});
+        end
+    
+        % Write the result back to .fingerprint_noise_lev2 struct
+        inResult.fingerprint_noise_lev2 = containers.Map(keySet, valueSet);  
+    end 
+end
+
 outResult = inResult;
 
 end
