@@ -396,7 +396,6 @@ def aggregate_tfd():
     pool.join()
 
 if __name__ == "__main__":
-
     # Check the number of input args
     if len(sys.argv) == 3:
 
@@ -404,11 +403,12 @@ if __name__ == "__main__":
         ROOT_PATH = sys.argv[1]
         NUM_WORKERS = sys.argv[2]
 
-        # Check the validity of input args
+        # Check if the first arg is a valid path
         if not os.path.exists(ROOT_PATH):
-            print('<root_path>: %s does not exist!' % sys.argv[1])
+            print('<root_path>: %s does not exist!' % ROOT_PATH)
             exit(0)
 
+        # Check if the second arg is an integer more than 2
         try:
             NUM_WORKERS = int(NUM_WORKERS)
             if NUM_WORKERS < 2:
@@ -417,7 +417,7 @@ if __name__ == "__main__":
         except ValueError:
             print('<num_workers> must be a positive number > 1!')
             sys.exit(0)
-
+        '''
         # Aggregate results
         start_time = time.time()
         print('Aggregating AFP...')
@@ -438,7 +438,7 @@ if __name__ == "__main__":
         print('Aggregating TFD...')
         aggregate_tfd()
         print("--- %s seconds ---" % (time.time() - start_time))
-
+        '''
     else:
         print('Usage: aggregate_results.py <root_path> <num_workers>')
         sys.exit(0)

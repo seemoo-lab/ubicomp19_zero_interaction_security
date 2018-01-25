@@ -3,29 +3,34 @@ from glob import glob
 import re
 import sys
 import numpy as np
+import os
 
-# ToDo: make car/office selection based on the input param
 # Number of sensors to compare each sensor with
-NUM_SENSORS = 11
-# NUM_SENSORS = 24
+NUM_SENSORS = 0
 
-# Sensor mapping
+# Sensor mapping: car experiment
 SENSORS_CAR1 = ['01', '02', '03', '04', '05', '06']
 SENSORS_CAR2 = ['07', '08', '09', '10', '11', '12']
 
-'''
+# Sensor mapping: office experiment
 SENSORS_OFFICE1 = ['01', '02', '03', '04', '05', '06', '07', '08']
 SENSORS_OFFICE2 = ['09', '10', '11', '12', '13', '14', '15', '16']
 SENSORS_OFFICE3 = ['17', '18', '19', '20', '21', '22', '23', '24']
-'''
 
-# ToDo: provide ROOT_PATH as input param, also power path here!!!
-# Root path - points to the result folder of structure: /Sensor-xx/audio/<audio_features>/<time_intervals>
-# Adjust this param!!!
-ROOT_PATH = 'D:/data/car/'
+# List of sensor mappings
+SENSORS = []
+
+# Root path - points to the result folder of structure:
+# /Sensor-xx/audio/<audio_features>/<time_intervals>
+ROOT_PATH = ''
+
+# Root path - points to the power folder of structure:
+# /Sensor-xx/audio/soundProofXcorr/<time_intervals>/Power.json
+POWER_PATH = ''
 
 # Summary file name
 SUMMARY_FILE = 'Summary.json'
+
 
 def align_summary(path):
     # Iterate over matched files
@@ -244,7 +249,7 @@ def add_spf_power(data_path, power_path):
         with open(json_file, "w") as f:
             f.write(dumps(rv, indent=4, sort_keys=True))
 
-
+# Todo: split to individual functions, e.g. wrap_up_afp(), etc.
 def wrap_up_results(path, feature):
     # Iterate over matched files
     for json_file in glob(path, recursive=True):
@@ -263,6 +268,7 @@ def wrap_up_results(path, feature):
         # Get the target sensor
         target_sensor = metadata['sensor']
 
+        # Todo: adjust the check using SENSORS list
         # Get co-located and non-colocated lists of sensor numbers
         if target_sensor in SENSORS_CAR1:
             co_located_list = list(SENSORS_CAR1)
@@ -543,7 +549,7 @@ def format_tfd():
 def format_power():
 
     # Power path - adjust this only
-    power_path = 'C:/Users/mfomichev/Desktop/car_power'
+    # power_path = 'C:/Users/mfomichev/Desktop/car_power'
 
     # Audio feature
     feature = 'soundProofXcorr'
@@ -552,16 +558,54 @@ def format_power():
     spf_path = ROOT_PATH + 'Sensor-*/audio/' + feature + '/*/Sensor-*.json'
 
     # Add power levels to result data files
-    add_spf_power(spf_path, power_path)
+    add_spf_power(spf_path, POWER_PATH)
 
 if __name__ == "__main__":
+    # Check the number of input args
+    if len(sys.argv) == 3:
 
-    # print()
+        # Assign input args
+        scenario = sys.argv[1]
+        ROOT_PATH = sys.argv[2]
 
-    format_afp()
-    format_nfp()
-    format_spf()
-    format_tfd()
+        # Check if the second arg is a valid path
+        if not os.path.exists(ROOT_PATH):
+            print('<root_path>: %s does not exist!' % ROOT_PATH)
+            exit(0)
+
+        # Check if the first arg is a string 'car' or 'office'
+        # or an existing path pointing to the power folder
+        if scenario == 'car':
+            NUM_SENSORS = 11
+            SENSORS.append(SENSORS_CAR1)
+            SENSORS.append(SENSORS_CAR2)
+        elif scenario == 'office':
+            NUM_SENSORS = 24
+            SENSORS.append(SENSORS_OFFICE1)
+            SENSORS.append(SENSORS_OFFICE2)
+            SENSORS.append(SENSORS_OFFICE3)
+        else:
+            # In case of power scenario we expect existing POWER_PATH
+            POWER_PATH = scenario
+            if not os.path.exists(POWER_PATH):
+                print('<power_path>: %s does not exist!' % POWER_PATH)
+                exit(0)
+
+            # Format power
+            # format_power()
+
+        # Format results
+        '''
+        format_afp()
+        format_nfp()
+        format_spf()
+        format_tfd()
+        '''
+
+    else:
+        print('Usage: aggregate_results.py <root_path> <num_workers>')
+        sys.exit(0)
+
 
 
 
