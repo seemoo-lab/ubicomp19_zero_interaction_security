@@ -6,19 +6,17 @@ import sys
 from multiprocessing import Pool
 import time
 from functools import partial
+import os
 
-# ToDo: provide NUM_WORKERS as input param
 # Number of workers to be used in parallel
-NUM_WORKERS = 4
+NUM_WORKERS = 0
 
 # Summary file name
 SUMMARY_FILE = 'Summary.json'
 
-# ToDo: provide ROOT_PATH as input param
-# Root path - points to the result folder of structure: /Sensor-xx/audio/<audio_features>/<time_intervals>
-# Adjust this param!!!
-ROOT_PATH = 'D:/data/car/'
-
+# Root path - points to the result folder of structure:
+# /Sensor-xx/audio/<audio_features>/<time_intervals>
+ROOT_PATH = ''
 
 def parse_folders(path, feature):
     # Local vars
@@ -387,24 +385,50 @@ def aggregate_tfd():
 
 if __name__ == "__main__":
 
-    #print()
+    # Check the number of input args
+    if len(sys.argv) == 3:
 
-    start_time = time.time()
-    print('Aggregating AFP...')
-    aggregate_afp()
-    print("--- %s seconds ---" % (time.time() - start_time))
+        # Assign input args
+        ROOT_PATH = sys.argv[1]
+        NUM_WORKERS = sys.argv[2]
 
-    start_time = time.time()
-    print('Aggregating NFP...')
-    aggregate_nfp()
-    print("--- %s seconds ---" % (time.time() - start_time))
+        # Check the validity of input args
+        if not os.path.exists(ROOT_PATH):
+            print('<root_path>: %s does not exist!' % sys.argv[1])
+            exit(0)
 
-    start_time = time.time()
-    print('Aggregating SPF...')
-    aggregate_spf()
-    print("--- %s seconds ---" % (time.time() - start_time))
+        try:
+            NUM_WORKERS = int(NUM_WORKERS)
+            if NUM_WORKERS < 2:
+                print('<num_workers> must be a positive number > 1!')
+                sys.exit(0)
+        except ValueError:
+            print('<num_workers> must be a positive number > 1!')
+            sys.exit(0)
 
-    start_time = time.time()
-    print('Aggregating TFD...')
-    aggregate_tfd()
-    print("--- %s seconds ---" % (time.time() - start_time))
+        # Aggregate results
+        start_time = time.time()
+        print('Aggregating AFP...')
+        aggregate_afp()
+        print("--- %s seconds ---" % (time.time() - start_time))
+
+        start_time = time.time()
+        print('Aggregating NFP...')
+        aggregate_nfp()
+        print("--- %s seconds ---" % (time.time() - start_time))
+
+        start_time = time.time()
+        print('Aggregating SPF...')
+        aggregate_spf()
+        print("--- %s seconds ---" % (time.time() - start_time))
+
+        start_time = time.time()
+        print('Aggregating TFD...')
+        aggregate_tfd()
+        print("--- %s seconds ---" % (time.time() - start_time))
+
+    else:
+        print('Usage: aggregate_results.py <root_path> <num_workers>')
+        sys.exit(0)
+
+
