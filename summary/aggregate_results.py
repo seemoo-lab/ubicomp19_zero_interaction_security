@@ -163,125 +163,137 @@ def process_folder(file_list, feature=''):
 def process_feature(json_file, feature):
     # Process each feature
     if feature == 'audioFingerprint':
-        # Initialize res_dict
-        res_dict = {}
-
-        # List to store the 'fingerprints_similarity_percent' fields
-        afp_similarity_list = []
-
-        # Open and read the JSON file
-        with open(json_file, "r") as f:
-            json = loads(f.read())
-            results = json['results']
-            # Store 'fingerprints_similarity_percent' fields in the list
-            for k, v in results.items():
-                afp_similarity_list.append(v['fingerprints_similarity_percent'])
-
-        # Convert list to np array
-        afp_similarity_array = np.array(list(afp_similarity_list), dtype=float)
-
-        # Compute mean, median, std, min, max and store results in res_dict
-        res_dict['mean'] = np.mean(afp_similarity_array)
-        res_dict['median'] = np.median(afp_similarity_array)
-        res_dict['std'] = np.std(afp_similarity_array)
-        res_dict['min'] = np.amin(afp_similarity_array)
-        res_dict['max'] = np.amax(afp_similarity_array)
-
-        return res_dict
-
+        return process_afp(json_file)
     elif feature == 'noiseFingerprint':
-        # String to store the 'fingerprints_similarity_percent' value
-        nfp_similarity = ''
-
-        # Open and read the JSON file
-        with open(json_file, "r") as f:
-            json = loads(f.read())
-            results = json['results']
-            # Store 'fingerprints_similarity_percent' fields in the list
-            for k, v in results.items():
-                nfp_similarity = v['fingerprints_similarity_percent']
-
-        return nfp_similarity
-
+        return process_nfp(json_file)
     elif feature == 'soundProofXcorr':
-        # Initialize res_dict
-        res_dict = {}
-
-        # List to store the 'max_xcorr' fields
-        spf_xcorr_list = []
-
-        # Open and read the JSON file
-        with open(json_file, "r") as f:
-            json = loads(f.read())
-            results = json['results']
-            res_len = len(results)
-            # Store 'max_xcorr' fields in the list
-            for k, v in results.items():
-                # Take into account the power threshold
-                if v['power1_db'] >= 40 and v['power2_db'] >= 40:
-                    spf_xcorr_list.append(v['max_xcorr'])
-
-        # Convert list to np array
-        spf_xcorr_array = np.array(list(spf_xcorr_list), dtype=float)
-
-        # Compute mean, median, std, min, max and store results in res_dict
-        res_dict['mean'] = np.mean(spf_xcorr_array)
-        res_dict['median'] = np.median(spf_xcorr_array)
-        res_dict['std'] = np.std(spf_xcorr_array)
-        res_dict['min'] = np.amin(spf_xcorr_array)
-        res_dict['max'] = np.amax(spf_xcorr_array)
-        res_dict['threshold_percent'] = (len(spf_xcorr_list)/res_len)*100
-
-        return res_dict
-
+        return process_spf(json_file)
     elif feature == 'timeFreqDistance':
-        # Initialize res_dict
-        res_dict = {}
-
-        # List to store the 'max_xcorr' and 'time_freq_dist' fields
-        tfd_xcorr_list = []
-        tfd_tfd_list = []
-
-        with open(json_file, "r") as f:
-            json = loads(f.read())
-            results = json['results']
-            # Store 'max_xcorr' and 'time_freq_dist' fields in the lists
-            for k, v in results.items():
-                tfd_xcorr_list.append(v['max_xcorr'])
-                tfd_tfd_list.append(v['time_freq_dist'])
-
-        # Convert xcorr and tfd lists to np arrays
-        tfd_xcorr_array = np.array(list(tfd_xcorr_list), dtype=float)
-        tfd_tfd_array = np.array(list(tfd_tfd_list), dtype=float)
-
-        # Compute mean, median, std, min, max for xcorr
-        xcorr_dict = {}
-
-        xcorr_dict['mean'] = np.mean(tfd_xcorr_array)
-        xcorr_dict['median'] = np.median(tfd_xcorr_array)
-        xcorr_dict['std'] = np.std(tfd_xcorr_array)
-        xcorr_dict['min'] = np.amin(tfd_xcorr_array)
-        xcorr_dict['max'] = np.amax(tfd_xcorr_array)
-
-        # Compute mean, median, std, min, max for tfd
-        tfd_dict = {}
-
-        tfd_dict['mean'] = np.mean(tfd_tfd_array)
-        tfd_dict['median'] = np.median(tfd_tfd_array)
-        tfd_dict['std'] = np.std(tfd_tfd_array)
-        tfd_dict['min'] = np.amin(tfd_tfd_array)
-        tfd_dict['max'] = np.amax(tfd_tfd_array)
-
-        # Add xcorr and tfd to the res_dict
-        res_dict['max_xcorr'] = xcorr_dict
-        res_dict['time_freq_dist'] = tfd_dict
-
-        return res_dict
-
+        return process_tfd(json_file)
     else:
         print('process_feature: unknown feature: %s --- ignoring...' % feature)
 
     return
+
+
+def process_afp(json_file):
+    # Initialize res_dict
+    res_dict = {}
+
+    # List to store the 'fingerprints_similarity_percent' fields
+    afp_similarity_list = []
+
+    # Open and read the JSON file
+    with open(json_file, "r") as f:
+        json = loads(f.read())
+        results = json['results']
+        # Store 'fingerprints_similarity_percent' fields in the list
+        for k, v in results.items():
+            afp_similarity_list.append(v['fingerprints_similarity_percent'])
+
+    # Convert list to np array
+    afp_similarity_array = np.array(list(afp_similarity_list), dtype=float)
+
+    # Compute mean, median, std, min, max and store results in res_dict
+    res_dict['mean'] = np.mean(afp_similarity_array)
+    res_dict['median'] = np.median(afp_similarity_array)
+    res_dict['std'] = np.std(afp_similarity_array)
+    res_dict['min'] = np.amin(afp_similarity_array)
+    res_dict['max'] = np.amax(afp_similarity_array)
+
+    return res_dict
+
+
+def process_nfp(json_file):
+    # String to store the 'fingerprints_similarity_percent' value
+    nfp_similarity = ''
+
+    # Open and read the JSON file
+    with open(json_file, "r") as f:
+        json = loads(f.read())
+        results = json['results']
+        # Store 'fingerprints_similarity_percent' fields in the list
+        for k, v in results.items():
+            nfp_similarity = v['fingerprints_similarity_percent']
+
+    return nfp_similarity
+
+
+def process_spf(json_file):
+    # Initialize res_dict
+    res_dict = {}
+
+    # List to store the 'max_xcorr' fields
+    spf_xcorr_list = []
+
+    # Open and read the JSON file
+    with open(json_file, "r") as f:
+        json = loads(f.read())
+        results = json['results']
+        res_len = len(results)
+        # Store 'max_xcorr' fields in the list
+        for k, v in results.items():
+            # Take into account the power threshold
+            if v['power1_db'] >= 40 and v['power2_db'] >= 40:
+                spf_xcorr_list.append(v['max_xcorr'])
+
+    # Convert list to np array
+    spf_xcorr_array = np.array(list(spf_xcorr_list), dtype=float)
+
+    # Compute mean, median, std, min, max and store results in res_dict
+    res_dict['mean'] = np.mean(spf_xcorr_array)
+    res_dict['median'] = np.median(spf_xcorr_array)
+    res_dict['std'] = np.std(spf_xcorr_array)
+    res_dict['min'] = np.amin(spf_xcorr_array)
+    res_dict['max'] = np.amax(spf_xcorr_array)
+    res_dict['threshold_percent'] = (len(spf_xcorr_list) / res_len) * 100
+
+    return res_dict
+
+
+def process_tfd(json_file):
+    # Initialize res_dict
+    res_dict = {}
+
+    # List to store the 'max_xcorr' and 'time_freq_dist' fields
+    tfd_xcorr_list = []
+    tfd_tfd_list = []
+
+    with open(json_file, "r") as f:
+        json = loads(f.read())
+        results = json['results']
+        # Store 'max_xcorr' and 'time_freq_dist' fields in the lists
+        for k, v in results.items():
+            tfd_xcorr_list.append(v['max_xcorr'])
+            tfd_tfd_list.append(v['time_freq_dist'])
+
+    # Convert xcorr and tfd lists to np arrays
+    tfd_xcorr_array = np.array(list(tfd_xcorr_list), dtype=float)
+    tfd_tfd_array = np.array(list(tfd_tfd_list), dtype=float)
+
+    # Compute mean, median, std, min, max for xcorr
+    xcorr_dict = {}
+
+    xcorr_dict['mean'] = np.mean(tfd_xcorr_array)
+    xcorr_dict['median'] = np.median(tfd_xcorr_array)
+    xcorr_dict['std'] = np.std(tfd_xcorr_array)
+    xcorr_dict['min'] = np.amin(tfd_xcorr_array)
+    xcorr_dict['max'] = np.amax(tfd_xcorr_array)
+
+    # Compute mean, median, std, min, max for tfd
+    tfd_dict = {}
+
+    tfd_dict['mean'] = np.mean(tfd_tfd_array)
+    tfd_dict['median'] = np.median(tfd_tfd_array)
+    tfd_dict['std'] = np.std(tfd_tfd_array)
+    tfd_dict['min'] = np.amin(tfd_tfd_array)
+    tfd_dict['max'] = np.amax(tfd_tfd_array)
+
+    # Add xcorr and tfd to the res_dict
+    res_dict['max_xcorr'] = xcorr_dict
+    res_dict['time_freq_dist'] = tfd_dict
+
+    return res_dict
 
 
 def aggregate_afp():
