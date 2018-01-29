@@ -21,7 +21,7 @@ SCRIPT = __file__[:-3]
 
 ### Parameters of the algorithm
 # Slot size
-SLOT_SIZES = [60, 120]
+SLOT_SIZES = [5, 10, 15, 30, 60, 120]
 # Relative change threshold
 THRES_REL = 0.1
 # Absolute change threshold
