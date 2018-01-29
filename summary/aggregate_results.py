@@ -156,7 +156,7 @@ def process_folder(file_list, feature=''):
     # Save the summary JSON file
     filename = log_path + SUMMARY_FILE
     # print('Saving a file: %s' % filename)
-    with open(filename, "w") as f:
+    with open(filename, 'w') as f:
         f.write(dumps(rv, indent=4, sort_keys=True))
 
 
@@ -184,7 +184,7 @@ def process_afp(json_file):
     afp_similarity_list = []
 
     # Open and read the JSON file
-    with open(json_file, "r") as f:
+    with open(json_file, 'r') as f:
         json = loads(f.read())
         results = json['results']
         # Store 'fingerprints_similarity_percent' fields in the list
@@ -209,7 +209,7 @@ def process_nfp(json_file):
     nfp_similarity = ''
 
     # Open and read the JSON file
-    with open(json_file, "r") as f:
+    with open(json_file, 'r') as f:
         json = loads(f.read())
         results = json['results']
         # Store 'fingerprints_similarity_percent' fields in the list
@@ -227,7 +227,7 @@ def process_spf(json_file):
     spf_xcorr_list = []
 
     # Open and read the JSON file
-    with open(json_file, "r") as f:
+    with open(json_file, 'r') as f:
         json = loads(f.read())
         results = json['results']
         res_len = len(results)
@@ -259,7 +259,7 @@ def process_tfd(json_file):
     tfd_xcorr_list = []
     tfd_tfd_list = []
 
-    with open(json_file, "r") as f:
+    with open(json_file, 'r') as f:
         json = loads(f.read())
         results = json['results']
         # Store 'max_xcorr' and 'time_freq_dist' fields in the lists

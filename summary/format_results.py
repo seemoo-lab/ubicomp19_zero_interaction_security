@@ -50,7 +50,7 @@ def align_summary(path):
         target_sensor = 'Sensor-' + match.group(1)
 
         # Open and read the JSON file
-        with open(json_file, "r") as f:
+        with open(json_file, 'r') as f:
             json = loads(f.read())
             results = json['results']
             # Count the number of results
@@ -75,7 +75,7 @@ def align_summary(path):
                 print('sym file: %s ---- with field: %s' % (sym_path, target_sensor.lower()))
 
                 # Open and read JSON file
-                with open(sym_path, "r") as f:
+                with open(sym_path, 'r') as f:
                     sym_json = loads(f.read())
                     # Get the field to be symmetrically added to json_file
                     sym_field = sym_json['results'][target_sensor.lower()]
@@ -84,7 +84,7 @@ def align_summary(path):
                 json['results'][insert_sensor.lower()] = sym_field
 
             # Save the updated json file
-            with open(json_file, "w") as f:
+            with open(json_file, 'w') as f:
                 f.write(dumps(json, indent=4, sort_keys=True))
 
 
@@ -137,7 +137,7 @@ def add_last_summary(path, feature):
             print('sym file: %s ---- with field: %s' % (sym_path, target_sensor.lower()))
 
             # Open and read JSON file
-            with open(sym_path, "r") as f:
+            with open(sym_path, 'r') as f:
                 sym_json = loads(f.read())
                 # Get the field to be symmetrically added to json_file
                 sym_field = sym_json['results'][target_sensor.lower()]
@@ -172,7 +172,7 @@ def add_last_summary(path, feature):
         filename = json_file + SUMMARY_FILE
         print('Saving a file: %s' % filename)
         # Save the new JSON file
-        with open(filename, "w") as f:
+        with open(filename, 'w') as f:
             f.write(dumps(rv, indent=4, sort_keys=True))
 
 
@@ -199,7 +199,7 @@ def add_spf_power(data_path, power_path):
             sys.exit(0)
 
         # Open and read data JSON file
-        with open(json_file, "r") as f:
+        with open(json_file, 'r') as f:
             json_data = loads(f.read())
             data_res = json_data['results']
             metadata = json_data['metadata']
@@ -208,7 +208,7 @@ def add_spf_power(data_path, power_path):
             print(res_data_len)
 
         # Open and read power JSON file
-        with open(power_path, "r") as f:
+        with open(power_path, 'r') as f:
             json_power = loads(f.read())
             power_res = json_power['results']
             # Count the number of results
@@ -246,7 +246,7 @@ def add_spf_power(data_path, power_path):
         rv['results'] = data_res
 
         # Save the result back to json_file
-        with open(json_file, "w") as f:
+        with open(json_file, 'w') as f:
             f.write(dumps(rv, indent=4, sort_keys=True))
 
 # Todo: split to individual functions, e.g. wrap_up_afp(), etc.
@@ -260,7 +260,7 @@ def wrap_up_results(path, feature):
         non_colocated_list = []
 
         # Open and read JSON file
-        with open(json_file, "r") as f:
+        with open(json_file, 'r') as f:
             json = loads(f.read())
             results = json['results']
             metadata = json['metadata']
@@ -474,7 +474,7 @@ def wrap_up_results(path, feature):
         print('saving a file: %s' % json_file)
 
         # Save the updated JSON file
-        with open(json_file, "w") as f:
+        with open(json_file, 'w') as f:
             f.write(dumps(json, indent=4, sort_keys=True))
 
 
@@ -580,7 +580,7 @@ if __name__ == "__main__":
             SENSORS.append(SENSORS_CAR1)
             SENSORS.append(SENSORS_CAR2)
         elif scenario == 'office':
-            NUM_SENSORS = 24
+            NUM_SENSORS = 23
             SENSORS.append(SENSORS_OFFICE1)
             SENSORS.append(SENSORS_OFFICE2)
             SENSORS.append(SENSORS_OFFICE3)
