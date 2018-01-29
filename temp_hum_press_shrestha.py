@@ -133,6 +133,12 @@ def sync_populations(pop1, pop2, sensor1="", sensor2=""):
     return (rv[1], rv[2])
 
 
+def convert_meters(pressure):
+    # Convert pressure value to height in meters according to formula (1)
+    # from the paper
+    return (1 - (pressure / 1013.25) ** 0.190284) * 145336.45 * 0.3048
+
+
 # ---------------------
 # Statistical functions
 # ---------------------
@@ -143,7 +149,7 @@ def difference(element1, element2):
 # ------------------------
 # Main evaluation function
 # ------------------------
-def compute(file1, file2):
+def compute(file1, file2, bar=False):
     try:
         # Read results
         pop1 = read_results(file1)
@@ -161,6 +167,9 @@ def compute(file1, file2):
         # Process results
         rv = {}
         for i in range(min(len(pop1), len(pop2))):
+            if bar:
+                pop1[i] = convert_meters(pop1[i])
+                pop2[i] = convert_meters(pop2[i])
             if not acceptable_difference(pop1[i], pop2[i]):
                 print("[WARN] Unacceptable time difference at position", i,
                       "for files", file1, file2, "- proceeding anyways")
@@ -243,7 +252,7 @@ def process_bar(files_tuple):
 
     # Compute and save the features
     print("[BAR ] Computing features for Sensors", no1, "and", no2)
-    rv["results"] = compute(pop1, pop2)
+    rv["results"] = compute(pop1, pop2, bar=True)
 
     # Save timestamp of finished processing
     rv["metadata"]["processing_end"] = \
