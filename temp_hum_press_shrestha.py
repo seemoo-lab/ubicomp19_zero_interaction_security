@@ -168,8 +168,8 @@ def compute(file1, file2, bar=False):
         rv = {}
         for i in range(min(len(pop1), len(pop2))):
             if bar:
-                pop1[i] = convert_meters(pop1[i])
-                pop2[i] = convert_meters(pop2[i])
+                pop1[i].value = convert_meters(pop1[i].value)
+                pop2[i].value = convert_meters(pop2[i].value)
             if not acceptable_difference(pop1[i], pop2[i]):
                 print("[WARN] Unacceptable time difference at position", i,
                       "for files", file1, file2, "- proceeding anyways")
