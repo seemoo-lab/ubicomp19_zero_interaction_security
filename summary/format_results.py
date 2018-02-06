@@ -560,7 +560,7 @@ def format_power():
     # Add power levels to result data files
     add_spf_power(spf_path, POWER_PATH)
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     # Check the number of input args
     if len(sys.argv) == 3:
 

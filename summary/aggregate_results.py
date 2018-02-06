@@ -395,7 +395,7 @@ def aggregate_tfd():
     pool.close()
     pool.join()
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     # Check the number of input args
     if len(sys.argv) == 3:
 
