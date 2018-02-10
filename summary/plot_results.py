@@ -4,14 +4,33 @@ import re
 import sys
 import numpy as np
 import os
-
+import itertools
 import datetime
 import time
+import multiprocessing
+from multiprocessing import Pool
+from functools import partial
 
 # Sensor mapping: car experiment
 SENSORS_CAR1 = ['01', '02', '03', '04', '05', '06']
 SENSORS_CAR2 = ['07', '08', '09', '10', '11', '12']
 
+# Sensor mapping: office experiment
+SENSORS_OFFICE1 = ['01', '02', '03', '04', '05', '06', '07', '08']
+SENSORS_OFFICE2 = ['09', '10', '11', '12', '13', '14', '15', '16']
+SENSORS_OFFICE3 = ['17', '18', '19', '20', '21', '22', '23', '24']
+
+# List of sensor mappings
+SENSORS = []
+
+# Root path - points to the result folder of structure:
+# /Sensor-xx/audio/<audio_features>/<time_intervals>
+ROOT_PATH = ''
+
+# Number of workers to be used in parallel
+NUM_WORKERS = 0
+
+# ToDo: This param has to be decided on or automated in some way
 TIME_DELTA = 5
 
 def from_arff():
@@ -56,7 +75,8 @@ def from_arff():
         feature_idx = 1
 
         for feature in feature_list:
-            if feature != "?":
+            if feature != '?':
+                # libsvm_row = libsvm_row + ' ' + str(feature_idx) + ':' + feature
                 if float(feature) == 0:
                     libsvm_row = libsvm_row + ' ' + str(feature_idx) + ':' + '0.000001'
                 else:
@@ -66,7 +86,6 @@ def from_arff():
         # Add libsvm_row to libsvm_list
         libsvm_list.append(libsvm_row)
 
-
     filename = 'C:/Users/mfomichev/Desktop/shrestha_libsvm.txt'
 
     # Open a file for writing
@@ -74,16 +93,22 @@ def from_arff():
         libsvm_list = map(lambda line: line + '\n', libsvm_list)
         f.writelines(libsvm_list)
 
+
 def generate_zip_set():
 
     ROOT_PATH = 'D:/data/car/'
 
-    audio_path = ROOT_PATH + 'Sensor-*/audio/timeFreqDistance/10sec/Sensor-*.json'
+    TIME_INT = '10sec'
+
+    audio_path = ROOT_PATH + 'Sensor-*/audio/timeFreqDistance/' + TIME_INT + '/Sensor-*.json'
     # ble_path = ROOT_PATH + 'Sensor-*/ble/ble_wifi_truong/chunk_len-10/Sensor-*.json'
     # wifi_path = ROOT_PATH + 'Sensor-*/wifi/ble_wifi_truong/chunk_len-10/Sensor-*.json'
 
     # List to store the results
     libsvm_list = []
+
+    # List to store max values of 'sum_squared_ranks' for each sensor
+    # max_rank_list = []
 
     for json_file in glob(audio_path, recursive=True):
 
@@ -100,7 +125,8 @@ def generate_zip_set():
         target_folder = match.group(1)
 
         # Get target sensor number, e.g. 01, 02, etc.
-        match = re.search(r'10sec(?:/|\\)Sensor-(.*)\.json', json_file)
+        regex = re.escape(TIME_INT) + r'(?:/|\\)Sensor-(.*)\.json'
+        match = re.search(regex, json_file)
 
         # If there is no match - exit
         if not match:
@@ -147,8 +173,41 @@ def generate_zip_set():
         ble_dict = dict(ble_res)
         wifi_dict = dict(wifi_res)
 
+        '''
+        # Check max value for 'sum_squared_ranks'
+        rank_list = []
+        for k, v in wifi_res.items():
+            if v:
+                if not 'error' in v:
+                    if v['sum_squared_ranks'] != None:
+                        rank_list.append(v['sum_squared_ranks'])
+
+        rank_array = np.array(list(rank_list), dtype=float)
+        max_rank_list.append(np.amax(rank_array))
+        '''
+
         # Binary classification label (0 or 1) for libsvm format
         label = ''
+
+        '''
+        # Make a copy of list of sensors' lists
+        sensors_lists = list(SENSORS)
+
+        # Iterate over list of sensors' lists
+        for sensor_list in SENSORS:
+            # Check if target sensor is in sensor_list
+            if target_sensor in sensor_list:
+                # Construct co-located list excluding target sensor
+                co_located_list = list(sensor_list)
+                co_located_list.remove(target_sensor)
+
+                # Construct non-colocated list
+                sensors_lists.remove(sensor_list)
+                non_colocated_list = list(itertools.chain.from_iterable(sensors_lists))
+
+                # Get out from the loop
+                break
+        '''
 
         # Todo: adjust for the office experiment (see format_results.py)
         # Get the binary label value: 0 - non-colocated, 1 - co-located
@@ -215,6 +274,7 @@ def generate_zip_set():
             # Add audio features
             libsvm_row = add_features('audio', v, libsvm_row)
 
+
             # Check ble features
             if check_ts in ble_res:
                 # Check if the value ble_res[check_ts] is not empty
@@ -232,6 +292,7 @@ def generate_zip_set():
                     if not 'error' in wifi_res[check_ts]:
                         # Add wifi features to libsvm_row
                         libsvm_row = add_features('wifi', wifi_res[check_ts], libsvm_row)
+                        
 
             # print(libsvm_row)
 
@@ -250,20 +311,25 @@ def generate_zip_set():
 
 
 def date_to_sec(date_str):
-
     # Split the date str (we discard ms), the format is yyyy-mm-dd HH:MM:SS(.FFF)
     res = date_str.split('.')
 
     if not res:
-        print('date_to_sec: string %s has a wrong format!' % date_str)
+        print('date_to_sec: string "%s" has wrong format, exiting...' % date_str)
         sys.exit(0)
 
-    # date = time.strptime(res[0].split(',')[0], '%Y-%m-%d %H:%M:%S')
-    # return datetime.timedelta(hours=date.tm_hour, minutes=date.tm_min, seconds=date.tm_sec).total_seconds()
+    # Return number of seconds
     return datetime.datetime.strptime(res[0], '%Y-%m-%d %H:%M:%S').timestamp()
 
 
 def add_features(feature, value, libsvm_row):
+
+    # we selected the approximation for 0 (e.g. 'sum_squared_ranks' in JSON) as 0.000001
+    # (libsvm format ignores features with zero values: 1:1 2:0 3:5 4:0 -> 1:1 3:5)
+
+    # we selected the approximation for 0 ('sum_squared_ranks' in JSON) as
+    # max(sum_squared_ranks) found over all sensors x10, we arrived at 10000
+    # car scenario: max(sum_squared_ranks) = 912.0 x 10 = 9120 (round to 10000)
 
     if feature == 'audio':
         xcorr = value['max_xcorr']
@@ -286,7 +352,7 @@ def add_features(feature, value, libsvm_row):
         idx = 5
         for k, v in value.items():
             if v == None:
-                v = '1000'
+                v = '10000'
 
             if float(v) == 0:
                 v = '0.000001'
@@ -295,10 +361,88 @@ def add_features(feature, value, libsvm_row):
 
             idx += 1
     else:
-        print('add_features: unknown feature: %s, exiting...' % feature)
+        print('add_features: unknown feature "%s", exiting...' % feature)
         sys.exit(0)
 
     return libsvm_row
 
 
-generate_zip_set()
+def get_small_dataset():
+    print()
+
+
+def get_big_dataset():
+    print()
+
+
+if __name__ == '__main__':
+    # Check the number of input args
+    if len(sys.argv) == 4:
+        # Assign input args
+        ROOT_PATH = sys.argv[1]
+        RESULT_PATH = sys.argv[2]
+        scenario = sys.argv[3]
+
+    elif len(sys.argv) == 5:
+        # Assign input args
+        ROOT_PATH = sys.argv[1]
+        RESULT_PATH = sys.argv[2]
+        scenario = sys.argv[3]
+        NUM_WORKERS = sys.argv[4]
+
+        # Check if <num_workers> is an integer more than 2
+        try:
+            NUM_WORKERS = int(NUM_WORKERS)
+            if NUM_WORKERS < 2:
+                print('Error: <num_workers> must be a positive number > 1!')
+                sys.exit(0)
+        except ValueError:
+            print('Error: <num_workers> must be a positive number > 1!')
+            sys.exit(0)
+    else:
+        print('Usage: plot_results.py <root_path> <result_path> <scenario> (optional - <num_workers>)')
+        sys.exit(0)
+
+    # Get the number of cores on the system
+    num_cores = multiprocessing.cpu_count()
+
+    # Set the number of workers
+    if NUM_WORKERS == 0:
+        NUM_WORKERS = num_cores
+    elif NUM_WORKERS > num_cores:
+        NUM_WORKERS = num_cores
+
+    # Check if <root_path> is a valid path
+    if not os.path.exists(ROOT_PATH):
+        print('Error: Root path "%s" does not exist!' % ROOT_PATH)
+        sys.exit(0)
+
+    # Check if we have a slash at the end of the <root_path>
+    if ROOT_PATH[-1] != '/':
+        ROOT_PATH = ROOT_PATH + '/'
+
+    # Check if <result_path> is a valid path
+    if not os.path.exists(RESULT_PATH):
+        print('Error: Result path "%s" does not exist!' % RESULT_PATH)
+        sys.exit(0)
+
+    # Check if we have a slash at the end of the <result_path>
+    if RESULT_PATH[-1] != '/':
+        RESULT_PATH = RESULT_PATH + '/'
+
+    # Check if <scenario> is a string 'car' or 'office'
+    if scenario == 'car':
+        NUM_SENSORS = 11
+        SENSORS.append(SENSORS_CAR1)
+        SENSORS.append(SENSORS_CAR2)
+    elif scenario == 'office':
+        NUM_SENSORS = 23
+        SENSORS.append(SENSORS_OFFICE1)
+        SENSORS.append(SENSORS_OFFICE2)
+        SENSORS.append(SENSORS_OFFICE3)
+    else:
+        print('Error: <scenario> can only be "car" or "office"!')
+        sys.exit(0)
+
+    # generate_zip_set()
+    from_arff()

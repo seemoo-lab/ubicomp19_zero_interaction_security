@@ -401,12 +401,10 @@ def aggregate_tfd():
 if __name__ == '__main__':
     # Check the number of input args
     if len(sys.argv) == 2:
-
         # Assign input args
         ROOT_PATH = sys.argv[1]
 
     elif len(sys.argv) == 3:
-
         # Assign input args
         ROOT_PATH = sys.argv[1]
         NUM_WORKERS = sys.argv[2]
@@ -435,7 +433,7 @@ if __name__ == '__main__':
 
     # Check if <root_path> is a valid path
     if not os.path.exists(ROOT_PATH):
-        print('Error: Path "%s" does not exist!' % ROOT_PATH)
+        print('Error: Root path "%s" does not exist!' % ROOT_PATH)
         exit(0)
 
     # Check if we have a slash at the end of the <root_path>

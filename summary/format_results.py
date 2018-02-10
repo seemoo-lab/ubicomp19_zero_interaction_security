@@ -8,6 +8,7 @@ import multiprocessing
 from multiprocessing import Pool
 from functools import partial
 import time
+import itertools
 
 # Number of sensors to compare each sensor with
 NUM_SENSORS = 0
@@ -27,10 +28,6 @@ SENSORS = []
 # Root path - points to the result folder of structure:
 # /Sensor-xx/audio/<audio_features>/<time_intervals>
 ROOT_PATH = ''
-
-# Root path - points to the power folder of structure:
-# /Sensor-xx/audio/soundProofXcorr/<time_intervals>/Power.json
-POWER_PATH = ''
 
 # Number of workers to be used in parallel
 NUM_WORKERS = 0
@@ -351,16 +348,23 @@ def wrap_up_results(path, feature):
         # Get the target sensor
         target_sensor = metadata['sensor']
 
-        # Todo: adjust the check using SENSORS list
-        # Get co-located and non-colocated lists of sensor numbers
-        if target_sensor in SENSORS_CAR1:
-            co_located_list = list(SENSORS_CAR1)
-            co_located_list.remove(target_sensor)
-            non_colocated_list = list(SENSORS_CAR2)
-        else:
-            co_located_list = list(SENSORS_CAR2)
-            co_located_list.remove(target_sensor)
-            non_colocated_list = list(SENSORS_CAR1)
+        # Make a copy of list of sensors' lists
+        sensors_lists = list(SENSORS)
+
+        # Iterate over list of sensors' lists
+        for sensor_list in SENSORS:
+            # Check if target sensor is in sensor_list
+            if target_sensor in sensor_list:
+                # Construct co-located list excluding target sensor
+                co_located_list = list(sensor_list)
+                co_located_list.remove(target_sensor)
+
+                # Construct non-colocated list
+                sensors_lists.remove(sensor_list)
+                non_colocated_list = list(itertools.chain.from_iterable(sensors_lists))
+
+                # Get out from the loop
+                break
 
         # Lists of co-located and non-colocated values
         co_located_val = []
@@ -657,13 +661,11 @@ def format_power():
 if __name__ == '__main__':
     # Check the number of input args
     if len(sys.argv) == 3:
-
         # Assign input args
         ROOT_PATH = sys.argv[1]
         scenario = sys.argv[2]
 
     elif len(sys.argv) == 4:
-
         # Assign input args
         ROOT_PATH = sys.argv[1]
         scenario = sys.argv[2]
@@ -693,7 +695,7 @@ if __name__ == '__main__':
 
     # Check if <root_path> is a valid path
     if not os.path.exists(ROOT_PATH):
-        print('Error: Path "%s" does not exist!' % ROOT_PATH)
+        print('Error: Root path "%s" does not exist!' % ROOT_PATH)
         sys.exit(0)
 
     # Check if we have a slash at the end of the <root_path>
