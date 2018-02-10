@@ -94,7 +94,7 @@ for i=1:nSubfolders
         
         % Get JSON files in each resLogFolder
         logPath = strcat(nfpPath, '/', resFolderArr{j});
-        resFolder = dir(strcat(logPath, '/', 'sensor-*.json'));
+        resFolder = dir(strcat(logPath, '/', 'Sensor-*.json'));
         
         % Number of json files
         nJsonFiles = length(resFolder);
