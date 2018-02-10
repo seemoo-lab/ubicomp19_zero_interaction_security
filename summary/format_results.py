@@ -337,7 +337,7 @@ def wrap_up_results(path, feature):
     # Iterate over matched files
     for json_file in glob(path, recursive=True):
 
-        print('parsed files: %s' % json_file)
+        print('parsed file: %s' % json_file)
 
         co_located_list = []
         non_colocated_list = []
@@ -679,10 +679,10 @@ if __name__ == '__main__':
             print('Error: <num_workers> must be a positive number > 1!')
             sys.exit(0)
     else:
-        print('Usage: aggregate_results.py <root_path> <scenario> (optional - <num_workers>)')
+        print('Usage: format_results.py <root_path> <scenario> (optional - <num_workers>)')
         sys.exit(0)
 
-    # Get number of cores on the system
+    # Get the number of cores on the system
     num_cores = multiprocessing.cpu_count()
 
     # Set the number of workers

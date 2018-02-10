@@ -4,6 +4,7 @@ import re
 import numpy as np
 import sys
 from multiprocessing import Pool
+import multiprocessing
 import time
 from functools import partial
 import os
@@ -17,6 +18,7 @@ SUMMARY_FILE = 'Summary.json'
 # Root path - points to the result folder of structure:
 # /Sensor-xx/audio/<audio_features>/<time_intervals>
 ROOT_PATH = ''
+
 
 def parse_folders(path, feature):
     # Local vars
@@ -304,7 +306,7 @@ def aggregate_afp():
     # Path to result files
     afp_path = ROOT_PATH + 'Sensor-*/audio/' + feature + '/*/Sensor-*.json'
 
-    # Get the list of JSON files for each timeIntreval folder, e.g. 5sec, 1min, etc.
+    # Get the list of JSON files for each timeInterval folder, e.g. 5sec, 1min, etc.
     folder_list = parse_folders(afp_path, feature)
 
     # Initiate a pool of workers
@@ -329,7 +331,7 @@ def aggregate_nfp():
     # Path to result files
     nfp_path = ROOT_PATH + 'Sensor-*/audio/' + feature + '/*/Sensor-*.json'
 
-    # Get the list of JSON files for each timeIntreval folder, e.g. 5sec, 1min, etc.
+    # Get the list of JSON files for each timeInterval folder, e.g. 5sec, 1min, etc.
     folder_list = parse_folders(nfp_path, feature)
 
     # Initiate a pool of workers
@@ -354,7 +356,7 @@ def aggregate_spf():
     # Path to result files
     spf_path = ROOT_PATH + 'Sensor-*/audio/' + feature + '/*/Sensor-*.json'
 
-    # Get the list of JSON files for each timeIntreval folder, e.g. 5sec, 1min, etc.
+    # Get the list of JSON files for each timeInterval folder, e.g. 5sec, 1min, etc.
     folder_list = parse_folders(spf_path, feature)
 
     # Initiate a pool of workers
@@ -379,7 +381,7 @@ def aggregate_tfd():
     # Path to result files
     tfd_path = ROOT_PATH + 'Sensor-*/audio/' + feature + '/*/Sensor-*.json'
 
-    # Get the list of JSON files for each timeIntreval folder, e.g. 5sec, 1min, etc.
+    # Get the list of JSON files for each timeInterval folder, e.g. 5sec, 1min, etc.
     folder_list = parse_folders(tfd_path, feature)
 
     # Initiate a pool of workers
@@ -395,52 +397,72 @@ def aggregate_tfd():
     pool.close()
     pool.join()
 
+
 if __name__ == '__main__':
     # Check the number of input args
-    if len(sys.argv) == 3:
+    if len(sys.argv) == 2:
+
+        # Assign input args
+        ROOT_PATH = sys.argv[1]
+
+    elif len(sys.argv) == 3:
 
         # Assign input args
         ROOT_PATH = sys.argv[1]
         NUM_WORKERS = sys.argv[2]
 
-        # Check if the first arg is a valid path
-        if not os.path.exists(ROOT_PATH):
-            print('<root_path>: %s does not exist!' % ROOT_PATH)
-            exit(0)
-
-        # Check if the second arg is an integer more than 2
+        # Check if <num_workers> is an integer more than 2
         try:
             NUM_WORKERS = int(NUM_WORKERS)
             if NUM_WORKERS < 2:
-                print('<num_workers> must be a positive number > 1!')
+                print('Error: <num_workers> must be a positive number > 1!')
                 sys.exit(0)
         except ValueError:
-            print('<num_workers> must be a positive number > 1!')
+            print('Error: <num_workers> must be a positive number > 1!')
             sys.exit(0)
-        '''
-        # Aggregate results
-        start_time = time.time()
-        print('Aggregating AFP...')
-        aggregate_afp()
-        print("--- %s seconds ---" % (time.time() - start_time))
-
-        start_time = time.time()
-        print('Aggregating NFP...')
-        aggregate_nfp()
-        print("--- %s seconds ---" % (time.time() - start_time))
-
-        start_time = time.time()
-        print('Aggregating SPF...')
-        aggregate_spf()
-        print("--- %s seconds ---" % (time.time() - start_time))
-
-        start_time = time.time()
-        print('Aggregating TFD...')
-        aggregate_tfd()
-        print("--- %s seconds ---" % (time.time() - start_time))
-        '''
     else:
-        print('Usage: aggregate_results.py <root_path> <num_workers>')
+        print('Usage: aggregate_results.py <root_path> (optional - <num_workers>)')
         sys.exit(0)
+
+    # Get the number of cores on the system
+    num_cores = multiprocessing.cpu_count()
+
+    # Set the number of workers
+    if NUM_WORKERS == 0:
+        NUM_WORKERS = num_cores
+    elif NUM_WORKERS > num_cores:
+        NUM_WORKERS = num_cores
+
+    # Check if <root_path> is a valid path
+    if not os.path.exists(ROOT_PATH):
+        print('Error: Path "%s" does not exist!' % ROOT_PATH)
+        exit(0)
+
+    # Check if we have a slash at the end of the <root_path>
+    if ROOT_PATH[-1] != '/':
+        ROOT_PATH = ROOT_PATH + '/'
+
+    '''
+    # Aggregate results
+    start_time = time.time()
+    print('Aggregating AFP...')
+    aggregate_afp()
+    print("--- %s seconds ---" % (time.time() - start_time))
+
+    start_time = time.time()
+    print('Aggregating NFP...')
+    aggregate_nfp()
+    print("--- %s seconds ---" % (time.time() - start_time))
+
+    start_time = time.time()
+    print('Aggregating SPF...')
+    aggregate_spf()
+    print("--- %s seconds ---" % (time.time() - start_time))
+
+    start_time = time.time()
+    print('Aggregating TFD...')
+    aggregate_tfd()
+    print("--- %s seconds ---" % (time.time() - start_time))
+    '''
 
 
