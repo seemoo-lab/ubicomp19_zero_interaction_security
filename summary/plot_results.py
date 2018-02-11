@@ -27,11 +27,61 @@ SENSORS = []
 # /Sensor-xx/audio/<audio_features>/<time_intervals>
 ROOT_PATH = ''
 
+# Result path - path to a folder to store resulting data sets
+RESULT_PATH = ''
+
 # Number of workers to be used in parallel
 NUM_WORKERS = 0
 
-# ToDo: This param has to be decided on or automated in some way
+# ToDo: this param has to be decided on or automated in some way
 TIME_DELTA = 5
+
+# ToDo: move parse_folders into some helper.py (common for aggregate, format and plot)
+def parse_folders(path, feature):
+    # Local vars
+    cur_folder = ''
+    file_list = []
+    folder_list = []
+
+    # Iterate over matched files
+    for json_file in glob(path, recursive=True):
+        # Get the current folder, e.g. 10sec, 1min, etc.
+        # (take different slashes into account: / or \)
+        regex = re.escape(feature) + r'(?:/|\\)(.*)(?:/|\\)Sensor-'
+        match = re.search(regex, json_file)
+
+        # If there is no match - exit
+        if not match:
+            print('parse_folders: no match for the folder name, exiting...')
+            sys.exit(0)
+
+        # Check if the folder has changed - used for logging
+        if len(cur_folder) > 0:
+            if cur_folder != match.group(1):
+
+                # Update current folder
+                cur_folder = match.group(1)
+
+                # Save the current file list to folder list
+                folder_list.append(file_list)
+
+                # Null file list
+                file_list = []
+
+                # Add first new element to file list
+                file_list.append(json_file)
+
+            else:
+                file_list.append(json_file)
+        else:
+            cur_folder = match.group(1)
+            file_list.append(json_file)
+
+    # Take care of the last element
+    if file_list:
+        folder_list.append(file_list)
+
+    return folder_list
 
 def from_arff():
     filename = 'C:/Users/mfomichev/Desktop/shrestha_full.txt'
@@ -94,220 +144,230 @@ def from_arff():
         f.writelines(libsvm_list)
 
 
-def generate_zip_set():
+# ToDo: look into the older code (generate_zip_set()) to find max squre rank in the office scenario
+def process_dataset(json_file, dataset='', feature='', time_interval='', root_path='', sensors=[]):
 
-    ROOT_PATH = 'D:/data/car/'
+    # Get target sensor number - Sensor-xx/audio/<feature>/<time_interval>
+    # or Sensor-xx/temp/temp_hum_press_shrestha/
+    if dataset == 'small':
+        match = re.search(r'Sensor-(.*)(?:/|\\)audio(?:/|\\)', json_file)
+    elif dataset == 'big':
+        match = re.search(r'Sensor-(.*)(?:/|\\)temp(?:/|\\)', json_file)
+    else:
+        print('process_dataset: uknown dataset type = %s, exiting...', dataset)
+        sys.exit(0)
 
-    TIME_INT = '10sec'
+    # If there is no match - exit
+    if not match:
+        print('process_dataset: no match for the folder number, exiting...')
+        sys.exit(0)
 
-    audio_path = ROOT_PATH + 'Sensor-*/audio/timeFreqDistance/' + TIME_INT + '/Sensor-*.json'
-    # ble_path = ROOT_PATH + 'Sensor-*/ble/ble_wifi_truong/chunk_len-10/Sensor-*.json'
-    # wifi_path = ROOT_PATH + 'Sensor-*/wifi/ble_wifi_truong/chunk_len-10/Sensor-*.json'
+    target_sensor = match.group(1)
+
+    # Get sensor number from all the sensor in the current folder, e.g. 01, 02, etc.
+    regex = re.escape(time_interval) + r'(?:/|\\)Sensor-(.*)\.json'
+    match = re.search(regex, json_file)
+
+    # If there is no match - exit
+    if not match:
+        print('process_dataset: no match for the sensor number, exiting...')
+        sys.exit(0)
+
+    sensor = match.group(1)
+
+    # Binary classification label (0 - non-colocated or 1 - co-located) for libsvm format
+    label = '0'
+
+    # Iterate over list of sensors' lists
+    for sensor_list in sensors:
+        # Check if both target sensor and sensor are in sensor_list
+        if target_sensor in sensor_list and sensor in sensor_list:
+            # Set label to 1, means co-located
+            label = '1'
+            # Get out from the loop
+            break
+
+    if dataset == 'small':
+        # ToDo: provide ble_wifi_truong as a param?
+        # Construct Wi-Fi and BLE paths
+        ble_path = root_path + 'Sensor-' + target_sensor + '/ble/ble_wifi_truong/' + time_interval + \
+                   '/Sensor-' + sensor + '.json'
+
+        wifi_path = root_path + 'Sensor-' + target_sensor + '/wifi/ble_wifi_truong/' + time_interval + \
+                    '/Sensor-' + sensor + '.json'
+
+        # Build the small data set
+        return build_small_dataset(json_file, ble_path, wifi_path, label, feature)
+
+    elif dataset == 'big':
+
+        hum_path = root_path + 'Sensor-' + target_sensor + '/hum/' + time_interval + \
+                   '/Sensor-' + sensor + '.json'
+
+        press_path = root_path + 'Sensor-' + target_sensor + '/press/' + time_interval + \
+                    '/Sensor-' + sensor + '.json'
+        
+        return build_big_dataset(json_file, hum_path, press_path, label)
+    else:
+        print('process_dataset: uknown dataset type = %s, exiting...', dataset)
+        sys.exit(0)
+
+
+def build_small_dataset(json_file, ble_path, wifi_path, label, feature):
 
     # List to store the results
     libsvm_list = []
 
-    # List to store max values of 'sum_squared_ranks' for each sensor
-    # max_rank_list = []
+    # Read audio JSON
+    with open(json_file, 'r') as f:
+        audio_json = loads(f.read())
+        audio_res = audio_json['results']
 
-    for json_file in glob(audio_path, recursive=True):
+    # Read ble JSON
+    with open(ble_path, 'r') as f:
+        ble_json = loads(f.read())
+        ble_res = ble_json['results']
 
-        print(json_file)
+    # Read wifi JSON
+    with open(wifi_path, 'r') as f:
+        wifi_json = loads(f.read())
+        wifi_res = wifi_json['results']
 
-        # Get target folder number, e.g. 01, 02, etc.
-        match = re.search(r'Sensor-(.*)(?:/|\\)audio(?:/|\\)', json_file)
+    # Get a timestamp of audio (started later)
+    first_audio_ts = date_to_sec(next(iter(audio_res)))
 
-        # If there is no match - exit
-        if not match:
-            print('generate_zip_set: no match for the folder number, exiting...')
-            sys.exit(0)
+    # Copies of ble and wifi dict to be able to remove elements in for loop
+    ble_dict = dict(ble_res)
+    wifi_dict = dict(wifi_res)
 
-        target_folder = match.group(1)
-
-        # Get target sensor number, e.g. 01, 02, etc.
-        regex = re.escape(TIME_INT) + r'(?:/|\\)Sensor-(.*)\.json'
-        match = re.search(regex, json_file)
-
-        # If there is no match - exit
-        if not match:
-            print('generate_zip_set: no match for the sensor number, exiting...')
-            sys.exit(0)
-
-        target_sensor = match.group(1)
-
-        # Construct Wi-Fi and BLE paths
-        ble_path = ROOT_PATH + 'Sensor-' + target_folder + '/ble/ble_wifi_truong/chunk_len-10/Sensor-' + \
-            target_sensor + '.json'
-
-        wifi_path = ROOT_PATH + 'Sensor-' + target_folder + '/wifi/ble_wifi_truong/chunk_len-10/Sensor-' + \
-            target_sensor + '.json'
-
-        # Read audio JSON
-        with open(json_file, 'r') as f:
-            audio_json = loads(f.read())
-            audio_res = audio_json['results']
-
-        # Read ble JSON
-        with open(ble_path, 'r') as f:
-            ble_json = loads(f.read())
-            ble_res = ble_json['results']
-
-        # Read wifi JSON
-        with open(wifi_path, 'r') as f:
-            wifi_json = loads(f.read())
-            wifi_res = wifi_json['results']
-
-        # Get a timestamp of audio (started later)
-        first_audio_ts = date_to_sec(next(iter(audio_res)))
-        # first_ts_audio = date_to_sec('2017-11-23 15:21:10')
-        '''
-        # Get a timestamp of wifi (started on time)
-        first_wifi_ts = date_to_sec(next(iter(wifi_res)))
-
-        # Get a delta time to search for adjacent timestamps
-        time_delta = 60 - ((first_audio_ts-first_wifi_ts) % 60)
-        print('time_delta', time_delta)
-        '''
-
-        # Copies of ble and wifi dict to be able to remove elements in for loop
-        ble_dict = dict(ble_res)
-        wifi_dict = dict(wifi_res)
-
-        '''
-        # Check max value for 'sum_squared_ranks'
-        rank_list = []
-        for k, v in wifi_res.items():
-            if v:
-                if not 'error' in v:
-                    if v['sum_squared_ranks'] != None:
-                        rank_list.append(v['sum_squared_ranks'])
-
-        rank_array = np.array(list(rank_list), dtype=float)
-        max_rank_list.append(np.amax(rank_array))
-        '''
-
-        # Binary classification label (0 or 1) for libsvm format
-        label = ''
-
-        '''
-        # Make a copy of list of sensors' lists
-        sensors_lists = list(SENSORS)
-
-        # Iterate over list of sensors' lists
-        for sensor_list in SENSORS:
-            # Check if target sensor is in sensor_list
-            if target_sensor in sensor_list:
-                # Construct co-located list excluding target sensor
-                co_located_list = list(sensor_list)
-                co_located_list.remove(target_sensor)
-
-                # Construct non-colocated list
-                sensors_lists.remove(sensor_list)
-                non_colocated_list = list(itertools.chain.from_iterable(sensors_lists))
-
-                # Get out from the loop
-                break
-        '''
-
-        # Todo: adjust for the office experiment (see format_results.py)
-        # Get the binary label value: 0 - non-colocated, 1 - co-located
-        if target_folder in SENSORS_CAR1 and target_sensor in SENSORS_CAR1:
-            label = '1'
-        elif target_folder in SENSORS_CAR2 and target_sensor in SENSORS_CAR2:
-            label = '1'
-        else:
-            label = '0'
-
-        print('label: ', label)
-
-        # Take care about wifi and ble samples before audio
-        for k, v in wifi_res.items():
-            # A row in a libsvm file
-            libsvm_row = ''
-            # Iterate until the proximity of the first audio ts
-            if date_to_sec(k) + TIME_DELTA < first_audio_ts:
-                # Check if ble_dict has a key 'k'
-                if k in ble_dict:
-                    # Check if the value ble_dict[k] is not empty
-                    if ble_dict[k]:
-                        # Check if the value ble_dict[k] does not contain field 'error'
-                        if not 'error' in ble_dict[k]:
-                            # Add ble features to libsvm_row
-                            libsvm_row = add_features('ble', ble_dict[k], libsvm_row)
-                        # Remove element with key 'k' from  the ble_dict
-                        #  used to sync with the audio data later on
-                        del ble_dict[k]
-                # Check if the value 'v' is not empty
-                if v:
-                    # Check if the value 'v' does not contain field 'error'
-                    if not 'error' in v:
-                        # Add wifi features to libsvm_row
-                        libsvm_row = add_features('wifi', v, libsvm_row)
-                    # Remove element with key 'k' from  the wifi_dict
-                    #  used to sync with the audio data later on
-                    del wifi_dict[k]
-                # Add libsvm_row to the list
-                if libsvm_row:
-                    libsvm_row = label + ' ' + libsvm_row
-                    libsvm_list.append(libsvm_row)
-            else:
-                break
-
-        wifi_res = wifi_dict
-        ble_res = ble_dict
-
-        # Todo: still decide to take 20 sec or 30 sec jump
-        # Audio, wifi and ble samples
-        for k, v in audio_res.items():
-            # A row in a libsvm file
-            libsvm_row = ''
-
-            # Get the timestamp of audio chunk
-            audio_ts = date_to_sec(k)
-
-            # Get the check timestamp (yyyy-mm-dd HH:MM:SS) used for wifi and ble
-            check_ts = datetime.datetime.fromtimestamp(audio_ts-TIME_DELTA).strftime('%Y-%m-%d %H:%M:%S')
-
-            # print(k)
-            # print(check_ts)
-
-            # Add audio features
-            libsvm_row = add_features('audio', v, libsvm_row)
-
-
-            # Check ble features
-            if check_ts in ble_res:
-                # Check if the value ble_res[check_ts] is not empty
-                if ble_res[check_ts]:
-                    # Check if the value ble_res[check_ts] does not contain field 'error'
-                    if not 'error' in ble_res[check_ts]:
+    # Take care of wifi and ble samples before audio
+    for k, v in wifi_res.items():
+        # A row in a libsvm file
+        libsvm_row = ''
+        # Iterate until the proximity of the first audio ts
+        # Adjust here to '< first_audio_ts'(car - from 30 to 20)
+        if date_to_sec(k) + TIME_DELTA <= first_audio_ts:
+            # Check if ble_dict has a key 'k'
+            if k in ble_dict:
+                # Check if the value ble_dict[k] is not empty
+                if ble_dict[k]:
+                    # Check if the value ble_dict[k] does not contain field 'error'
+                    if not 'error' in ble_dict[k]:
                         # Add ble features to libsvm_row
-                        libsvm_row = add_features('ble', ble_res[check_ts], libsvm_row)
-
-            # Check wifi features
-            if check_ts in wifi_res:
-                # Check if the value wifi_res[check_ts] is not empty
-                if wifi_res[check_ts]:
-                    # Check if the value wifi_res[check_ts] does not contain field 'error'
-                    if not 'error' in wifi_res[check_ts]:
-                        # Add wifi features to libsvm_row
-                        libsvm_row = add_features('wifi', wifi_res[check_ts], libsvm_row)
-                        
-
-            # print(libsvm_row)
-
+                        libsvm_row = add_features('ble', ble_dict[k], libsvm_row)
+                    # Remove element with key 'k' from  the ble_dict
+                    #  used to sync with the audio data later on
+                    del ble_dict[k]
+            # Check if the value 'v' is not empty
+            if v:
+                # Check if the value 'v' does not contain field 'error'
+                if not 'error' in v:
+                    # Add wifi features to libsvm_row
+                    libsvm_row = add_features('wifi', v, libsvm_row)
+                # Remove element with key 'k' from  the wifi_dict
+                #  used to sync with the audio data later on
+                del wifi_dict[k]
             # Add libsvm_row to the list
             if libsvm_row:
-                libsvm_row = label + ' ' + libsvm_row
+                libsvm_row = label + libsvm_row
                 libsvm_list.append(libsvm_row)
+        else:
+            break
 
-    filename = 'C:/Users/mfomichev/Desktop/hien_libsvm.txt'
+    wifi_res = wifi_dict
+    ble_res = ble_dict
 
-    print('Saving a file...')
-    # Open a file for writing
-    with open(filename, 'w') as f:
-        libsvm_list = map(lambda line: line + '\n', libsvm_list)
-        f.writelines(libsvm_list)
+    # Todo: pay attention to TIME_DELTA (should be adjusted for the office scenario)
+    # Audio, wifi and ble samples
+    for k, v in audio_res.items():
+        # A row in a libsvm file
+        libsvm_row = ''
+
+        # Get the timestamp of audio chunk
+        audio_ts = date_to_sec(k)
+
+        # Get the check timestamp (yyyy-mm-dd HH:MM:SS) used for wifi and ble
+        # Adjust here to '- TIME_DELTA' (car - from 30 to 20)
+        check_ts = datetime.datetime.fromtimestamp(audio_ts + TIME_DELTA).strftime('%Y-%m-%d %H:%M:%S')
+
+        # ToDo: add support for adding more audio features
+        # Add audio features
+        libsvm_row = add_features(feature, v, libsvm_row)
+
+        # Check ble features
+        if check_ts in ble_res:
+            # Check if the value ble_res[check_ts] is not empty
+            if ble_res[check_ts]:
+                # Check if the value ble_res[check_ts] does not contain field 'error'
+                if not 'error' in ble_res[check_ts]:
+                    # Add ble features to libsvm_row
+                    libsvm_row = add_features('ble', ble_res[check_ts], libsvm_row)
+
+        # Check wifi features
+        if check_ts in wifi_res:
+            # Check if the value wifi_res[check_ts] is not empty
+            if wifi_res[check_ts]:
+                # Check if the value wifi_res[check_ts] does not contain field 'error'
+                if not 'error' in wifi_res[check_ts]:
+                    # Add wifi features to libsvm_row
+                    libsvm_row = add_features('wifi', wifi_res[check_ts], libsvm_row)
+
+        # Add libsvm_row to the list
+        if libsvm_row:
+            libsvm_row = label + libsvm_row
+            libsvm_list.append(libsvm_row)
+
+    return libsvm_list
+
+
+def build_big_dataset(json_file, hum_path, press_path, label):
+
+    # List to store the results
+    libsvm_list = []
+
+    # Read temperature JSON
+    with open(json_file, 'r') as f:
+        temp_json = loads(f.read())
+        temp_res = list(temp_json['results'].values())
+
+    # Read humidity JSON
+    with open(hum_path, 'r') as f:
+        hum_json = loads(f.read())
+        hum_res = list(hum_json['results'].values())
+
+    # Read pressure JSON
+    with open(press_path, 'r') as f:
+        press_json = loads(f.read())
+        press_res = list(press_json['results'].values())
+
+    # Store lengths of the results in a list
+    len_list = [len(temp_res), len(hum_res), len(press_res)]
+
+    # ToDo: decide if we want to use min or max
+    # Get the min length to include all three features
+    min_len = min(len_list)
+
+    for idx, val in enumerate(temp_res):
+        # Exit condition
+        if idx == min_len:
+            break
+
+        # Handle zero values in the data
+        if float(val) == 0:
+            val = '0.000001'
+        if float(hum_res[idx]) == 0:
+            hum_res[idx] = '0.000001'
+        if float(press_res[idx]) == 0:
+            press_res[idx] = '0.000001'
+
+        # Construct libsvm_row
+        libsvm_row = label + ' ' + '1:' + str(val) + ' ' + '2:' + str(hum_res[idx]) \
+                     + ' ' + '3:' + str(press_res[idx])
+
+        # Add libsvm_row to the list
+        libsvm_list.append(libsvm_row)
+
+    return libsvm_list
 
 
 def date_to_sec(date_str):
@@ -331,7 +391,8 @@ def add_features(feature, value, libsvm_row):
     # max(sum_squared_ranks) found over all sensors x10, we arrived at 10000
     # car scenario: max(sum_squared_ranks) = 912.0 x 10 = 9120 (round to 10000)
 
-    if feature == 'audio':
+    # ToDo: add here more audio features, automatic indexing
+    if feature == 'timeFreqDistance':
         xcorr = value['max_xcorr']
         tfd = value['time_freq_dist']
         if float(xcorr) == 0:
@@ -367,12 +428,90 @@ def add_features(feature, value, libsvm_row):
     return libsvm_row
 
 
-def get_small_dataset():
-    print()
+def get_small_dataset(scenario):
+
+    # Audio feature
+    feature = 'timeFreqDistance'
+
+    # Time interval of the feature
+    time_interval = '10sec'
+
+    # Type of the dataset
+    dataset = 'small'
+
+    # Path to result data files
+    tfd_path = ROOT_PATH + 'Sensor-*/audio/' + feature + '/' + time_interval + '/Sensor-*.json'
+
+    # Get the list of JSON files for the specified interval folder
+    # we need to flatten the result from parse_folders, because
+    # we consider only a single time interval at time
+    file_list = list(itertools.chain.from_iterable(parse_folders(tfd_path, feature)))
+
+    # Initiate a pool of workers
+    pool = Pool(processes=NUM_WORKERS, maxtasksperchild=1)
+
+    # Use partial to pass static params: feature, ... sensors
+    func = partial(process_dataset, dataset=dataset, feature=feature, time_interval=time_interval, \
+                   root_path=ROOT_PATH, sensors=SENSORS)
+
+    # Let workers do the job
+    results = pool.map(func, file_list)
+
+    # Wait for processes to terminate
+    pool.close()
+    pool.join()
+
+    # Path of the resulting file
+    filename = RESULT_PATH + dataset + '_dataset' + '_' + scenario + '.txt'
+
+    # Save the results
+    with open(filename, 'w') as f:
+        for file in results:
+            file = map(lambda line: line + '\n', file)
+            f.writelines(file)
 
 
-def get_big_dataset():
-    print()
+def get_big_dataset(scenario):
+
+    # Physical feature
+    feature = 'temp'
+
+    # Time interval of the feature
+    time_interval = 'temp_hum_press_shrestha'
+
+    # Type of the dataset
+    dataset = 'big'
+
+    # Path to result data files
+    temp_path = ROOT_PATH + 'Sensor-*/' + feature + '/' + time_interval + '/Sensor-*.json'
+
+    # Get the list of JSON files for the specified interval folder
+    # we need to flatten the result from parse_folders, because
+    # we consider only a single time interval at time
+    file_list = list(itertools.chain.from_iterable(parse_folders(temp_path, feature)))
+
+    # Initiate a pool of workers
+    pool = Pool(processes=NUM_WORKERS, maxtasksperchild=1)
+
+    # Use partial to pass static params: feature, ... sensors
+    func = partial(process_dataset, dataset=dataset, feature=feature, time_interval=time_interval, \
+                   root_path=ROOT_PATH, sensors=SENSORS)
+
+    # Let workers do the job
+    results = pool.map(func, file_list)
+
+    # Wait for processes to terminate
+    pool.close()
+    pool.join()
+
+    # Path of the resulting file
+    filename = RESULT_PATH + dataset +'_dataset' + '_' + scenario + '.txt'
+
+    # Save the results
+    with open(filename, 'w') as f:
+        for file in results:
+            file = map(lambda line: line + '\n', file)
+            f.writelines(file)
 
 
 if __name__ == '__main__':
@@ -432,17 +571,23 @@ if __name__ == '__main__':
 
     # Check if <scenario> is a string 'car' or 'office'
     if scenario == 'car':
-        NUM_SENSORS = 11
         SENSORS.append(SENSORS_CAR1)
         SENSORS.append(SENSORS_CAR2)
+
+        start_time = time.time()
+        print('Building the small dataset using %d workers...' % NUM_WORKERS)
+        get_small_dataset(scenario)
+        print('--- %s seconds ---' % (time.time() - start_time))
+
+        start_time = time.time()
+        print('Building the big dataset using %d workers...' % NUM_WORKERS)
+        get_big_dataset(scenario)
+        print('--- %s seconds ---' % (time.time() - start_time))
+
     elif scenario == 'office':
-        NUM_SENSORS = 23
         SENSORS.append(SENSORS_OFFICE1)
         SENSORS.append(SENSORS_OFFICE2)
         SENSORS.append(SENSORS_OFFICE3)
     else:
         print('Error: <scenario> can only be "car" or "office"!')
         sys.exit(0)
-
-    # generate_zip_set()
-    from_arff()

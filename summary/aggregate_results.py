@@ -443,22 +443,22 @@ if __name__ == '__main__':
     '''
     # Aggregate results
     start_time = time.time()
-    print('Aggregating AFP...')
+    print('Aggregating AFP using %d workers...' % NUM_WORKERS)
     aggregate_afp()
     print("--- %s seconds ---" % (time.time() - start_time))
-
+    
     start_time = time.time()
-    print('Aggregating NFP...')
+    print('Aggregating NFP using %d workers...' % NUM_WORKERS')
     aggregate_nfp()
     print("--- %s seconds ---" % (time.time() - start_time))
 
     start_time = time.time()
-    print('Aggregating SPF...')
+    print('Aggregating SPF using %d workers...' % NUM_WORKERS')
     aggregate_spf()
     print("--- %s seconds ---" % (time.time() - start_time))
 
     start_time = time.time()
-    print('Aggregating TFD...')
+    print('Aggregating TFD using %d workers...' % NUM_WORKERS')
     aggregate_tfd()
     print("--- %s seconds ---" % (time.time() - start_time))
     '''
