@@ -286,7 +286,9 @@ def add_spf_power(json_file, power_file):
 
     # Open and read power JSON file
     with open(power_file, 'r') as f:
-        json_power = loads(f.read())
+    	# Read in JSON, replacing "-Inf" with "-Infinity"
+    	# Otherwise, the JSON import will fail.
+        json_power = loads(f.read().replace('-Inf', '-Infinity'))
         power_res = json_power['results']
         # Count the number of results
         res_power_len = len(power_res)
