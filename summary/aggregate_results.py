@@ -190,7 +190,7 @@ def process_afp(json_file):
         json = loads(f.read())
         results = json['results']
         # Store 'fingerprints_similarity_percent' fields in the list
-        for k, v in results.items():
+        for k, v in sorted(results.items()):
             afp_similarity_list.append(v['fingerprints_similarity_percent'])
 
     # Convert list to np array
@@ -215,7 +215,7 @@ def process_nfp(json_file):
         json = loads(f.read())
         results = json['results']
         # Store 'fingerprints_similarity_percent' fields in the list
-        for k, v in results.items():
+        for k, v in sorted(results.items()):
             nfp_similarity = v['fingerprints_similarity_percent']
 
     return nfp_similarity
@@ -234,7 +234,7 @@ def process_spf(json_file):
         results = json['results']
         res_len = len(results)
         # Store 'max_xcorr' fields in the list
-        for k, v in results.items():
+        for k, v in sorted(results.items()):
             # Take into account the power threshold
             if v['power1_db'] >= 40 and v['power2_db'] >= 40:
                 spf_xcorr_list.append(v['max_xcorr'])
@@ -265,7 +265,7 @@ def process_tfd(json_file):
         json = loads(f.read())
         results = json['results']
         # Store 'max_xcorr' and 'time_freq_dist' fields in the lists
-        for k, v in results.items():
+        for k, v in sorted(results.items()):
             tfd_xcorr_list.append(v['max_xcorr'])
             tfd_tfd_list.append(v['time_freq_dist'])
 

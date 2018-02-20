@@ -300,15 +300,15 @@ def add_spf_power(json_file, power_file):
     power_list = []
 
     # Store power values in the power list
-    for k, v in power_res.items():
+    for k, v in sorted(power_res.items()):
         power_list.append(v)
 
     # Index to iterate over the power_list
     idx = 0
 
     # Iterate over the data_res dictionary and add power values from power_list to data_res (sigh!)
-    for k, v in data_res.items():
-        for k1, v1 in power_list[idx].items():
+    for k, v in sorted(data_res.items()):
+        for k1, v1 in sorted(power_list[idx].items()):
             v[k1] = v1
         idx += 1
 
@@ -371,7 +371,7 @@ def wrap_up_results(path, feature):
         non_colocated_val = []
 
         # Accumulate co-located and non-colocated values
-        for k, v in results.items():
+        for k, v in sorted(results.items()):
             # Get the sensor number, e.g. 01, 02, etc.
             sensor_num = k.split('-')[1]
 

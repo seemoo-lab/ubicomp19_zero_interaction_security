@@ -10,7 +10,6 @@ import time
 import multiprocessing
 from multiprocessing import Pool
 from functools import partial
-# import collections
 
 # Sensor mapping: car experiment
 SENSORS_CAR1 = ['01', '02', '03', '04', '05', '06']
@@ -212,9 +211,9 @@ def process_dataset(json_file, dataset='', feature='', time_interval='', root_pa
         press_path = root_path + 'Sensor-' + target_sensor + '/press/' + time_interval + \
                     '/Sensor-' + sensor + '.json'
 
+        # Build the big data set
         build_big_dataset(json_file, hum_path, press_path, tmp_path, label)
 
-        # return build_big_dataset(json_file, hum_path, press_path, tmp_path, label)
     else:
         print('process_dataset: uknown dataset type = %s, exiting...', dataset)
         sys.exit(0)
@@ -360,29 +359,40 @@ def build_big_dataset(json_file, hum_path, press_path, tmp_path, label):
         for k, v in sorted(press_json['results'].items()):
             press_res.append(v)
 
-    # Store lengths of the results in a list
+    # Construct the list of result lengths
     len_list = [len(temp_res), len(hum_res), len(press_res)]
 
-    # ToDo: decide if we want to use min or max
-    # Get the min length to include all three features
-    min_len = min(len_list)
+    # ToDo: we can always change it to min and keep the code
+    # Find max len value
+    max_len = max(len_list)
 
-    for idx, val in enumerate(temp_res):
-        # Exit condition
-        if idx == min_len:
-            break
+    for idx in range(0, max_len):
+        # Declare feature strings
+        temp_feature = ''
+        hum_feature = ''
+        press_feature = ''
 
-        # Handle zero values in the data
-        if float(val) == 0:
-            val = '0.000001'
-        if float(hum_res[idx]) == 0:
-            hum_res[idx] = '0.000001'
-        if float(press_res[idx]) == 0:
-            press_res[idx] = '0.000001'
+        # Construct feature strings
+        if idx < len_list[0]:
+            if float(temp_res[idx]) == 0:
+                temp_feature = ' ' + '1:' + '0.000001'
+            else:
+                temp_feature = ' ' + '1:' + str(temp_res[idx])
+
+        if idx < len_list[1]:
+            if float(hum_res[idx]) == 0:
+                hum_feature = ' ' + '2:' + '0.000001'
+            else:
+                hum_feature = ' ' + '2:' + str(hum_res[idx])
+
+        if idx < len_list[2]:
+            if float(press_res[idx]) == 0:
+                press_feature = ' ' + '3:' + '0.000001'
+            else:
+                press_feature = ' ' + '3:' + str(press_res[idx])
 
         # Construct libsvm_row
-        libsvm_row = label + ' ' + '1:' + str(val) + ' ' + '2:' + str(hum_res[idx]) \
-                     + ' ' + '3:' + str(press_res[idx])
+        libsvm_row = label + temp_feature + hum_feature + press_feature
 
         # Add libsvm_row to the list
         libsvm_list.append(libsvm_row)
@@ -560,6 +570,19 @@ def get_big_dataset(scenario):
 
 if __name__ == '__main__':
 
+    '''
+    ROOT_PATH = 'D:/data/car/'
+    RESULT_PATH = 'C:/Users/mfomichev/Desktop/'
+    NUM_WORKERS = 1
+
+    SENSORS.append(SENSORS_CAR1)
+    SENSORS.append(SENSORS_CAR2)
+
+    scenario = 'car'
+
+    get_big_dataset(scenario)
+    '''
+
     # Check the number of input args
     if len(sys.argv) == 4:
         # Assign input args
@@ -634,10 +657,12 @@ if __name__ == '__main__':
         SENSORS.append(SENSORS_OFFICE2)
         SENSORS.append(SENSORS_OFFICE3)
 
+        '''
         start_time = time.time()
         print('Building the small dataset using %d workers...' % NUM_WORKERS)
         get_small_dataset(scenario)
         print('--- %s seconds ---' % (time.time() - start_time))
+        '''
 
         start_time = time.time()
         print('Building the big dataset using %d workers...' % NUM_WORKERS)
