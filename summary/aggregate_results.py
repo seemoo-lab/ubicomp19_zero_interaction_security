@@ -298,16 +298,17 @@ def process_tfd(json_file):
     return res_dict
 
 
+# ToDo: merge all aggregate functions into one with input feature param
 def aggregate_afp():
 
     # Audio feature
     feature = 'audioFingerprint'
 
     # Path to result files
-    afp_path = ROOT_PATH + 'Sensor-*/audio/' + feature + '/*/Sensor-*.json'
+    feature_path = ROOT_PATH + 'Sensor-*/audio/' + feature + '/*/Sensor-*.json'
 
     # Get the list of JSON files for each timeInterval folder, e.g. 5sec, 1min, etc.
-    folder_list = parse_folders(afp_path, feature)
+    folder_list = parse_folders(feature_path, feature)
 
     # Initiate a pool of workers
     pool = Pool(processes=NUM_WORKERS, maxtasksperchild=1)
@@ -329,10 +330,10 @@ def aggregate_nfp():
     feature = 'noiseFingerprint'
 
     # Path to result files
-    nfp_path = ROOT_PATH + 'Sensor-*/audio/' + feature + '/*/Sensor-*.json'
+    feature_path = ROOT_PATH + 'Sensor-*/audio/' + feature + '/*/Sensor-*.json'
 
     # Get the list of JSON files for each timeInterval folder, e.g. 5sec, 1min, etc.
-    folder_list = parse_folders(nfp_path, feature)
+    folder_list = parse_folders(feature_path, feature)
 
     # Initiate a pool of workers
     pool = Pool(processes=NUM_WORKERS, maxtasksperchild=1)
@@ -354,10 +355,10 @@ def aggregate_spf():
     feature = 'soundProofXcorr'
 
     # Path to result files
-    spf_path = ROOT_PATH + 'Sensor-*/audio/' + feature + '/*/Sensor-*.json'
+    feature_path = ROOT_PATH + 'Sensor-*/audio/' + feature + '/*/Sensor-*.json'
 
     # Get the list of JSON files for each timeInterval folder, e.g. 5sec, 1min, etc.
-    folder_list = parse_folders(spf_path, feature)
+    folder_list = parse_folders(feature_path, feature)
 
     # Initiate a pool of workers
     pool = Pool(processes=NUM_WORKERS, maxtasksperchild=1)
@@ -379,10 +380,10 @@ def aggregate_tfd():
     feature = 'timeFreqDistance'
 
     # Path to result files
-    tfd_path = ROOT_PATH + 'Sensor-*/audio/' + feature + '/*/Sensor-*.json'
+    feature_path = ROOT_PATH + 'Sensor-*/audio/' + feature + '/*/Sensor-*.json'
 
     # Get the list of JSON files for each timeInterval folder, e.g. 5sec, 1min, etc.
-    folder_list = parse_folders(tfd_path, feature)
+    folder_list = parse_folders(feature_path, feature)
 
     # Initiate a pool of workers
     pool = Pool(processes=NUM_WORKERS, maxtasksperchild=1)

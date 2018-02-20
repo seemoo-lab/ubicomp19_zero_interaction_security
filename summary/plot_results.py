@@ -3,13 +3,14 @@ from glob import glob
 import re
 import sys
 import numpy as np
-import os
+import os, shutil
 import itertools
 import datetime
 import time
 import multiprocessing
 from multiprocessing import Pool
 from functools import partial
+# import collections
 
 # Sensor mapping: car experiment
 SENSORS_CAR1 = ['01', '02', '03', '04', '05', '06']
@@ -144,8 +145,9 @@ def from_arff():
         f.writelines(libsvm_list)
 
 
-# ToDo: look into the older code (generate_zip_set()) to find max squre rank in the office scenario
-def process_dataset(json_file, dataset='', feature='', time_interval='', root_path='', sensors=[]):
+# ToDo: look into the older code (generate_zip_set()) to find max square rank in the office scenario
+def process_dataset(json_file, dataset='', feature='', time_interval='', root_path='', \
+                    tmp_path='', sensors=[]):
 
     # Get target sensor number - Sensor-xx/audio/<feature>/<time_interval>
     # or Sensor-xx/temp/temp_hum_press_shrestha/
@@ -187,6 +189,9 @@ def process_dataset(json_file, dataset='', feature='', time_interval='', root_pa
             # Get out from the loop
             break
 
+    # Temporary path to store intermediate results
+    tmp_path = tmp_path + target_sensor + '_' + sensor + '.txt'
+
     if dataset == 'small':
         # ToDo: provide ble_wifi_truong as a param?
         # Construct Wi-Fi and BLE paths
@@ -197,7 +202,7 @@ def process_dataset(json_file, dataset='', feature='', time_interval='', root_pa
                     '/Sensor-' + sensor + '.json'
 
         # Build the small data set
-        return build_small_dataset(json_file, ble_path, wifi_path, label, feature)
+        build_small_dataset(json_file, ble_path, wifi_path, tmp_path, label, feature)
 
     elif dataset == 'big':
 
@@ -206,14 +211,16 @@ def process_dataset(json_file, dataset='', feature='', time_interval='', root_pa
 
         press_path = root_path + 'Sensor-' + target_sensor + '/press/' + time_interval + \
                     '/Sensor-' + sensor + '.json'
-        
-        return build_big_dataset(json_file, hum_path, press_path, label)
+
+        build_big_dataset(json_file, hum_path, press_path, tmp_path, label)
+
+        # return build_big_dataset(json_file, hum_path, press_path, tmp_path, label)
     else:
         print('process_dataset: uknown dataset type = %s, exiting...', dataset)
         sys.exit(0)
 
 
-def build_small_dataset(json_file, ble_path, wifi_path, label, feature):
+def build_small_dataset(json_file, ble_path, wifi_path, tmp_path, label, feature):
 
     # List to store the results
     libsvm_list = []
@@ -234,14 +241,15 @@ def build_small_dataset(json_file, ble_path, wifi_path, label, feature):
         wifi_res = wifi_json['results']
 
     # Get a timestamp of audio (started later)
-    first_audio_ts = date_to_sec(next(iter(audio_res)))
+    # first_audio_ts = date_to_sec(next(iter(audio_res)))
+    first_audio_ts = date_to_sec(next(iter(sorted(audio_res))))
 
     # Copies of ble and wifi dict to be able to remove elements in for loop
     ble_dict = dict(ble_res)
     wifi_dict = dict(wifi_res)
 
     # Take care of wifi and ble samples before audio
-    for k, v in wifi_res.items():
+    for k, v in sorted(wifi_res.items()):
         # A row in a libsvm file
         libsvm_row = ''
         # Iterate until the proximity of the first audio ts
@@ -279,7 +287,7 @@ def build_small_dataset(json_file, ble_path, wifi_path, label, feature):
 
     # Todo: pay attention to TIME_DELTA (should be adjusted for the office scenario)
     # Audio, wifi and ble samples
-    for k, v in audio_res.items():
+    for k, v in sorted(audio_res.items()):
         # A row in a libsvm file
         libsvm_row = ''
 
@@ -317,28 +325,40 @@ def build_small_dataset(json_file, ble_path, wifi_path, label, feature):
             libsvm_row = label + libsvm_row
             libsvm_list.append(libsvm_row)
 
-    return libsvm_list
+    # Save the results
+    with open(tmp_path, 'w') as f:
+        libsvm_list = map(lambda line: line + '\n', libsvm_list)
+        f.writelines(libsvm_list)
 
 
-def build_big_dataset(json_file, hum_path, press_path, label):
+def build_big_dataset(json_file, hum_path, press_path, tmp_path, label):
 
     # List to store the results
     libsvm_list = []
 
     # Read temperature JSON
+    temp_res = []
     with open(json_file, 'r') as f:
         temp_json = loads(f.read())
-        temp_res = list(temp_json['results'].values())
+        # Sort dict by keys and get corresponding values
+        for k, v in sorted(temp_json['results'].items()):
+            temp_res.append(v)
 
     # Read humidity JSON
+    hum_res = []
     with open(hum_path, 'r') as f:
         hum_json = loads(f.read())
-        hum_res = list(hum_json['results'].values())
+        # Sort dict by keys and get corresponding values
+        for k, v in sorted(hum_json['results'].items()):
+            hum_res.append(v)
 
     # Read pressure JSON
+    press_res = []
     with open(press_path, 'r') as f:
         press_json = loads(f.read())
-        press_res = list(press_json['results'].values())
+        # Sort dict by keys and get corresponding values
+        for k, v in sorted(press_json['results'].items()):
+            press_res.append(v)
 
     # Store lengths of the results in a list
     len_list = [len(temp_res), len(hum_res), len(press_res)]
@@ -367,7 +387,10 @@ def build_big_dataset(json_file, hum_path, press_path, label):
         # Add libsvm_row to the list
         libsvm_list.append(libsvm_row)
 
-    return libsvm_list
+    # Save the results
+    with open(tmp_path, 'w') as f:
+        libsvm_list = map(lambda line: line + '\n', libsvm_list)
+        f.writelines(libsvm_list)
 
 
 def date_to_sec(date_str):
@@ -387,7 +410,7 @@ def add_features(feature, value, libsvm_row):
     # we selected the approximation for 0 (e.g. 'sum_squared_ranks' in JSON) as 0.000001
     # (libsvm format ignores features with zero values: 1:1 2:0 3:5 4:0 -> 1:1 3:5)
 
-    # we selected the approximation for 0 ('sum_squared_ranks' in JSON) as
+    # we selected the approximation for None ('sum_squared_ranks' in JSON) as
     # max(sum_squared_ranks) found over all sensors x10, we arrived at 10000
     # car scenario: max(sum_squared_ranks) = 912.0 x 10 = 9120 (round to 10000)
 
@@ -402,7 +425,7 @@ def add_features(feature, value, libsvm_row):
         libsvm_row = libsvm_row + ' ' + '1:' + str(xcorr) + ' ' + '2:' + str(tfd)
     elif feature == 'ble':
         idx = 3
-        for k, v in value.items():
+        for k, v in sorted(value.items()):
             if float(v) == 0:
                 libsvm_row = libsvm_row + ' ' + str(idx) + ':' + '0.000001'
             else:
@@ -411,7 +434,7 @@ def add_features(feature, value, libsvm_row):
             idx += 1
     elif feature == 'wifi':
         idx = 5
-        for k, v in value.items():
+        for k, v in sorted(value.items()):
             if v == None:
                 v = '10000'
 
@@ -428,6 +451,7 @@ def add_features(feature, value, libsvm_row):
     return libsvm_row
 
 
+# ToDo: merge get_dataset functions into one with input feature param
 def get_small_dataset(scenario):
 
     # Audio feature
@@ -439,23 +463,33 @@ def get_small_dataset(scenario):
     # Type of the dataset
     dataset = 'small'
 
+    # Path to a temporary folder to store intermediate results
+    tmp_path = RESULT_PATH + 'tmp_dataset/'
+
+    # Create a temporary folder to store intermediate results
+    if not os.path.exists(tmp_path):
+        os.makedirs(tmp_path)
+
     # Path to result data files
-    tfd_path = ROOT_PATH + 'Sensor-*/audio/' + feature + '/' + time_interval + '/Sensor-*.json'
+    feature_path = ROOT_PATH + 'Sensor-*/audio/' + feature + '/' + time_interval + '/Sensor-*.json'
 
     # Get the list of JSON files for the specified interval folder
     # we need to flatten the result from parse_folders, because
     # we consider only a single time interval at time
-    file_list = list(itertools.chain.from_iterable(parse_folders(tfd_path, feature)))
+    file_list = list(itertools.chain.from_iterable(parse_folders(feature_path, feature)))
+
+    # Sort the file_list
+    file_list.sort()
 
     # Initiate a pool of workers
     pool = Pool(processes=NUM_WORKERS, maxtasksperchild=1)
 
     # Use partial to pass static params: feature, ... sensors
     func = partial(process_dataset, dataset=dataset, feature=feature, time_interval=time_interval, \
-                   root_path=ROOT_PATH, sensors=SENSORS)
+                   root_path=ROOT_PATH, tmp_path=tmp_path, sensors=SENSORS)
 
     # Let workers do the job
-    results = pool.map(func, file_list)
+    pool.imap(func, file_list)
 
     # Wait for processes to terminate
     pool.close()
@@ -464,11 +498,11 @@ def get_small_dataset(scenario):
     # Path of the resulting file
     filename = RESULT_PATH + dataset + '_dataset' + '_' + scenario + '.txt'
 
-    # Save the results
-    with open(filename, 'w') as f:
-        for file in results:
-            file = map(lambda line: line + '\n', file)
-            f.writelines(file)
+    # Merge tmp files into a single resulting file
+    os.system('cat ' + tmp_path + '*.txt >> ' + filename)
+
+    # Delete tmp folder and its content
+    shutil.rmtree(tmp_path)
 
 
 def get_big_dataset(scenario):
@@ -482,39 +516,50 @@ def get_big_dataset(scenario):
     # Type of the dataset
     dataset = 'big'
 
+    # Path to a temporary folder to store intermediate results
+    tmp_path = RESULT_PATH + 'tmp_dataset/'
+
+    # Create a temporary folder to store intermediate results
+    if not os.path.exists(tmp_path):
+        os.makedirs(tmp_path)
+
     # Path to result data files
-    temp_path = ROOT_PATH + 'Sensor-*/' + feature + '/' + time_interval + '/Sensor-*.json'
+    feature_path = ROOT_PATH + 'Sensor-*/' + feature + '/' + time_interval + '/Sensor-*.json'
 
     # Get the list of JSON files for the specified interval folder
     # we need to flatten the result from parse_folders, because
     # we consider only a single time interval at time
-    file_list = list(itertools.chain.from_iterable(parse_folders(temp_path, feature)))
+    file_list = list(itertools.chain.from_iterable(parse_folders(feature_path, feature)))
+
+    # Sort the file_list
+    file_list.sort()
 
     # Initiate a pool of workers
     pool = Pool(processes=NUM_WORKERS, maxtasksperchild=1)
 
     # Use partial to pass static params: feature, ... sensors
     func = partial(process_dataset, dataset=dataset, feature=feature, time_interval=time_interval, \
-                   root_path=ROOT_PATH, sensors=SENSORS)
+                   root_path=ROOT_PATH, tmp_path=tmp_path, sensors=SENSORS)
 
     # Let workers do the job
-    results = pool.map(func, file_list)
+    pool.imap(func, file_list)
 
     # Wait for processes to terminate
     pool.close()
     pool.join()
 
     # Path of the resulting file
-    filename = RESULT_PATH + dataset +'_dataset' + '_' + scenario + '.txt'
+    filename = RESULT_PATH + dataset + '_dataset' + '_' + scenario + '.txt'
 
-    # Save the results
-    with open(filename, 'w') as f:
-        for file in results:
-            file = map(lambda line: line + '\n', file)
-            f.writelines(file)
+    # Merge tmp files into a single resulting file
+    os.system('cat ' + tmp_path + '*.txt >> ' + filename)
+
+    # Delete tmp folder and its content
+    shutil.rmtree(tmp_path)
 
 
 if __name__ == '__main__':
+
     # Check the number of input args
     if len(sys.argv) == 4:
         # Assign input args
@@ -588,6 +633,17 @@ if __name__ == '__main__':
         SENSORS.append(SENSORS_OFFICE1)
         SENSORS.append(SENSORS_OFFICE2)
         SENSORS.append(SENSORS_OFFICE3)
+
+        start_time = time.time()
+        print('Building the small dataset using %d workers...' % NUM_WORKERS)
+        get_small_dataset(scenario)
+        print('--- %s seconds ---' % (time.time() - start_time))
+
+        start_time = time.time()
+        print('Building the big dataset using %d workers...' % NUM_WORKERS)
+        get_big_dataset(scenario)
+        print('--- %s seconds ---' % (time.time() - start_time))
+
     else:
         print('Error: <scenario> can only be "car" or "office"!')
         sys.exit(0)

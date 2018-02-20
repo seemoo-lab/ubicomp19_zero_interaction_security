@@ -286,9 +286,7 @@ def add_spf_power(json_file, power_file):
 
     # Open and read power JSON file
     with open(power_file, 'r') as f:
-    	# Read in JSON, replacing "-Inf" with "-Infinity"
-    	# Otherwise, the JSON import will fail.
-        json_power = loads(f.read().replace('-Inf', '-Infinity'))
+        json_power = loads(f.read())
         power_res = json_power['results']
         # Count the number of results
         res_power_len = len(power_res)
@@ -567,21 +565,22 @@ def wrap_up_results(path, feature):
             f.write(dumps(json, indent=4, sort_keys=True))
 
 
+# ToDo: merge all format functions into one with input feature param
 def format_afp():
 
     # Audio feature
     feature = 'audioFingerprint'
 
     # Path to summary.json files
-    afp_summary = ROOT_PATH + 'Sensor-*/audio/' + feature + '/*/' + SUMMARY_FILE
-    last_afp_summary = ROOT_PATH + 'Sensor-' + str(NUM_SENSORS + 1) + '/audio/' + feature + '/*/'
+    feature_summary = ROOT_PATH + 'Sensor-*/audio/' + feature + '/*/' + SUMMARY_FILE
+    last_feature_summary = ROOT_PATH + 'Sensor-' + str(NUM_SENSORS + 1) + '/audio/' + feature + '/*/'
 
     # Format results
-    align_summary(afp_summary)
-    add_last_summary(last_afp_summary, feature)
+    align_summary(feature_summary)
+    add_last_summary(last_feature_summary, feature)
 
     # Wrap up results: overview of co-located vs. non-colocated
-    wrap_up_results(afp_summary, feature)
+    wrap_up_results(feature_summary, feature)
 
 
 def format_nfp():
@@ -590,15 +589,15 @@ def format_nfp():
     feature = 'noiseFingerprint'
 
     # Path to summary.json files
-    nfp_summary = ROOT_PATH + 'Sensor-*/audio/' + feature + '/*/' + SUMMARY_FILE
-    last_nfp_summary = ROOT_PATH + 'Sensor-' + str(NUM_SENSORS + 1) + '/audio/' + feature + '/*/'
+    feature_summary = ROOT_PATH + 'Sensor-*/audio/' + feature + '/*/' + SUMMARY_FILE
+    last_feature_summary = ROOT_PATH + 'Sensor-' + str(NUM_SENSORS + 1) + '/audio/' + feature + '/*/'
 
     # Format results
-    align_summary(nfp_summary)
-    add_last_summary(last_nfp_summary, feature)
+    align_summary(feature_summary)
+    add_last_summary(last_feature_summary, feature)
 
     # Wrap up results: overview of co-located vs. non-colocated
-    wrap_up_results(nfp_summary, feature)
+    wrap_up_results(feature_summary, feature)
 
 
 def format_spf():
@@ -607,15 +606,15 @@ def format_spf():
     feature = 'soundProofXcorr'
 
     # Path to summary.json files
-    spf_summary = ROOT_PATH + 'Sensor-*/audio/' + feature + '/*/' + SUMMARY_FILE
-    last_spf_summary = ROOT_PATH + 'Sensor-' + str(NUM_SENSORS + 1) + '/audio/' + feature + '/*/'
+    feature_summary = ROOT_PATH + 'Sensor-*/audio/' + feature + '/*/' + SUMMARY_FILE
+    last_feature_summary = ROOT_PATH + 'Sensor-' + str(NUM_SENSORS + 1) + '/audio/' + feature + '/*/'
 
     # Format results
-    align_summary(spf_summary)
-    add_last_summary(last_spf_summary, feature)
+    align_summary(feature_summary)
+    add_last_summary(last_feature_summary, feature)
 
     # Wrap up results: overview of co-located vs. non-colocated
-    wrap_up_results(spf_summary, feature)
+    wrap_up_results(feature_summary, feature)
 
 
 def format_tfd():
@@ -624,15 +623,15 @@ def format_tfd():
     feature = 'timeFreqDistance'
 
     # Path to summary.json files
-    tfd_summary = ROOT_PATH + 'Sensor-*/audio/' + feature + '/*/' + SUMMARY_FILE
-    last_tfd_summary = ROOT_PATH + 'Sensor-' + str(NUM_SENSORS + 1) + '/audio/' + feature + '/*/'
+    feature_summary = ROOT_PATH + 'Sensor-*/audio/' + feature + '/*/' + SUMMARY_FILE
+    last_feature_summary = ROOT_PATH + 'Sensor-' + str(NUM_SENSORS + 1) + '/audio/' + feature + '/*/'
 
     # Format results
-    align_summary(tfd_summary)
-    add_last_summary(last_tfd_summary, feature)
+    align_summary(feature_summary)
+    add_last_summary(last_feature_summary, feature)
 
     # Wrap up results: overview of co-located vs. non-colocated
-    wrap_up_results(tfd_summary, feature)
+    wrap_up_results(feature_summary, feature)
 
 
 def format_power():
@@ -641,10 +640,10 @@ def format_power():
     feature = 'soundProofXcorr'
 
     # Path to result data files
-    spf_path = ROOT_PATH + 'Sensor-*/audio/' + feature + '/*/Sensor-*.json'
+    feature_path = ROOT_PATH + 'Sensor-*/audio/' + feature + '/*/Sensor-*.json'
 
     # Get the list of JSON files for each timeInterval folder, e.g. 5sec, 1min, etc.
-    folder_list = parse_folders(spf_path, feature)
+    folder_list = parse_folders(feature_path, feature)
 
     # Initiate a pool of workers
     pool = Pool(processes=NUM_WORKERS, maxtasksperchild=1)
