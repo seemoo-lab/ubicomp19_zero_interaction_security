@@ -33,8 +33,8 @@ RESULT_PATH = ''
 # Number of workers to be used in parallel
 NUM_WORKERS = 0
 
-# ToDo: this param has to be decided on or automated in some way
-TIME_DELTA = 5
+# Time used to sync audio with wifi and ble features
+TIME_DELTA = 0
 
 # ToDo: move parse_folders into some helper.py (common for aggregate, format and plot)
 def parse_folders(path, feature):
@@ -83,70 +83,9 @@ def parse_folders(path, feature):
 
     return folder_list
 
-def from_arff():
-    filename = 'C:/Users/mfomichev/Desktop/shrestha_full.txt'
-
-    # Open and read the .txt file
-    with open(filename, 'r') as f:
-        lines = f.readlines()
-
-    # Remove new line characters at the end of the line
-    lines = [line.strip() for line in lines]
-
-    # List to store the results
-    libsvm_list = []
-
-    # Iterate over all lines
-    for line in lines:
-        # Get elements separated by a comma
-        feature_list = line.split(',')
-
-        # A row in a libsvm file
-        libsvm_row = ''
-
-        # print(line)
-
-        # Check the classification label
-        libsvm_row = feature_list[-1]
-        '''
-        if feature_list[-1] == '1':
-            libsvm_row = '1'
-        elif feature_list[-1] == '3':
-            libsvm_row = '0'
-        else:
-            print('Line: %s contains an invalid label!' % line)
-            sys.exit(0)
-        '''
-
-        # Remove the label element from the list
-        del feature_list[-1]
-
-        # Feature indexes in Libsvm format
-        feature_idx = 1
-
-        for feature in feature_list:
-            if feature != '?':
-                # libsvm_row = libsvm_row + ' ' + str(feature_idx) + ':' + feature
-                if float(feature) == 0:
-                    libsvm_row = libsvm_row + ' ' + str(feature_idx) + ':' + '0.000001'
-                else:
-                    libsvm_row = libsvm_row + ' ' + str(feature_idx) + ':' + feature
-            feature_idx += 1
-
-        # Add libsvm_row to libsvm_list
-        libsvm_list.append(libsvm_row)
-
-    filename = 'C:/Users/mfomichev/Desktop/shrestha_libsvm.txt'
-
-    # Open a file for writing
-    with open(filename, 'w') as f:
-        libsvm_list = map(lambda line: line + '\n', libsvm_list)
-        f.writelines(libsvm_list)
-
-
 # ToDo: look into the older code (generate_zip_set()) to find max square rank in the office scenario
 def process_dataset(json_file, dataset='', feature='', time_interval='', root_path='', \
-                    tmp_path='', sensors=[]):
+                    tmp_path='', time_delta='', sensors=[]):
 
     # Get target sensor number - Sensor-xx/audio/<feature>/<time_interval>
     # or Sensor-xx/temp/temp_hum_press_shrestha/
@@ -201,7 +140,7 @@ def process_dataset(json_file, dataset='', feature='', time_interval='', root_pa
                     '/Sensor-' + sensor + '.json'
 
         # Build the small data set
-        build_small_dataset(json_file, ble_path, wifi_path, tmp_path, label, feature)
+        build_small_dataset(json_file, ble_path, wifi_path, tmp_path, label, feature, time_delta)
 
     elif dataset == 'big':
 
@@ -219,7 +158,7 @@ def process_dataset(json_file, dataset='', feature='', time_interval='', root_pa
         sys.exit(0)
 
 
-def build_small_dataset(json_file, ble_path, wifi_path, tmp_path, label, feature):
+def build_small_dataset(json_file, ble_path, wifi_path, tmp_path, label, feature, time_delta):
 
     # List to store the results
     libsvm_list = []
@@ -253,7 +192,7 @@ def build_small_dataset(json_file, ble_path, wifi_path, tmp_path, label, feature
         libsvm_row = ''
         # Iterate until the proximity of the first audio ts
         # Adjust here to '< first_audio_ts'(car - from 30 to 20)
-        if date_to_sec(k) + TIME_DELTA <= first_audio_ts:
+        if date_to_sec(k) + time_delta <= first_audio_ts:
             # Check if ble_dict has a key 'k'
             if k in ble_dict:
                 # Check if the value ble_dict[k] is not empty
@@ -284,7 +223,6 @@ def build_small_dataset(json_file, ble_path, wifi_path, tmp_path, label, feature
     wifi_res = wifi_dict
     ble_res = ble_dict
 
-    # Todo: pay attention to TIME_DELTA (should be adjusted for the office scenario)
     # Audio, wifi and ble samples
     for k, v in sorted(audio_res.items()):
         # A row in a libsvm file
@@ -294,8 +232,8 @@ def build_small_dataset(json_file, ble_path, wifi_path, tmp_path, label, feature
         audio_ts = date_to_sec(k)
 
         # Get the check timestamp (yyyy-mm-dd HH:MM:SS) used for wifi and ble
-        # Adjust here to '- TIME_DELTA' (car - from 30 to 20)
-        check_ts = datetime.datetime.fromtimestamp(audio_ts + TIME_DELTA).strftime('%Y-%m-%d %H:%M:%S')
+        # Adjust here to 'audio_ts - time_delta' (car - from 30 to 20)
+        check_ts = datetime.datetime.fromtimestamp(audio_ts + time_delta).strftime('%Y-%m-%d %H:%M:%S')
 
         # ToDo: add support for adding more audio features
         # Add audio features
@@ -309,6 +247,8 @@ def build_small_dataset(json_file, ble_path, wifi_path, tmp_path, label, feature
                 if not 'error' in ble_res[check_ts]:
                     # Add ble features to libsvm_row
                     libsvm_row = add_features('ble', ble_res[check_ts], libsvm_row)
+            # Remove ble_res[check_ts]
+            del ble_res[check_ts]
 
         # Check wifi features
         if check_ts in wifi_res:
@@ -318,6 +258,45 @@ def build_small_dataset(json_file, ble_path, wifi_path, tmp_path, label, feature
                 if not 'error' in wifi_res[check_ts]:
                     # Add wifi features to libsvm_row
                     libsvm_row = add_features('wifi', wifi_res[check_ts], libsvm_row)
+            # Remove wifi_res[check_ts]
+            del wifi_res[check_ts]
+
+        # Add libsvm_row to the list
+        if libsvm_row:
+            libsvm_row = label + libsvm_row
+            libsvm_list.append(libsvm_row)
+
+    # Store the reminders of ble_ and wifi_res in a list
+    res_list = [ble_res, wifi_res]
+
+    # Get the key list of the longest dictionary
+    key_list = list(max(res_list, key=len).keys())
+
+    # Sort the key list
+    key_list.sort()
+
+    # Check wifi and ble values after audio stopped
+    for key in key_list:
+        # A row in a libsvm file
+        libsvm_row = ''
+
+        # Check ble features
+        if key in ble_res:
+            # Check if the value ble_res[key] is not empty
+            if ble_res[key]:
+                # Check if the value ble_res[key] does not contain field 'error'
+                if not 'error' in ble_res[key]:
+                    # Add ble features to libsvm_row
+                    libsvm_row = add_features('ble', ble_res[key], libsvm_row)
+
+        # Check wifi features
+        if key in wifi_res:
+            # Check if the value wifi_res[key] is not empty
+            if wifi_res[key]:
+                # Check if the value wifi_res[key] does not contain field 'error'
+                if not 'error' in wifi_res[key]:
+                    # Add wifi features to libsvm_row
+                    libsvm_row = add_features('wifi', wifi_res[key], libsvm_row)
 
         # Add libsvm_row to the list
         if libsvm_row:
@@ -480,8 +459,21 @@ def get_small_dataset(scenario):
     if not os.path.exists(tmp_path):
         os.makedirs(tmp_path)
 
+    # Addition to the path with *h folders (audio features in the office experiment)
+    chunk_path = ''
+
+    # Gz extension for audio features (office experiment)
+    gz_ext = ''
+
+    if scenario == 'office':
+        chunk_path = '*h/'
+        gz_ext = '.gz'
+
     # Path to result data files
-    feature_path = ROOT_PATH + 'Sensor-*/audio/' + feature + '/' + time_interval + '/Sensor-*.json'
+    feature_path = ROOT_PATH + chunk_path +  'Sensor-*/audio/' + feature + '/' + time_interval \
+                   + '/Sensor-*.json' + gz_ext
+
+    res = parse_folders(feature_path, feature)
 
     # Get the list of JSON files for the specified interval folder
     # we need to flatten the result from parse_folders, because
@@ -496,7 +488,7 @@ def get_small_dataset(scenario):
 
     # Use partial to pass static params: feature, ... sensors
     func = partial(process_dataset, dataset=dataset, feature=feature, time_interval=time_interval, \
-                   root_path=ROOT_PATH, tmp_path=tmp_path, sensors=SENSORS)
+                   root_path=ROOT_PATH, tmp_path=tmp_path, time_delta=TIME_DELTA, sensors=SENSORS)
 
     # Let workers do the job
     pool.imap(func, file_list)
@@ -549,7 +541,7 @@ def get_big_dataset(scenario):
 
     # Use partial to pass static params: feature, ... sensors
     func = partial(process_dataset, dataset=dataset, feature=feature, time_interval=time_interval, \
-                   root_path=ROOT_PATH, tmp_path=tmp_path, sensors=SENSORS)
+                   root_path=ROOT_PATH, tmp_path=tmp_path, time_delta=TIME_DELTA, sensors=SENSORS)
 
     # Let workers do the job
     pool.imap(func, file_list)
@@ -570,19 +562,20 @@ def get_big_dataset(scenario):
 
 if __name__ == '__main__':
 
-    '''
-    ROOT_PATH = 'D:/data/car/'
+    ROOT_PATH = 'D:/data/office/'
     RESULT_PATH = 'C:/Users/mfomichev/Desktop/'
     NUM_WORKERS = 1
+    TIME_DELTA = 6
 
-    SENSORS.append(SENSORS_CAR1)
-    SENSORS.append(SENSORS_CAR2)
+    SENSORS.append(SENSORS_OFFICE1)
+    SENSORS.append(SENSORS_OFFICE2)
+    SENSORS.append(SENSORS_OFFICE3)
 
-    scenario = 'car'
+    scenario = 'office'
 
-    get_big_dataset(scenario)
+    get_small_dataset(scenario)
+
     '''
-
     # Check the number of input args
     if len(sys.argv) == 4:
         # Assign input args
@@ -641,6 +634,8 @@ if __name__ == '__main__':
     if scenario == 'car':
         SENSORS.append(SENSORS_CAR1)
         SENSORS.append(SENSORS_CAR2)
+        
+        TIME_DELTA = 5
 
         start_time = time.time()
         print('Building the small dataset using %d workers...' % NUM_WORKERS)
@@ -656,13 +651,13 @@ if __name__ == '__main__':
         SENSORS.append(SENSORS_OFFICE1)
         SENSORS.append(SENSORS_OFFICE2)
         SENSORS.append(SENSORS_OFFICE3)
+        
+        TIME_DELTA = 6
 
-        '''
         start_time = time.time()
         print('Building the small dataset using %d workers...' % NUM_WORKERS)
         get_small_dataset(scenario)
         print('--- %s seconds ---' % (time.time() - start_time))
-        '''
 
         start_time = time.time()
         print('Building the big dataset using %d workers...' % NUM_WORKERS)
@@ -672,3 +667,4 @@ if __name__ == '__main__':
     else:
         print('Error: <scenario> can only be "car" or "office"!')
         sys.exit(0)
+    '''
