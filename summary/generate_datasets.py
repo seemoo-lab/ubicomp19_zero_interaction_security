@@ -11,6 +11,7 @@ import multiprocessing
 from multiprocessing import Pool
 from functools import partial
 import gzip
+import math
 
 # Sensor mapping: car experiment
 SENSORS_CAR1 = ['01', '02', '03', '04', '05', '06']
@@ -88,96 +89,101 @@ def parse_folders(path, feature):
 # ToDo: look into the older code (generate_zip_set()) to find max square rank in the office scenario
 def process_dataset(json_file, dataset='', feature='', time_interval='', root_path='', \
                     tmp_path='', time_delta='', sensors=[]):
-    # Check the instance of json_file
-    if isinstance(json_file, list):
-        check_json = json_file[0]
-    elif isinstance(json_file, str):
-        check_json = json_file
-    else:
-        print('process_dataset: json_file must be only of instance list or str, exiting...')
-        sys.exit(0)
+    try:
 
-    # Get target sensor number - Sensor-xx/audio/<feature>/<time_interval>
-    # or Sensor-xx/temp/temp_hum_press_shrestha/
-    if dataset == 'small':
-        match = re.search(r'Sensor-(.*)(?:/|\\)audio(?:/|\\)', check_json)
-    elif dataset == 'big':
-        match = re.search(r'Sensor-(.*)(?:/|\\)temp(?:/|\\)', check_json)
-    else:
-        print('process_dataset: uknown dataset type = %s, exiting...', dataset)
-        sys.exit(0)
-
-    # If there is no match - exit
-    if not match:
-        print('process_dataset: no match for the folder number, exiting...')
-        sys.exit(0)
-
-    target_sensor = match.group(1)
-
-    # Get sensor number from all the sensor in the current folder, e.g. 01, 02, etc.
-    regex = re.escape(time_interval) + r'(?:/|\\)Sensor-(.*)\.json'
-    match = re.search(regex, check_json)
-
-    # If there is no match - exit
-    if not match:
-        print('process_dataset: no match for the sensor number, exiting...')
-        sys.exit(0)
-
-    sensor = match.group(1)
-
-    # Binary classification label (0 - non-colocated or 1 - co-located) for libsvm format
-    label = '0'
-
-    # Iterate over list of sensors' lists
-    for sensor_list in sensors:
-        # Check if both target sensor and sensor are in sensor_list
-        if target_sensor in sensor_list and sensor in sensor_list:
-            # Set label to 1, means co-located
-            label = '1'
-            # Get out from the loop
-            break
-
-    # Temporary path to store intermediate results
-    tmp_path = tmp_path + target_sensor + '_' + sensor + '.txt'
-
-    if dataset == 'small':
-        # Construct Wi-Fi and BLE paths
-        ble_path = root_path + 'Sensor-' + target_sensor + '/ble/ble_wifi_truong/' + time_interval + \
-                   '/Sensor-' + sensor + '.json'
-
-        wifi_path = root_path + 'Sensor-' + target_sensor + '/wifi/ble_wifi_truong/' + time_interval + \
-                    '/Sensor-' + sensor + '.json'
-
-        # Handle the list case (do nothing for the string case)
+        # Check the instance of json_file
         if isinstance(json_file, list):
-            # Resulting dictionary
-            audio_res = {}
-            # Read all gzip files from json_file list and store 'results' fields in the dict
-            for file in json_file:
-                with gzip.open(file, 'rt') as f:
-                    audio_json = loads(f.read())
-                    audio_res.update(audio_json['results'])
+            check_json = json_file[0]
+        elif isinstance(json_file, str):
+            check_json = json_file
+        else:
+            print('process_dataset: json_file must be only of instance list or str, exiting...')
+            sys.exit(0)
 
-            # Update json_file
-            json_file = audio_res
+        # Get target sensor number - Sensor-xx/audio/<feature>/<time_interval>
+        # or Sensor-xx/temp/temp_hum_press_shrestha/
+        if dataset == 'small':
+            match = re.search(r'Sensor-(.*)(?:/|\\)audio(?:/|\\)', check_json)
+        elif dataset == 'big':
+            match = re.search(r'Sensor-(.*)(?:/|\\)temp(?:/|\\)', check_json)
+        else:
+            print('process_dataset: uknown dataset type = %s, exiting...', dataset)
+            sys.exit(0)
 
-        # Build the small data set
-        build_small_dataset(json_file, ble_path, wifi_path, tmp_path, label, feature, time_delta)
+        # If there is no match - exit
+        if not match:
+            print('process_dataset: no match for the folder number, exiting...')
+            sys.exit(0)
 
-    elif dataset == 'big':
-        # Construct hum and press paths
-        hum_path = root_path + 'Sensor-' + target_sensor + '/hum/' + time_interval + \
-                   '/Sensor-' + sensor + '.json'
+        target_sensor = match.group(1)
 
-        press_path = root_path + 'Sensor-' + target_sensor + '/press/' + time_interval + \
-                    '/Sensor-' + sensor + '.json'
+        # Get sensor number from all the sensor in the current folder, e.g. 01, 02, etc.
+        regex = re.escape(time_interval) + r'(?:/|\\)Sensor-(.*)\.json'
+        match = re.search(regex, check_json)
 
-        # Build the big data set
-        build_big_dataset(json_file, hum_path, press_path, tmp_path, label)
+        # If there is no match - exit
+        if not match:
+            print('process_dataset: no match for the sensor number, exiting...')
+            sys.exit(0)
 
-    else:
-        print('process_dataset: uknown dataset type = %s, exiting...', dataset)
-        sys.exit(0)
+        sensor = match.group(1)
+
+        # Binary classification label (0 - non-colocated or 1 - co-located) for libsvm format
+        label = '0'
+
+        # Iterate over list of sensors' lists
+        for sensor_list in sensors:
+            # Check if both target sensor and sensor are in sensor_list
+            if target_sensor in sensor_list and sensor in sensor_list:
+                # Set label to 1, means co-located
+                label = '1'
+                # Get out from the loop
+                break
+
+        # Temporary path to store intermediate results
+        tmp_path = tmp_path + target_sensor + '_' + sensor + '.txt'
+
+        if dataset == 'small':
+            # Construct Wi-Fi and BLE paths
+            ble_path = root_path + 'Sensor-' + target_sensor + '/ble/ble_wifi_truong/' + time_interval + \
+                       '/Sensor-' + sensor + '.json'
+
+            wifi_path = root_path + 'Sensor-' + target_sensor + '/wifi/ble_wifi_truong/' + time_interval + \
+                        '/Sensor-' + sensor + '.json'
+
+            # Handle the list case (do nothing for the string case)
+            if isinstance(json_file, list):
+                # Resulting dictionary
+                audio_res = {}
+                # Read all gzip files from json_file list and store 'results' fields in the dict
+                for file in json_file:
+                    with gzip.open(file, 'rt') as f:
+                        audio_json = loads(f.read())
+                        audio_res.update(audio_json['results'])
+
+                # Update json_file
+                json_file = audio_res
+
+            # Build the small data set
+            build_small_dataset(json_file, ble_path, wifi_path, tmp_path, label, feature, time_delta)
+
+        elif dataset == 'big':
+            # Construct hum and press paths
+            hum_path = root_path + 'Sensor-' + target_sensor + '/hum/' + time_interval + \
+                       '/Sensor-' + sensor + '.json'
+
+            press_path = root_path + 'Sensor-' + target_sensor + '/press/' + time_interval + \
+                        '/Sensor-' + sensor + '.json'
+
+            # Build the big data set
+            build_big_dataset(json_file, hum_path, press_path, tmp_path, label)
+
+        else:
+            print('process_dataset: uknown dataset type = %s, exiting...', dataset)
+            sys.exit(0)
+
+    except Exception as e:
+        print(e)
 
 
 def build_small_dataset(json_file, ble_path, wifi_path, tmp_path, label, feature, time_delta):
@@ -457,31 +463,63 @@ def add_features(feature, value, libsvm_row):
 
     # ToDo: add here more audio features, automatic indexing
     if feature == 'timeFreqDistance':
+        # Declare feature strings
+        xcorr_feature = ''
+        tfd_feature = ''
+
+        # Get xcorr value
         xcorr = value['max_xcorr']
+
+        # Check if xcorr values is not NaN (incident with Sensor-07)
+        if not math.isnan(float(xcorr)):
+            if float(xcorr) == 0:
+                xcorr_feature = ' ' + '1:' + '0.000001'
+            else:
+                xcorr_feature = ' ' + '1:' + str(xcorr)
+
+        # Get tfd value
         tfd = value['time_freq_dist']
-        if float(xcorr) == 0:
-            xcorr = '0.000001'
-        if float(tfd) == 0:
-            tfd = '0.000001'
-        libsvm_row = libsvm_row + ' ' + '1:' + str(xcorr) + ' ' + '2:' + str(tfd)
+
+        # Check if xcorr values is not NaN due (incident with Sensor-07)
+        if not math.isnan(float(tfd)):
+            if float(tfd) == 0:
+                tfd_feature = ' ' + '2:' + '0.000001'
+            else:
+                tfd_feature = ' ' + '2:' + str(tfd)
+
+        # Construct libsvm_row
+        libsvm_row = libsvm_row + xcorr_feature + tfd_feature
+
     elif feature == 'ble':
+        # Starting index of ble features in the libsvm file
         idx = 3
+
+        # Iterate over ble features: 'euclidean' and 'jaccard'
         for k, v in sorted(value.items()):
+
+            # Construct libsvm_row
             if float(v) == 0:
                 libsvm_row = libsvm_row + ' ' + str(idx) + ':' + '0.000001'
             else:
                 libsvm_row = libsvm_row + ' ' + str(idx) + ':' + str(v)
 
             idx += 1
+
     elif feature == 'wifi':
+        # Starting index of ble features in the libsvm file
         idx = 5
+
+        # Iterate over ble features:
+        # 'euclidean', 'jaccard', 'mean_exp', 'mean_hamming', 'sum_squared_ranks'
         for k, v in sorted(value.items()):
+
             if v == None:
                 v = '10000'
 
             if float(v) == 0:
                 v = '0.000001'
 
+            # Construct libsvm_row
             libsvm_row = libsvm_row + ' ' + str(idx) + ':' + str(v)
 
             idx += 1
@@ -734,12 +772,12 @@ if __name__ == '__main__':
         print('Building the small dataset using %d workers...' % NUM_WORKERS)
         get_small_dataset(scenario)
         print('--- %s seconds ---' % (time.time() - start_time))
-
+        '''
         start_time = time.time()
         print('Building the big dataset using %d workers...' % NUM_WORKERS)
         get_big_dataset(scenario)
         print('--- %s seconds ---' % (time.time() - start_time))
-
+        '''
     else:
         print('Error: <scenario> can only be "car" or "office"!')
         sys.exit(0)
