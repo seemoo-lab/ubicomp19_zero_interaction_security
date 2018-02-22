@@ -10,6 +10,7 @@ import time
 import multiprocessing
 from multiprocessing import Pool
 from functools import partial
+import gzip
 
 # Sensor mapping: car experiment
 SENSORS_CAR1 = ['01', '02', '03', '04', '05', '06']
@@ -83,16 +84,25 @@ def parse_folders(path, feature):
 
     return folder_list
 
+
 # ToDo: look into the older code (generate_zip_set()) to find max square rank in the office scenario
 def process_dataset(json_file, dataset='', feature='', time_interval='', root_path='', \
                     tmp_path='', time_delta='', sensors=[]):
+    # Check the instance of json_file
+    if isinstance(json_file, list):
+        check_json = json_file[0]
+    elif isinstance(json_file, str):
+        check_json = json_file
+    else:
+        print('process_dataset: json_file must be only of instance list or str, exiting...')
+        sys.exit(0)
 
     # Get target sensor number - Sensor-xx/audio/<feature>/<time_interval>
     # or Sensor-xx/temp/temp_hum_press_shrestha/
     if dataset == 'small':
-        match = re.search(r'Sensor-(.*)(?:/|\\)audio(?:/|\\)', json_file)
+        match = re.search(r'Sensor-(.*)(?:/|\\)audio(?:/|\\)', check_json)
     elif dataset == 'big':
-        match = re.search(r'Sensor-(.*)(?:/|\\)temp(?:/|\\)', json_file)
+        match = re.search(r'Sensor-(.*)(?:/|\\)temp(?:/|\\)', check_json)
     else:
         print('process_dataset: uknown dataset type = %s, exiting...', dataset)
         sys.exit(0)
@@ -106,7 +116,7 @@ def process_dataset(json_file, dataset='', feature='', time_interval='', root_pa
 
     # Get sensor number from all the sensor in the current folder, e.g. 01, 02, etc.
     regex = re.escape(time_interval) + r'(?:/|\\)Sensor-(.*)\.json'
-    match = re.search(regex, json_file)
+    match = re.search(regex, check_json)
 
     # If there is no match - exit
     if not match:
@@ -131,7 +141,6 @@ def process_dataset(json_file, dataset='', feature='', time_interval='', root_pa
     tmp_path = tmp_path + target_sensor + '_' + sensor + '.txt'
 
     if dataset == 'small':
-        # ToDo: provide ble_wifi_truong as a param?
         # Construct Wi-Fi and BLE paths
         ble_path = root_path + 'Sensor-' + target_sensor + '/ble/ble_wifi_truong/' + time_interval + \
                    '/Sensor-' + sensor + '.json'
@@ -139,11 +148,24 @@ def process_dataset(json_file, dataset='', feature='', time_interval='', root_pa
         wifi_path = root_path + 'Sensor-' + target_sensor + '/wifi/ble_wifi_truong/' + time_interval + \
                     '/Sensor-' + sensor + '.json'
 
+        # Handle the list case (do nothing for the string case)
+        if isinstance(json_file, list):
+            # Resulting dictionary
+            audio_res = {}
+            # Read all gzip files from json_file list and store 'results' fields in the dict
+            for file in json_file:
+                with gzip.open(file, 'rt') as f:
+                    audio_json = loads(f.read())
+                    audio_res.update(audio_json['results'])
+
+            # Update json_file
+            json_file = audio_res
+
         # Build the small data set
         build_small_dataset(json_file, ble_path, wifi_path, tmp_path, label, feature, time_delta)
 
     elif dataset == 'big':
-
+        # Construct hum and press paths
         hum_path = root_path + 'Sensor-' + target_sensor + '/hum/' + time_interval + \
                    '/Sensor-' + sensor + '.json'
 
@@ -162,11 +184,19 @@ def build_small_dataset(json_file, ble_path, wifi_path, tmp_path, label, feature
 
     # List to store the results
     libsvm_list = []
+    extra = 0
 
-    # Read audio JSON
-    with open(json_file, 'r') as f:
-        audio_json = loads(f.read())
-        audio_res = audio_json['results']
+    if isinstance(json_file, dict):
+        audio_res = json_file
+        extra = 2
+    elif isinstance(json_file, str):
+        # Read audio JSON
+        with open(json_file, 'r') as f:
+            audio_json = loads(f.read())
+            audio_res = audio_json['results']
+    else:
+        print('build_small_dataset: json_file must be only of instance dict or str, exiting...')
+        sys.exit(0)
 
     # Read ble JSON
     with open(ble_path, 'r') as f:
@@ -179,40 +209,57 @@ def build_small_dataset(json_file, ble_path, wifi_path, tmp_path, label, feature
         wifi_res = wifi_json['results']
 
     # Get a timestamp of audio (started later)
-    # first_audio_ts = date_to_sec(next(iter(audio_res)))
     first_audio_ts = date_to_sec(next(iter(sorted(audio_res))))
 
-    # Copies of ble and wifi dict to be able to remove elements in for loop
-    ble_dict = dict(ble_res)
-    wifi_dict = dict(wifi_res)
+    # Store lengths of ble and wifi dicts in len_list
+    len_list = [len(ble_res), len(wifi_res)]
 
-    # Take care of wifi and ble samples before audio
-    for k, v in sorted(wifi_res.items()):
+    # Find index of max element in len_list
+    max_idx = len_list.index(max(len_list))
+
+    # Get key list to iterate over from wifi_res or ble_res
+    if max_idx:
+        key_list = list(wifi_res.keys())
+    else:
+        key_list = list(ble_res.keys())
+
+    # Sort the key list
+    key_list.sort()
+
+    # Construct ble and wifi features before audio started
+    for key in key_list:
+
         # A row in a libsvm file
         libsvm_row = ''
+
         # Iterate until the proximity of the first audio ts
         # Adjust here to '< first_audio_ts'(car - from 30 to 20)
-        if date_to_sec(k) + time_delta <= first_audio_ts:
-            # Check if ble_dict has a key 'k'
-            if k in ble_dict:
-                # Check if the value ble_dict[k] is not empty
-                if ble_dict[k]:
-                    # Check if the value ble_dict[k] does not contain field 'error'
-                    if not 'error' in ble_dict[k]:
+        if date_to_sec(key) + time_delta - extra <= first_audio_ts:
+
+            # Check if ble_res has a key
+            if key in ble_res:
+                # Check if the value ble_res[key] is not empty
+                if ble_res[key]:
+                    # Check if the value ble_res[key] does not contain field 'error'
+                    if not 'error' in ble_res[key]:
                         # Add ble features to libsvm_row
-                        libsvm_row = add_features('ble', ble_dict[k], libsvm_row)
-                    # Remove element with key 'k' from  the ble_dict
-                    #  used to sync with the audio data later on
-                    del ble_dict[k]
-            # Check if the value 'v' is not empty
-            if v:
-                # Check if the value 'v' does not contain field 'error'
-                if not 'error' in v:
-                    # Add wifi features to libsvm_row
-                    libsvm_row = add_features('wifi', v, libsvm_row)
-                # Remove element with key 'k' from  the wifi_dict
-                #  used to sync with the audio data later on
-                del wifi_dict[k]
+                        libsvm_row = add_features('ble', ble_res[key], libsvm_row)
+                # Remove element ble_res[key] from the ble_res
+                # used to sync with the audio data later on
+                del ble_res[key]
+
+            # Check if wifi_res has a key
+            if key in wifi_res:
+                # Check if the value wifi_res[key] is not empty
+                if wifi_res[key]:
+                    # Check if the value wifi_res[key] does not contain field 'error'
+                    if not 'error' in wifi_res[key]:
+                        # Add wifi features to libsvm_row
+                        libsvm_row = add_features('wifi', wifi_res[key], libsvm_row)
+                # Remove element wifi_res[key] from the wifi_res
+                # used to sync with the audio data later on
+                del wifi_res[key]
+
             # Add libsvm_row to the list
             if libsvm_row:
                 libsvm_row = label + libsvm_row
@@ -220,11 +267,9 @@ def build_small_dataset(json_file, ble_path, wifi_path, tmp_path, label, feature
         else:
             break
 
-    wifi_res = wifi_dict
-    ble_res = ble_dict
-
     # Audio, wifi and ble samples
     for k, v in sorted(audio_res.items()):
+
         # A row in a libsvm file
         libsvm_row = ''
 
@@ -266,17 +311,24 @@ def build_small_dataset(json_file, ble_path, wifi_path, tmp_path, label, feature
             libsvm_row = label + libsvm_row
             libsvm_list.append(libsvm_row)
 
-    # Store the reminders of ble_ and wifi_res in a list
-    res_list = [ble_res, wifi_res]
+    # Store lengths of reminder of ble and wifi dicts in len_list
+    len_list = [len(ble_res), len(wifi_res)]
 
-    # Get the key list of the longest dictionary
-    key_list = list(max(res_list, key=len).keys())
+    # Find index of max element in len_list
+    max_idx = len_list.index(max(len_list))
+
+    # Get key list to iterate over from reminder of wifi_res or ble_res
+    if max_idx:
+        key_list = list(wifi_res.keys())
+    else:
+        key_list = list(ble_res.keys())
 
     # Sort the key list
     key_list.sort()
 
-    # Check wifi and ble values after audio stopped
+    # Construct ble and wifi features after audio stopped
     for key in key_list:
+
         # A row in a libsvm file
         libsvm_row = ''
 
@@ -459,29 +511,63 @@ def get_small_dataset(scenario):
     if not os.path.exists(tmp_path):
         os.makedirs(tmp_path)
 
-    # Addition to the path with *h folders (audio features in the office experiment)
-    chunk_path = ''
+    # Generate file list depending on the scenario
+    if scenario == 'car':
+        # Path to result data files
+        feature_path = ROOT_PATH + 'Sensor-*/audio/' + feature + '/' + time_interval + '/Sensor-*.json'
 
-    # Gz extension for audio features (office experiment)
-    gz_ext = ''
+        # Get the list of JSON files for the specified interval folder
+        # we need to flatten the result from parse_folders, because
+        # we consider only a single time interval at time
+        file_list = list(itertools.chain.from_iterable(parse_folders(feature_path, feature)))
 
-    if scenario == 'office':
-        chunk_path = '*h/'
-        gz_ext = '.gz'
+        # Sort the file_list
+        file_list.sort()
 
-    # Path to result data files
-    feature_path = ROOT_PATH + chunk_path +  'Sensor-*/audio/' + feature + '/' + time_interval \
-                   + '/Sensor-*.json' + gz_ext
+    elif scenario == 'office':
 
-    res = parse_folders(feature_path, feature)
+        # Get the overall number of sensors in the experiment
+        n_sensors = len(list(itertools.chain.from_iterable(SENSORS)))
 
-    # Get the list of JSON files for the specified interval folder
-    # we need to flatten the result from parse_folders, because
-    # we consider only a single time interval at time
-    file_list = list(itertools.chain.from_iterable(parse_folders(feature_path, feature)))
+        # Files list to store the results
+        file_list = []
 
-    # Sort the file_list
-    file_list.sort()
+        # Iterate over all target sensors, e.g. folders /Sensor-01, /Sensor-02, etc.
+        for idx1 in range(1, n_sensors):
+            # Iterate over all sensors inside folders, e.g. /Sensor-01/Sensor-02.json.gz, etc.
+            for idx2 in range(idx1 + 1, n_sensors + 1):
+
+                # 01, 02, ... vs. 10, 11
+                if idx1 < 10:
+                    target_sensor = '0' + str(idx1)
+                else:
+                    target_sensor = str(idx1)
+                if idx2 < 10:
+                    sensor = '0' + str(idx2)
+                else:
+                    sensor = str(idx2)
+
+                # Construct feature path
+                feature_path = ROOT_PATH + '*h/' + 'Sensor-' + target_sensor + '/audio/' + feature + '/' \
+                               + time_interval + '/Sensor-' + sensor + '.json' + '.gz'
+
+                # List to store sensor values from each of *h folders
+                sensor_list = []
+
+                # Get sensor list
+                for json_file in glob(feature_path, recursive=True):
+                    sensor_list.append(json_file)
+
+                if sensor_list:
+                    # Sort sensor list
+                    sensor_list.sort()
+                    # Append sensor list to file list
+                    file_list.append(sensor_list)
+
+    # Check if the file list was successfully created
+    if not file_list:
+        print('get_small_dataset: File list is empty, exiting...')
+        sys.exit(0)
 
     # Initiate a pool of workers
     pool = Pool(processes=NUM_WORKERS, maxtasksperchild=1)
@@ -536,6 +622,11 @@ def get_big_dataset(scenario):
     # Sort the file_list
     file_list.sort()
 
+    # Check if the file list was successfully created
+    if not file_list:
+        print('get_big_dataset: File list is empty, exiting...')
+        sys.exit(0)
+
     # Initiate a pool of workers
     pool = Pool(processes=NUM_WORKERS, maxtasksperchild=1)
 
@@ -561,21 +652,6 @@ def get_big_dataset(scenario):
 
 
 if __name__ == '__main__':
-
-    ROOT_PATH = 'D:/data/office/'
-    RESULT_PATH = 'C:/Users/mfomichev/Desktop/'
-    NUM_WORKERS = 1
-    TIME_DELTA = 6
-
-    SENSORS.append(SENSORS_OFFICE1)
-    SENSORS.append(SENSORS_OFFICE2)
-    SENSORS.append(SENSORS_OFFICE3)
-
-    scenario = 'office'
-
-    get_small_dataset(scenario)
-
-    '''
     # Check the number of input args
     if len(sys.argv) == 4:
         # Assign input args
@@ -667,4 +743,3 @@ if __name__ == '__main__':
     else:
         print('Error: <scenario> can only be "car" or "office"!')
         sys.exit(0)
-    '''
