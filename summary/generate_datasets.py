@@ -38,6 +38,10 @@ NUM_WORKERS = 0
 # Time used to sync audio with wifi and ble features
 TIME_DELTA = 0
 
+# Reduce flag
+REDUCE_FLAG = False
+
+
 # ToDo: move parse_folders into some helper.py (common for aggregate, format and plot)
 def parse_folders(path, feature):
     # Local vars
@@ -368,65 +372,80 @@ def build_small_dataset(json_file, ble_path, wifi_path, tmp_path, label, feature
 
 
 def build_big_dataset(json_file, hum_path, press_path, tmp_path, label):
-
     # List to store the results
     libsvm_list = []
 
     # Read temperature JSON
-    temp_res = []
     with open(json_file, 'r') as f:
         temp_json = loads(f.read())
-        # Sort dict by keys and get corresponding values
-        for k, v in sorted(temp_json['results'].items()):
-            temp_res.append(v)
+        temp_res = temp_json['results']
 
     # Read humidity JSON
-    hum_res = []
     with open(hum_path, 'r') as f:
         hum_json = loads(f.read())
-        # Sort dict by keys and get corresponding values
-        for k, v in sorted(hum_json['results'].items()):
-            hum_res.append(v)
+        hum_res = hum_json['results']
 
     # Read pressure JSON
     press_res = []
     with open(press_path, 'r') as f:
         press_json = loads(f.read())
-        # Sort dict by keys and get corresponding values
-        for k, v in sorted(press_json['results'].items()):
-            press_res.append(v)
+        press_res = press_json['results']
 
-    # Construct the list of result lengths
+    # Update keys of temp_res, hum_res and press_res
+    # ToDo: remove json_file as a param once issues with Sensor 7 and 8 are fixed
+    temp_res = update_res(temp_res, json_file)
+    hum_res = update_res(hum_res, hum_path)
+    press_res = update_res(press_res, press_path)
+
+    # Store lengths of temp, hum and press dicts in len_list
     len_list = [len(temp_res), len(hum_res), len(press_res)]
 
     # ToDo: we can always change it to min and keep the code
-    # Find max len value
-    max_len = max(len_list)
+    # Find index of max element in len_list
+    max_idx = len_list.index(max(len_list))
 
-    for idx in range(0, max_len):
+    # Get key list to iterate over from temp_res, hum_res or press_res
+    if max_idx == 0:
+        key_list = list(temp_res.keys())
+    elif max_idx == 1:
+        key_list = list(hum_res.keys())
+    else:
+        key_list = list(press_res.keys())
+
+    # Sort the key list
+    key_list.sort()
+
+    # Construct temp, hum and press features
+    for key in key_list:
+
+        # A row in a libsvm file
+        libsvm_row = ''
+
         # Declare feature strings
         temp_feature = ''
         hum_feature = ''
         press_feature = ''
 
-        # Construct feature strings
-        if idx < len_list[0]:
-            if float(temp_res[idx]) == 0:
+        # Check if temp_res contains key
+        if key in temp_res:
+            if float(temp_res[key]) == 0:
                 temp_feature = ' ' + '1:' + '0.000001'
             else:
-                temp_feature = ' ' + '1:' + str(temp_res[idx])
+                temp_feature = ' ' + '1:' + str(temp_res[key])
 
-        if idx < len_list[1]:
-            if float(hum_res[idx]) == 0:
+        # Check if hum_res contains key
+        if key in hum_res:
+            if float(hum_res[key]) == 0:
                 hum_feature = ' ' + '2:' + '0.000001'
             else:
-                hum_feature = ' ' + '2:' + str(hum_res[idx])
+                hum_feature = ' ' + '2:' + str(hum_res[key])
 
-        if idx < len_list[2]:
-            if float(press_res[idx]) == 0:
+        # Check if press_res contains key
+        if key in press_res:
+            if float(press_res[key]) == 0:
                 press_feature = ' ' + '3:' + '0.000001'
             else:
-                press_feature = ' ' + '3:' + str(press_res[idx])
+                press_feature = ' ' + '3:' + str(press_res[key])
 
         # Construct libsvm_row
         libsvm_row = label + temp_feature + hum_feature + press_feature
@@ -440,16 +459,101 @@ def build_big_dataset(json_file, hum_path, press_path, tmp_path, label):
         f.writelines(libsvm_list)
 
 
+def update_res(res_dict, json_file):
+
+    # Split the first key(format - yyyy-mm-dd HH:MM:SS.FFF) of res_dict
+    split_key = next(iter(sorted(res_dict))).split('.')
+
+    # Check if the key contains '.' symbol
+    if len(split_key) < 2:
+        print('update_res_keys: key %s in file %s has wrong format, exiting...' %
+              (next(iter(sorted(res_dict))), json_file))
+        sys.exit(0)
+
+    # Get the current key in a format yyyy-mm-dd HH:MM:SS
+    cur_key = split_key[0]
+
+    # Initialize idx value
+    idx = 0
+
+    if REDUCE_FLAG:
+        # List to store samples of one second
+        sample_list = []
+
+        # New resulting dict
+        reduce_dict = {}
+
+    # Iterate over res_dict
+    for k, v in sorted(res_dict.items()):
+
+        # Split the key(format - yyyy-mm-dd HH:MM:SS.FFF) of res_dict
+        split_key = k.split('.')
+
+        # Check if the key contains '.' symbol
+        if len(split_key) < 2:
+            print('update_res_keys: key %s in file %s has wrong format, exiting...' % (k, json_file))
+            sys.exit(0)
+
+        # Get the check key in a format yyyy-mm-dd HH:MM:SS
+        check_key = split_key[0]
+
+        # Check if reduction of the data is set
+        if REDUCE_FLAG:
+            # Compute avg over the samples from the same second
+            # and add 1-sec timestamp of format yyyy-mm-dd HH:MM:SS
+            if check_key == cur_key:
+                sample_list.append(v)
+            else:
+                # Convert sample_list to np array
+                sample_array = np.array(list(sample_list), dtype=float)
+
+                # Add mean result to the reduce_dict
+                reduce_dict[cur_key] = np.mean(sample_array)
+
+                # Null sample list
+                sample_list = []
+
+                # Add the first new value to sample_list
+                sample_list.append(v)
+        else:
+            # Generate new keys of format yyyy-mm-dd HH:MM:SS_idx and update res_dict
+            if check_key == cur_key:
+                new_key = check_key + '_' + str(idx)
+                res_dict[new_key] = res_dict.pop(k)
+                idx += 1
+            else:
+                idx = 0
+                new_key = check_key + '_' + str(idx)
+                res_dict[new_key] = res_dict.pop(k)
+                idx += 1
+
+        # Update current key on every iteration
+        cur_key = check_key
+
+    # Return the result
+    if REDUCE_FLAG:
+        # Account for the last timestamp values
+        if sample_list:
+            # Convert sample_list to np array
+            sample_array = np.array(list(sample_list), dtype=float)
+
+            # Add mean result to the reduce_dict
+            reduce_dict[cur_key] = np.mean(sample_array)
+        return reduce_dict
+    else:
+        return res_dict
+
+
 def date_to_sec(date_str):
     # Split the date str (we discard ms), the format is yyyy-mm-dd HH:MM:SS(.FFF)
-    res = date_str.split('.')
+    split_date = date_str.split('.')
 
-    if not res:
+    if not split_date:
         print('date_to_sec: string "%s" has wrong format, exiting...' % date_str)
         sys.exit(0)
 
     # Return number of seconds
-    return datetime.datetime.strptime(res[0], '%Y-%m-%d %H:%M:%S').timestamp()
+    return datetime.datetime.strptime(split_date[0], '%Y-%m-%d %H:%M:%S').timestamp()
 
 
 def add_features(feature, value, libsvm_row):
@@ -621,8 +725,13 @@ def get_small_dataset(scenario):
     pool.close()
     pool.join()
 
+    # Check reduce flag and reflect in the file name
+    reduce_str = ''
+    if REDUCE_FLAG:
+        reduce_str = 'red_'
+
     # Path of the resulting file
-    filename = RESULT_PATH + dataset + '_dataset' + '_' + scenario + '.txt'
+    filename = RESULT_PATH + reduce_str + dataset + '_dataset' + '_' + scenario + '.txt'
 
     # Merge tmp files into a single resulting file
     os.system('cat ' + tmp_path + '*.txt >> ' + filename)
@@ -679,8 +788,13 @@ def get_big_dataset(scenario):
     pool.close()
     pool.join()
 
+    # Check reduce flag and reflect in the file name
+    reduce_str = ''
+    if REDUCE_FLAG:
+        reduce_str = 'red_'
+
     # Path of the resulting file
-    filename = RESULT_PATH + dataset + '_dataset' + '_' + scenario + '.txt'
+    filename = RESULT_PATH + reduce_str + dataset + '_dataset' + '_' + scenario + '.txt'
 
     # Merge tmp files into a single resulting file
     os.system('cat ' + tmp_path + '*.txt >> ' + filename)
@@ -750,14 +864,14 @@ if __name__ == '__main__':
         SENSORS.append(SENSORS_CAR2)
         
         TIME_DELTA = 5
-
+        
         start_time = time.time()
-        print('Building the small dataset using %d workers...' % NUM_WORKERS)
+        print('%s: building the small dataset using %d workers...' % (scenario, NUM_WORKERS))
         get_small_dataset(scenario)
         print('--- %s seconds ---' % (time.time() - start_time))
-
+        
         start_time = time.time()
-        print('Building the big dataset using %d workers...' % NUM_WORKERS)
+        print('%s: building the big dataset using %d workers...' % (scenario, NUM_WORKERS))
         get_big_dataset(scenario)
         print('--- %s seconds ---' % (time.time() - start_time))
 
@@ -767,17 +881,17 @@ if __name__ == '__main__':
         SENSORS.append(SENSORS_OFFICE3)
         
         TIME_DELTA = 6
-
+        
         start_time = time.time()
-        print('Building the small dataset using %d workers...' % NUM_WORKERS)
+        print('%s: building the small dataset using %d workers...' % (scenario, NUM_WORKERS))
         get_small_dataset(scenario)
         print('--- %s seconds ---' % (time.time() - start_time))
-        '''
+
         start_time = time.time()
-        print('Building the big dataset using %d workers...' % NUM_WORKERS)
+        print('%s: building the big dataset using %d workers...' % (scenario, NUM_WORKERS))
         get_big_dataset(scenario)
         print('--- %s seconds ---' % (time.time() - start_time))
-        '''
+
     else:
         print('Error: <scenario> can only be "car" or "office"!')
         sys.exit(0)
