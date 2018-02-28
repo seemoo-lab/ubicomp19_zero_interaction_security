@@ -73,64 +73,57 @@ def acceptable_difference(element1, element2):
 
 def sync_populations(pop1, pop2, sensor1="", sensor2=""):
     """Determine the offset between population 1 and 2."""
-    # First, we need to determine which fo the recordings starts earlier
-    offset = 0
-    td = pop1[0].time - pop2[0].time
-    rv = {1: [], 2: []}
-    if td.days < 0:
-        # pop2[0] is later than pop1[0]
-        fixed = pop2
-        move = pop1
-        # Remember that "move" was pop1 and "fixed" was pop2
-        rv_move = 1
-        rv_fixed = 2
-    else:
-        # pop2[0] is earlier than pop1[0]
-        fixed = pop1
-        move = pop2
-        # Remember that "move" was pop2 and "fixed" was pop1
-        rv_move = 2
-        rv_fixed = 1
-
-    # Now that we know which recording starts earlier, we need to determine
-    # how many samples we need to skip on that recording to get into sync
-    # with the other recording (as the recordings may have started at slightly
-    # different times)
-    while not acceptable_difference(fixed[0], move[offset]):
-        offset += 1
-
-    # We now have the offset on the "move" list in place so that the first
-    # element of the "fixed" list has an acceptable time difference from
-    # move[offset].
-    # Experiments have shown that this is not enough, the synchronization
-    # may deteriorate over time. So, in an additional step, we now need to
-    # create two new lists where the n-th element of each list has an
-    # acceptable time difference with the n-th element of the other list.
-    fix_index = 0
-    move_index = offset
-    skipped_samples = offset
-    while fix_index < len(fixed) and move_index < len(move):
-        if acceptable_difference(fixed[fix_index], move[move_index]):
-            # The two elements have an acceptable difference, save them
-            rv[rv_move].append(move[move_index])
-            rv[rv_fixed].append(fixed[fix_index])
-            # Increase indices
-            move_index += 1
-            fix_index += 1
+    # Establish initial sync
+    p1_ctr = 0
+    p2_ctr = 0
+    while not acceptable_difference(pop1[p1_ctr], pop2[p2_ctr]):
+        td = pop1[p1_ctr].time - pop2[p2_ctr].time
+        if td.days < 0:
+            p1_ctr += 1
         else:
+            p2_ctr += 1
+
+    # Track number of skipped samples
+    skipped_samples = p1_ctr + p2_ctr
+    # Prepare output
+    rv_1 = []
+    rv_2 = []
+
+    # Track if the sync deteriorated or not
+    deteriorate = False
+
+    # Create pairs
+    while p1_ctr < len(pop1) and p2_ctr < len(pop2):
+        # Check if the sync is still good
+        if acceptable_difference(pop1[p1_ctr], pop2[p2_ctr]):
+            # If the sync was bad before, log recovery
+            if deteriorate:
+                print("Sync reestablished:", pop1[p1_ctr].time, pop2[p2_ctr].time)
+                deteriorate = False
+            # The two elements have an acceptable difference, save them
+            rv_1.append(pop1[p1_ctr])
+            rv_2.append(pop2[p2_ctr])
+            # Increase indices
+            p1_ctr += 1
+            p2_ctr += 1
+        else:
+            # Check if the sync was bad before, log if it is newly bad
+            if not deteriorate:
+                print("Sync deteriorated:", pop1[p1_ctr].time, pop2[p2_ctr].time)
+                deteriorate = True
             # The difference is unacceptably high, we need to reconcile
             # Find the earlier timestamp and increment the index of that list
-            if move[move_index].time < fixed[fix_index].time:
-                move_index += 1
+            if pop1[p1_ctr].time < pop2[p2_ctr].time:
+                p1_ctr += 1
             else:
-                fix_index += 1
+                p2_ctr += 1
             skipped_samples += 1
 
     # We have now created two populations that are perfectly synced up.
     # Return them.
     print("[INFO] Skipped", skipped_samples, "samples. %s %s" %
           (sensor1, sensor2))
-    return (rv[1], rv[2])
+    return (rv_1, rv_2)
 
 
 def convert_meters(pressure):
@@ -160,8 +153,8 @@ def compute(file1, file2, bar=False):
         # Split into timeslots
         try:
             pop1, pop2 = sync_populations(pop1, pop2, file1, file2)
-        except IndexError:
-            print("[ERR ] No sync possible for ", file1, "-", file2)
+        except IndexError as e:
+            print("[ERR ] No sync possible for ", file1, "-", file2, ":", e)
             return {"error": "No sync possible"}
 
         # Process results
@@ -350,3 +343,22 @@ def test_population_sync_no_sync_possible():
         assert False, "This statement should be unreachable"
     except IndexError:
         assert True
+
+def test_population_sync_alignment_switch_regression():
+    pop1 = [Measurement(0, datetime(2017, 8, 16, 12, 15, 0, 150)),
+            Measurement(0, datetime(2017, 8, 16, 12, 15, 0, 450)),
+            Measurement(0, datetime(2017, 8, 16, 12, 15, 0, 750)),
+            Measurement(0, datetime(2017, 8, 16, 12, 15, 1, 50)),
+            Measurement(0, datetime(2017, 8, 17, 12, 15, 2, 200)),
+            Measurement(0, datetime(2017, 8, 17, 12, 15, 2, 500)),]
+    pop2 = [Measurement(0, datetime(2017, 8, 17, 12, 15, 1, 200)),
+            Measurement(0, datetime(2017, 8, 17, 12, 15, 1, 500)),
+            Measurement(0, datetime(2017, 8, 17, 12, 15, 1, 800)),
+            Measurement(0, datetime(2017, 8, 17, 12, 15, 2, 100)),
+            Measurement(0, datetime(2017, 8, 17, 12, 15, 2, 400))]
+
+    try:
+        sync_populations(pop1, pop2)
+        assert True
+    except IndexError:
+        assert False, "This statement should be unreachable"
