@@ -4,7 +4,7 @@
 master_ip="10.10.11.120"
 
 # Public key of the master
-pub_key="ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDlQceHZIil5tGeCvHo+ikmLOu8KwsWYxUgo/47gxQ3vhcHorCYYdbfbDxsZtPy38    SEa68czMR59Y6pdqbf8ZBZpILZ+LbwXpTJ3l+BNXN8S6N1jttC9z4965XVVpBgYrqUJxQ8IaQep+Ynyc5TBpYL5e8XH9RI4b2XSy3O    THn8TlQrsQbJ/bAeRP5c19d2wrs+nzXcnVco0gM1z/kIGSQWQt6/Ga4xlDiah8EUkOOUfIQfkGWTRnYbAylk2HNMya+xcClKWdq9UT    gIUcXg9WbgyEbMGN8mKdNxwg2ShvonaYQ5/O3PnibDoyCPzUlmF5iv+0ULcvPHI0SKSu3vW0ft seemoo@SEEMOO-USRP-Ubuntu-3"
+pub_key = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDMnvEWx75OER014I49/iYlsYg559pcaA5SLrbQMoXve5xRGHhvQH6J4JiR9IWCKUAE987roFe5kxuQDMNy71Jr9FQ4Y0teASa0bZGZ5qjQ5yyzFs/6w8dNwGY4X5Xx+4ujnm25Nw4bkaMjTyhwCXBVBGuOCfWQqL6ZHHS38hx9kP1DeySm0Zqi7dsPu1b+fR3Zoz0hhNBPk5cs8rqAhWMvHGIG31mzHjnv89C04mgrssSY0kt7A2cPqdYzor5Uyp1biLVx3xU6Q5tRQBUj7I1xVC5fA0XG1W7YVk2rMYgcXY4tBG3U8qD9fC2HTOQ1uqBoIymLfkBjskow6KGnJos7 seemoo@SEEMOO-USRP-Ubuntu-3"
 
 # Update and upgrade
 echo "Updating and upgrading..."
