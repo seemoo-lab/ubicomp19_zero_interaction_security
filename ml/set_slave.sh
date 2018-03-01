@@ -29,13 +29,13 @@ sudo apt-get -y install scala 2>&1 >/dev/null
 
 # Get Spark
 echo "Downloading and unpacking Spark..."
-wget -q http://ftp.halifax.rwth-aachen.de/apache/spark/spark-2.2.1/spark-2.2.1-bin-hadoop2.7.tgz
+wget -q http://mirror.23media.de/apache/spark/spark-2.3.0/spark-2.3.0-bin-hadoop2.7.tgz
 
 # Extract Spark
-tar -zxf spark-2.2.1-bin-hadoop2.7.tgz
+tar -zxf spark-2.3.0-bin-hadoop2.7.tgz
 
 # Delete archive
-rm -r spark-2.2.1-bin-hadoop2.7.tgz
+rm -r spark-2.3.0-bin-hadoop2.7.tgz
 
 # Get Hadoop
 echo "Downloading and unpacking Hadoop..."
@@ -51,7 +51,7 @@ rm -r hadoop-2.7.5.tar.gz
 pwd=$(pwd)
 
 # Vars to be added to .bashrc
-spark_home="SPARK_HOME=$pwd/spark-2.2.1-bin-hadoop2.7"
+spark_home="SPARK_HOME=$pwd/spark-2.3.0-bin-hadoop2.7"
 hadoop_home="HADOOP_HOME=$pwd/hadoop-2.7.5"
 extra_spark=$'export PATH=$SPARK_HOME/bin:$PATH\nexport PYSPARK_PYTHON=python3\nexport LD_LIBRARY_PATH=$HADOOP_HOME/lib/native/:$LD_LIBRARY_PATH'
 
@@ -74,10 +74,10 @@ local_ip=$(hostname  -I | cut -f1 -d' ')
 # Setting up slave
 
 # Create log4j.properties file
-cp ~/spark-2.2.1-bin-hadoop2.7/conf/log4j.properties.template ~/spark-2.2.1-bin-hadoop2.7/conf/log4j.properties
+cp ~/spark-2.3.0-bin-hadoop2.7/conf/log4j.properties.template ~/spark-2.3.0-bin-hadoop2.7/conf/log4j.properties
 
 # Create spark-env.sh
-cp ~/spark-2.2.1-bin-hadoop2.7/conf/spark-env.sh.template ~/spark-2.2.1-bin-hadoop2.7/conf/spark-env.sh
+cp ~/spark-2.3.0-bin-hadoop2.7/conf/spark-env.sh.template ~/spark-2.3.0-bin-hadoop2.7/conf/spark-env.sh
 
 # Construct to_spark_env string
 to_spark_env="
@@ -86,7 +86,7 @@ export SPARK_MASTER_HOST=$master_ip"
 
 # Add local_ip and master_ip to spark-env.sh
 echo "Updating spark-env.sh file..."
-echo "$to_spark_env" >> ~/spark-2.2.1-bin-hadoop2.7/conf/spark-env.sh
+echo "$to_spark_env" >> ~/spark-2.3.0-bin-hadoop2.7/conf/spark-env.sh
 
 # Append master's public key to authorized keys
 echo "Adding master's public key to authorized keys..."
