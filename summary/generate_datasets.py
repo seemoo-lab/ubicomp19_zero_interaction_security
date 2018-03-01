@@ -39,7 +39,7 @@ NUM_WORKERS = 0
 TIME_DELTA = 0
 
 # Reduce flag
-REDUCE_FLAG = False
+REDUCE_FLAG = True
 
 
 # ToDo: move parse_folders into some helper.py (common for aggregate, format and plot)
@@ -392,10 +392,9 @@ def build_big_dataset(json_file, hum_path, press_path, tmp_path, label):
         press_res = press_json['results']
 
     # Update keys of temp_res, hum_res and press_res
-    # ToDo: remove json_file as a param once issues with Sensor 7 and 8 are fixed
-    temp_res = update_res(temp_res, json_file)
-    hum_res = update_res(hum_res, hum_path)
-    press_res = update_res(press_res, press_path)
+    temp_res = update_res(temp_res)
+    hum_res = update_res(hum_res)
+    press_res = update_res(press_res)
 
     # Store lengths of temp, hum and press dicts in len_list
     len_list = [len(temp_res), len(hum_res), len(press_res)]
@@ -459,15 +458,14 @@ def build_big_dataset(json_file, hum_path, press_path, tmp_path, label):
         f.writelines(libsvm_list)
 
 
-def update_res(res_dict, json_file):
+def update_res(res_dict):
 
     # Split the first key(format - yyyy-mm-dd HH:MM:SS.FFF) of res_dict
     split_key = next(iter(sorted(res_dict))).split('.')
 
     # Check if the key contains '.' symbol
     if len(split_key) < 2:
-        print('update_res_keys: key %s in file %s has wrong format, exiting...' %
-              (next(iter(sorted(res_dict))), json_file))
+        print('update_res_keys: key %s has wrong format, exiting...', (next(iter(sorted(res_dict)))))
         sys.exit(0)
 
     # Get the current key in a format yyyy-mm-dd HH:MM:SS
@@ -491,7 +489,7 @@ def update_res(res_dict, json_file):
 
         # Check if the key contains '.' symbol
         if len(split_key) < 2:
-            print('update_res_keys: key %s in file %s has wrong format, exiting...' % (k, json_file))
+            print('update_res_keys: key %s has wrong format, exiting...', k)
             sys.exit(0)
 
         # Get the check key in a format yyyy-mm-dd HH:MM:SS
@@ -725,6 +723,7 @@ def get_small_dataset(scenario):
     pool.close()
     pool.join()
 
+    #ToDo: We may not need it
     # Check reduce flag and reflect in the file name
     reduce_str = ''
     if REDUCE_FLAG:
@@ -804,6 +803,7 @@ def get_big_dataset(scenario):
 
 
 if __name__ == '__main__':
+
     # Check the number of input args
     if len(sys.argv) == 4:
         # Assign input args
@@ -828,7 +828,7 @@ if __name__ == '__main__':
             print('Error: <num_workers> must be a positive number > 1!')
             sys.exit(0)
     else:
-        print('Usage: plot_results.py <root_path> <result_path> <scenario> (optional - <num_workers>)')
+        print('Usage: generate_datasets.py <root_path> <result_path> <scenario> (optional - <num_workers>)')
         sys.exit(0)
 
     # Get the number of cores on the system
@@ -864,12 +864,12 @@ if __name__ == '__main__':
         SENSORS.append(SENSORS_CAR2)
         
         TIME_DELTA = 5
-        
+        '''
         start_time = time.time()
         print('%s: building the small dataset using %d workers...' % (scenario, NUM_WORKERS))
         get_small_dataset(scenario)
         print('--- %s seconds ---' % (time.time() - start_time))
-        
+        '''
         start_time = time.time()
         print('%s: building the big dataset using %d workers...' % (scenario, NUM_WORKERS))
         get_big_dataset(scenario)
@@ -886,12 +886,12 @@ if __name__ == '__main__':
         print('%s: building the small dataset using %d workers...' % (scenario, NUM_WORKERS))
         get_small_dataset(scenario)
         print('--- %s seconds ---' % (time.time() - start_time))
-
+        '''
         start_time = time.time()
         print('%s: building the big dataset using %d workers...' % (scenario, NUM_WORKERS))
         get_big_dataset(scenario)
         print('--- %s seconds ---' % (time.time() - start_time))
-
+        '''
     else:
         print('Error: <scenario> can only be "car" or "office"!')
         sys.exit(0)

@@ -118,6 +118,7 @@ if __name__ == '__main__':
             tmp_file = split_features(num_zero_labels, num_one_labels, '0')
             sample_ratio = round(num_zero_labels / num_one_labels, 2)
 
+        '''
         # Sample tmp file according to sample_ratio
         sampled_file = under_sample_file(tmp_file, sample_ratio)
 
@@ -127,6 +128,7 @@ if __name__ == '__main__':
         # Delete tmp and sampled files
         os.remove(tmp_file)
         os.remove(sampled_file)
+        '''
 
     else:
         print('Usage: balance_dataset.py <dataset_path> <result_path>')
