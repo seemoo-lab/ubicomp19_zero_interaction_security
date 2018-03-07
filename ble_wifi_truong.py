@@ -210,7 +210,7 @@ def read_results(filename):
             except ValueError:
                 if "Interface doesn't support scanning" in line:
                     broken_sample = 1
-                else if "Sizes of BSSID and RSSI lists do not match" in line:
+                elif "Sizes of BSSID and RSSI lists do not match" in line:
                     tstr = line.strip().split()[9]
                     time = parser.parse(time)
                     rv.append(Measurement("-1", 0, time))
