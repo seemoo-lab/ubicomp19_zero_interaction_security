@@ -213,6 +213,7 @@ def read_results(filename):
                 else:
                     print("[WARN] Unhandled problem with sample %s, skipping" %
                           filename)
+                    print(line)
                 continue
             # Convert RSSI to int
             rssi = int(rssi[:-3])
