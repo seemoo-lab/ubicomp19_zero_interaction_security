@@ -212,7 +212,7 @@ def read_results(filename):
                     broken_sample = 1
                 elif "Sizes of BSSID and RSSI lists do not match" in line:
                     tstr = line.strip().split()[9]
-                    time = parser.parse(time)
+                    time = parser.parse(tstr)
                     rv.append(Measurement("-1", 0, time))
                 else:
                     print("[WARN] Unhandled problem with sample %s, skipping" %
