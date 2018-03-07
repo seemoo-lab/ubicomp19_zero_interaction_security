@@ -19,7 +19,7 @@ Uses ML
 """
 
 from dateutil import parser
-from datetime import datetime
+from datetime import datetime, timedelta
 from math import sqrt, exp
 from multiprocessing import Pool, cpu_count
 from functools import partial
@@ -170,6 +170,14 @@ def timeslot_list(population, slotsize=10):
                 rv[timeslot].append(Measurement(ident,
                                                 mean(observed_bssids[ident]),
                                                 timeslot))
+    # Fill in values for empty timeslots
+    min_time = min(rv.keys())
+    max_time = max(rv.keys())
+    cur_time = min_time
+    while cur_time < max_time:
+        if cur_time not in rv:
+            rv[cur_time] = []
+        cur_time = cur_time + timedelta(seconds=slotsize)
     return rv
 
 
@@ -229,6 +237,8 @@ def jaccard_dist(pop1, pop2, default=-100):
     """Compute the jaccard distance of the two populations.
 
     The Jaccard distance is defined as 1 - |intersection| / |union|."""
+    if len(pop1) == 0 and len(pop2) == 0:
+        return 0.0
     return 1.0 - len(intersection(pop1, pop2)) / \
         float(len(union(pop1, pop2, default)))
 
@@ -240,6 +250,8 @@ def mean_hamming_dist(pop1, pop2, default=-100):
     strength for all elements of the union of the populations, divided by
     the number of elements in the union.
     """
+    if len(pop1) == 0 and len(pop2) == 0:
+        return 0.0
     s = 0.0
     u = union(pop1, pop2, default)
     if len(u) == 0:
@@ -256,6 +268,8 @@ def euclidean_distance(pop1, pop2, default=-100):
     differences ((a-b)^2) between the signal strengths in the union of
     values in the population.
     """
+    if len(pop1) == 0 and len(pop2) == 0:
+        return 0.0
     s = 0.0
     u = union(pop1, pop2, default)
     if len(u) == 0:
@@ -272,6 +286,8 @@ def mean_exp_difference(pop1, pop2, default=-100):
     power of the absolute difference between values in the populations,
     divided by the cardinality of the union of the populations.
     """
+    if len(pop1) == 0 and len(pop2) == 0:
+        return 0.0
     s = 0.0
     u = union(pop1, pop2, default)
     if len(u) == 0:
@@ -291,6 +307,8 @@ def sum_squared_ranks(pop1, pop2):
 
     Note: I am not 100% sure if this is correct, we should confirm our
     interpretation with the original authors."""
+    if len(pop1) == 0 and len(pop2) == 0:
+        return 0.0
     i = intersection(pop1, pop2)
     if len(i) == 0:
         # Empty intersection
@@ -590,6 +608,25 @@ def test_timeslot_list():
     assert len(res[dt2]) == 2
 
 
+def test_timeslot_list_missing_timeframe():
+    pop = [Measurement("Eduroam", -80, datetime(2017, 8, 13, 12, 12, 12)),
+           Measurement("TalonTestbed", -60, datetime(2017, 8, 13, 12, 12, 12)),
+           Measurement("Hans", -76, datetime(2017, 8, 13, 12, 12, 12)),
+           Measurement("Eduroam", -80, datetime(2017, 8, 13, 12, 12, 32)),
+           Measurement("TalonTestbed", -60, datetime(2017, 8, 13, 12, 12, 32))]
+    res = timeslot_list(pop)
+    assert len(res) == 3
+    dt1 = datetime(2017, 8, 13, 12, 12, 10)
+    dt2 = datetime(2017, 8, 13, 12, 12, 20)
+    dt3 = datetime(2017, 8, 13, 12, 12, 30)
+    assert dt1 in res
+    assert dt2 in res
+    assert dt3 in res
+    assert len(res[dt1]) == 3
+    assert len(res[dt2]) == 0
+    assert len(res[dt3]) == 2
+
+
 def test_read_data():
     data = read_results("test-wifi.txt")
     assert data is not None
@@ -638,6 +675,11 @@ def test_mean_hamming_dist_2():
             abs(-90 - -100) + abs(-50 - -100)) / 5.0
 
 
+def test_mean_hamming_dist_2():
+    pop1 = []
+    pop2 = []
+    assert mean_hamming_dist(pop1, pop2) == 0
+
 def test_mean_hamming_dist_default():
     default = -150
     pop1 = [Measurement("Eduroam", -80, datetime.now()),
@@ -670,6 +712,12 @@ def test_euclidean_dist_2():
         sqrt((-80 - -100) ** 2 + (-76 - -100) ** 2 +
              (-60 - -100) ** 2 + (-90 - -100) ** 2 +
              (-50 - -100) ** 2)
+
+
+def test_euclidean_dist_empty():
+    pop1 = []
+    pop2 = []
+    assert euclidean_distance(pop1, pop2) == 0.0
 
 
 def test_euclidean_dist_default():
@@ -713,6 +761,12 @@ def test_mean_exp_diff_2():
     expected_val += exp(abs(-100 - -50))
     expected_val = expected_val / 5.0
     assert mean_exp_difference(pop1, pop2) == expected_val
+
+
+def test_mean_exp_diff_empty():
+    pop1 = []
+    pop2 = []
+    assert mean_exp_difference(pop1, pop2) == 0.0
 
 
 def test_mean_exp_diff_default():
@@ -761,3 +815,8 @@ def test_sum_squared_ranks_3():
     assert sum_squared_ranks(pop1, pop2) is None, \
         str(sum_squared_ranks(pop1, pop2)) + " != None"
 
+def test_sum_squared_ranks_empty():
+    pop1 = []
+    pop2 = []
+    assert sum_squared_ranks(pop1, pop2) == 0.0, \
+        str(sum_squared_ranks(pop1, pop2)) + " != 0.0"
