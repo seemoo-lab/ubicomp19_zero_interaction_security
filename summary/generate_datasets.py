@@ -502,11 +502,8 @@ def update_res(res_dict):
             if check_key == cur_key:
                 sample_list.append(v)
             else:
-                # Convert sample_list to np array
-                sample_array = np.array(list(sample_list), dtype=float)
-
-                # Add mean result to the reduce_dict
-                reduce_dict[cur_key] = np.mean(sample_array)
+                # Take the first value from the list
+                reduce_dict[cur_key] = sample_list[0]
 
                 # Null sample list
                 sample_list = []
@@ -532,11 +529,8 @@ def update_res(res_dict):
     if REDUCE_FLAG:
         # Account for the last timestamp values
         if sample_list:
-            # Convert sample_list to np array
-            sample_array = np.array(list(sample_list), dtype=float)
-
-            # Add mean result to the reduce_dict
-            reduce_dict[cur_key] = np.mean(sample_array)
+            # Take the first value from the list
+            reduce_dict[cur_key] = sample_list[0]
         return reduce_dict
     else:
         return res_dict
@@ -881,7 +875,7 @@ if __name__ == '__main__':
         SENSORS.append(SENSORS_OFFICE3)
         
         TIME_DELTA = 6
-        
+        '''
         start_time = time.time()
         print('%s: building the small dataset using %d workers...' % (scenario, NUM_WORKERS))
         get_small_dataset(scenario)
@@ -891,7 +885,7 @@ if __name__ == '__main__':
         print('%s: building the big dataset using %d workers...' % (scenario, NUM_WORKERS))
         get_big_dataset(scenario)
         print('--- %s seconds ---' % (time.time() - start_time))
-        '''
+
     else:
         print('Error: <scenario> can only be "car" or "office"!')
         sys.exit(0)
