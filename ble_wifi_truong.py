@@ -504,6 +504,8 @@ if __name__ == "__main__":
         wifi_files.append(wi_file)
     for ble_file in glob("Sensor-*/ble/ble.txt.blinded"):
         ble_files.append(ble_file)
+    wifi_files.sort()
+    ble_files.sort()
 
     pool = Pool(processes=24, maxtasksperchild=1)
 
