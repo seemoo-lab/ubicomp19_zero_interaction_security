@@ -481,9 +481,9 @@ def process_ble(file_tuple, slotsize=10, default=-100):
         fo.write(dumps(rv, indent=4, sort_keys=True))
 
     # Redundant save for the other direction (Sensor2 -> Sensor1)
-    path = derive_result_path(no2, "ble", SCRIPT, no1, params=params)
-    with open(path, "w") as fo:
-        fo.write(dumps(rv, indent=4, sort_keys=True))
+    # path = derive_result_path(no2, "ble", SCRIPT, no1, params=params)
+    # with open(path, "w") as fo:
+    #     fo.write(dumps(rv, indent=4, sort_keys=True))
 
 
 if __name__ == "__main__":
