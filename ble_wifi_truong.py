@@ -420,70 +420,78 @@ def compute(file1, file2, default=-100, slotsize=10, mode=MODE_WIFI):
 
 
 def process_wifi(file_tuple, slotsize=10, default=-100):
-    pop1, pop2 = file_tuple
-    # Get sensor ID from path
-    no1 = pop1[0:9]
-    no2 = pop2[0:9]
+    try:
+        pop1, pop2 = file_tuple
+        # Get sensor ID from path
+        no1 = pop1[0:9]
+        no2 = pop2[0:9]
 
-    params = {
-        "chunk_len": slotsize,
-    }
+        params = {
+            "chunk_len": slotsize,
+        }
 
-    # Prepare results dictionary
-    rv = {}
-    rv["metadata"] = create_metadata([pop1, pop2], SCRIPT, params=params)
+        # Prepare results dictionary
+        rv = {}
+        rv["metadata"] = create_metadata([pop1, pop2], SCRIPT, params=params)
 
-    # Compute and save the features
-    # print("[WIFI] Computing features for Sensors", no1, "and", no2)
-    rv["results"] = compute(pop1, pop2, default=default, slotsize=slotsize,
-                            mode=MODE_WIFI)
+        # Compute and save the features
+        # print("[WIFI] Computing features for Sensors", no1, "and", no2)
+        rv["results"] = compute(pop1, pop2, default=default, slotsize=slotsize,
+                                mode=MODE_WIFI)
 
-    # Save timestamp of finished processing
-    rv["metadata"]["processing_end"] = \
-        datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")
+        # Save timestamp of finished processing
+        rv["metadata"]["processing_end"] = \
+            datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")
 
-    # Save result json to file
-    path = derive_result_path(no1, "wifi", SCRIPT, no2, params=params)
-    with open(path, "w") as fo:
-        fo.write(dumps(rv, indent=4, sort_keys=True))
+        # Save result json to file
+        path = derive_result_path(no1, "wifi", SCRIPT, no2, params=params)
+        with open(path, "w") as fo:
+            fo.write(dumps(rv, indent=4, sort_keys=True))
 
-    # Redundant save for the other direction (Sensor2 -> Sensor1)
-    path = derive_result_path(no2, "wifi", SCRIPT, no1, params=params)
-    with open(path, "w") as fo:
-        fo.write(dumps(rv, indent=4, sort_keys=True))
+        # Redundant save for the other direction (Sensor2 -> Sensor1)
+        # path = derive_result_path(no2, "wifi", SCRIPT, no1, params=params)
+        # with open(path, "w") as fo:
+        #     fo.write(dumps(rv, indent=4, sort_keys=True))
+    except Exception:
+        print("Exception on WIFI pair", file_tuple)
+        traceback.print_exc()
 
 
 def process_ble(file_tuple, slotsize=10, default=-100):
-    # Get Sensor ID from path
-    pop1, pop2 = file_tuple
-    no1 = pop1[0:9]
-    no2 = pop2[0:9]
+    try:
+        # Get Sensor ID from path
+        pop1, pop2 = file_tuple
+        no1 = pop1[0:9]
+        no2 = pop2[0:9]
 
-    params = {
-        "chunk_len": slotsize,
-    }
+        params = {
+            "chunk_len": slotsize,
+        }
 
-    # Prepare results dictionary
-    rv = {}
-    rv["metadata"] = create_metadata([pop1, pop2], SCRIPT, params=params)
+        # Prepare results dictionary
+        rv = {}
+        rv["metadata"] = create_metadata([pop1, pop2], SCRIPT, params=params)
 
-    # Compute results
-    rv["results"] = compute(pop1, pop2, default=-100, slotsize=10,
-                            mode=MODE_BLE)
+        # Compute results
+        rv["results"] = compute(pop1, pop2, default=-100, slotsize=10,
+                                mode=MODE_BLE)
 
-    # Save timestamp of finished processing
-    rv["metadata"]["processing_end"] = \
-        datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")
+        # Save timestamp of finished processing
+        rv["metadata"]["processing_end"] = \
+            datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")
 
-    # Save result json to file
-    path = derive_result_path(no1, "ble", SCRIPT, no2, params=params)
-    with open(path, "w") as fo:
-        fo.write(dumps(rv, indent=4, sort_keys=True))
+        # Save result json to file
+        path = derive_result_path(no1, "ble", SCRIPT, no2, params=params)
+        with open(path, "w") as fo:
+            fo.write(dumps(rv, indent=4, sort_keys=True))
 
-    # Redundant save for the other direction (Sensor2 -> Sensor1)
-    # path = derive_result_path(no2, "ble", SCRIPT, no1, params=params)
-    # with open(path, "w") as fo:
-    #     fo.write(dumps(rv, indent=4, sort_keys=True))
+        # Redundant save for the other direction (Sensor2 -> Sensor1)
+        # path = derive_result_path(no2, "ble", SCRIPT, no1, params=params)
+        # with open(path, "w") as fo:
+        #     fo.write(dumps(rv, indent=4, sort_keys=True))
+    except Exception:
+        print("Exception on BLE pair", file_tuple)
+        traceback.print_exc()
 
 
 if __name__ == "__main__":
