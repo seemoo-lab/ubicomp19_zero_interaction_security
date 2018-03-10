@@ -8,6 +8,7 @@ import multiprocessing
 import time
 from functools import partial
 import os
+import gzip
 
 # Number of workers to be used in parallel
 NUM_WORKERS = 0
@@ -67,131 +68,147 @@ def parse_folders(path, feature):
     return folder_list
 
 
-def process_folder(file_list, feature=''):
+def process_folder(file_list, feature='', scenario=''):
 
-    # Get the current folder, e.g. 10sec, 1min, etc.
-    # (take different slashes into account: / or \)
-    regex = re.escape(feature) + r'(?:/|\\)(.*)(?:/|\\)Sensor-'
-    match = re.search(regex, file_list[0])
+    try:
+        # In the office scenario we deal with *.json.gz files
+        gz_str = ''
+        if scenario == 'office':
+            gz_str = '.gz'
 
-    # If there is no match - exit
-    if not match:
-        print('process_folder: no match for the folder name, exiting...')
-        sys.exit(0)
-
-    cur_folder = match.group(1)
-    # print(cur_folder)
-
-    # Get the base path for logging
-    match = re.search(r'(.*)Sensor-', file_list[0])
-
-    # If there is no match - exit
-    if not match:
-        print('process_folder: no match for the log path, exiting...')
-        sys.exit(0)
-
-    log_path = match.group(1)
-    # print(log_path)
-
-    # Get target sensor number, e.g. 01, 02, etc.
-    # (take different slashes into account: / or \)
-    match = re.search(r'Sensor-(.*)(?:/|\\)audio(?:/|\\)', file_list[0])
-
-    # If there is no match - exit
-    if not match:
-        print('process_folder: no match for the sensor number, exiting...')
-        sys.exit(0)
-
-    target_sensor = match.group(1)
-    # print(target_sensor)
-
-    # Store results from all json files in one folder
-    json_dict = {}
-
-    # Iterate over all files in the file_list (i.e. one folder)
-    for json_file in file_list:
-        # Get results from a single file
-        feature_res = process_feature(json_file, feature)
-
-        if not feature_res:
-            print('process_folder: feature processing failed, feature = %s, file = %s --- exiting...' % \
-                  + (feature, json_file))
-            sys.exit(0)
-
-        # Get the file name, e.g. Sensor-02 - a key in the json_dict
+        # Get the current folder, e.g. 10sec, 1min, etc.
         # (take different slashes into account: / or \)
-        regex = re.escape(cur_folder) + r'(?:/|\\)(.*).json'
-        match = re.search(regex, json_file)
+        regex = re.escape(feature) + r'(?:/|\\)(.*)(?:/|\\)Sensor-'
+        match = re.search(regex, file_list[0])
 
         # If there is no match - exit
         if not match:
-            print('process_folder: no match for the file name, exiting...')
+            print('process_folder: no match for the folder name, exiting...')
             sys.exit(0)
 
-        # Add data to json_dict
-        json_dict[match.group(1).lower()] = feature_res
+        cur_folder = match.group(1)
+        # print(cur_folder)
 
-    # Result that goes into JSON (name stolen from Max;))
-    rv = {}
+        # Get the base path for logging
+        match = re.search(r'(.*)Sensor-', file_list[0])
 
-    # Metadata dict
-    meta_dict = {}
+        # If there is no match - exit
+        if not match:
+            print('process_folder: no match for the log path, exiting...')
+            sys.exit(0)
 
-    # Metadata fields: target sensor, feature, duration and value
-    meta_dict['sensor'] = target_sensor
-    meta_dict['feature'] = feature
-    meta_dict['duration'] = cur_folder
+        log_path = match.group(1)
+        # print(log_path)
 
-    if feature == 'audioFingerprint' or feature == 'noiseFingerprint':
-        meta_dict['value'] = 'fingerprints_similarity_percent'
-    elif feature == 'soundProofXcorr':
-        meta_dict['value'] = 'max_xcorr'
-    elif feature == 'timeFreqDistance':
-        meta_dict['value'] = 'max_xcorr, time_freq_dist'
+        # Get target sensor number, e.g. 01, 02, etc.
+        # (take different slashes into account: / or \)
+        match = re.search(r'Sensor-(.*)(?:/|\\)audio(?:/|\\)', file_list[0])
 
-    # Add metadata
-    rv['metadata'] = meta_dict
+        # If there is no match - exit
+        if not match:
+            print('process_folder: no match for the sensor number, exiting...')
+            sys.exit(0)
 
-    # Add results
-    rv['results'] = json_dict
+        target_sensor = match.group(1)
+        # print(target_sensor)
 
-    # Save the summary JSON file
-    filename = log_path + SUMMARY_FILE
-    # print('Saving a file: %s' % filename)
-    with open(filename, 'w') as f:
-        f.write(dumps(rv, indent=4, sort_keys=True))
+        # Store results from all json files in one folder
+        json_dict = {}
+
+        # Iterate over all files in the file_list (i.e. one folder)
+        for json_file in file_list:
+            # Get results from a single file
+            feature_res = process_feature(json_file, feature, scenario)
+
+            if not feature_res:
+                print('process_folder: feature processing failed, feature = %s, file = %s --- exiting...' % \
+                      + (feature, json_file))
+                sys.exit(0)
+
+            # Get the file name, e.g. Sensor-02 - a key in the json_dict
+            # (take different slashes into account: / or \)
+            regex = re.escape(cur_folder) + r'(?:/|\\)(.*).json' + gz_str
+            match = re.search(regex, json_file)
+
+            # If there is no match - exit
+            if not match:
+                print('process_folder: no match for the file name, exiting...')
+                sys.exit(0)
+
+            # Add data to json_dict
+            json_dict[match.group(1).lower()] = feature_res
+
+        # Result that goes into JSON (name stolen from Max;))
+        rv = {}
+
+        # Metadata dict
+        meta_dict = {}
+
+        # Metadata fields: target sensor, feature, duration and value
+        meta_dict['sensor'] = target_sensor
+        meta_dict['feature'] = feature
+        meta_dict['duration'] = cur_folder
+
+        if feature == 'audioFingerprint' or feature == 'noiseFingerprint':
+            meta_dict['value'] = 'fingerprints_similarity_percent'
+        elif feature == 'soundProofXcorr':
+            meta_dict['value'] = 'max_xcorr'
+        elif feature == 'timeFreqDistance':
+            meta_dict['value'] = 'max_xcorr, time_freq_dist'
+
+        # Add metadata
+        rv['metadata'] = meta_dict
+
+        # Add results
+        rv['results'] = json_dict
+
+        # Save the summary JSON file
+        filename = log_path + SUMMARY_FILE
+        # print('Saving a file: %s' % filename)
+        with open(filename, 'w') as f:
+            f.write(dumps(rv, indent=4, sort_keys=True))
+
+    except Exception as e:
+        print(e)
 
 
-def process_feature(json_file, feature):
+def process_feature(json_file, feature, scenario):
     # Process each feature
     if feature == 'audioFingerprint':
-        return process_afp(json_file)
+        return process_afp(json_file, scenario)
     elif feature == 'noiseFingerprint':
-        return process_nfp(json_file)
+        return process_nfp(json_file, scenario)
     elif feature == 'soundProofXcorr':
-        return process_spf(json_file)
+        return process_spf(json_file, scenario)
     elif feature == 'timeFreqDistance':
-        return process_tfd(json_file)
+        return process_tfd(json_file, scenario)
     else:
         print('process_feature: unknown feature: %s --- ignoring...' % feature)
 
     return
 
 
-def process_afp(json_file):
+def process_afp(json_file, scenario):
     # Initialize res_dict
     res_dict = {}
 
     # List to store the 'fingerprints_similarity_percent' fields
     afp_similarity_list = []
 
-    # Open and read the JSON file
-    with open(json_file, 'r') as f:
-        json = loads(f.read())
-        results = json['results']
-        # Store 'fingerprints_similarity_percent' fields in the list
-        for k, v in sorted(results.items()):
-            afp_similarity_list.append(v['fingerprints_similarity_percent'])
+    if scenario == 'car':
+        # Open and read the JSON file
+        with open(json_file, 'r') as f:
+            json = loads(f.read())
+            results = json['results']
+    elif scenario == 'office':
+        # Open and read the GZIP file
+        with gzip.open(json_file, 'rt') as f:
+            json = loads(f.read())
+            results = json['results']
+
+    # Store 'fingerprints_similarity_percent' fields in the list
+    for k, v in sorted(results.items()):
+        afp_similarity_list.append(v['fingerprints_similarity_percent'])
 
     # Convert list to np array
     afp_similarity_array = np.array(list(afp_similarity_list), dtype=float)
@@ -206,38 +223,53 @@ def process_afp(json_file):
     return res_dict
 
 
-def process_nfp(json_file):
+def process_nfp(json_file, scenario):
     # String to store the 'fingerprints_similarity_percent' value
     nfp_similarity = ''
 
-    # Open and read the JSON file
-    with open(json_file, 'r') as f:
-        json = loads(f.read())
-        results = json['results']
-        # Store 'fingerprints_similarity_percent' fields in the list
-        for k, v in sorted(results.items()):
-            nfp_similarity = v['fingerprints_similarity_percent']
+    if scenario == 'car':
+        # Open and read the JSON file
+        with open(json_file, 'r') as f:
+            json = loads(f.read())
+            results = json['results']
+    elif scenario == 'office':
+        # Open and read the GZIP file
+        with gzip.open(json_file, 'rt') as f:
+            json = loads(f.read())
+            results = json['results']
+
+    # Store 'fingerprints_similarity_percent' fields in the list
+    for k, v in sorted(results.items()):
+        nfp_similarity = v['fingerprints_similarity_percent']
 
     return nfp_similarity
 
 
-def process_spf(json_file):
+def process_spf(json_file, scenario):
     # Initialize res_dict
     res_dict = {}
 
     # List to store the 'max_xcorr' fields
     spf_xcorr_list = []
 
-    # Open and read the JSON file
-    with open(json_file, 'r') as f:
-        json = loads(f.read())
-        results = json['results']
-        res_len = len(results)
-        # Store 'max_xcorr' fields in the list
-        for k, v in sorted(results.items()):
-            # Take into account the power threshold
-            if v['power1_db'] >= 40 and v['power2_db'] >= 40:
-                spf_xcorr_list.append(v['max_xcorr'])
+    if scenario == 'car':
+        # Open and read the JSON file
+        with open(json_file, 'r') as f:
+            json = loads(f.read())
+            results = json['results']
+            res_len = len(results)
+    elif scenario == 'office':
+        # Open and read the GZIP file
+        with gzip.open(json_file, 'rt') as f:
+            json = loads(f.read())
+            results = json['results']
+            res_len = len(results)
+
+    # Store 'max_xcorr' fields in the list
+    for k, v in sorted(results.items()):
+        # Take into account the power threshold
+        if v['power1_db'] >= 40 and v['power2_db'] >= 40:
+            spf_xcorr_list.append(v['max_xcorr'])
 
     # Convert list to np array
     spf_xcorr_array = np.array(list(spf_xcorr_list), dtype=float)
@@ -253,7 +285,7 @@ def process_spf(json_file):
     return res_dict
 
 
-def process_tfd(json_file):
+def process_tfd(json_file, scenario):
     # Initialize res_dict
     res_dict = {}
 
@@ -261,13 +293,21 @@ def process_tfd(json_file):
     tfd_xcorr_list = []
     tfd_tfd_list = []
 
-    with open(json_file, 'r') as f:
-        json = loads(f.read())
-        results = json['results']
-        # Store 'max_xcorr' and 'time_freq_dist' fields in the lists
-        for k, v in sorted(results.items()):
-            tfd_xcorr_list.append(v['max_xcorr'])
-            tfd_tfd_list.append(v['time_freq_dist'])
+    if scenario == 'car':
+        # Open and read the JSON file
+        with open(json_file, 'r') as f:
+            json = loads(f.read())
+            results = json['results']
+    elif scenario == 'office':
+        # Open and read the GZIP file
+        with gzip.open(json_file, 'rt') as f:
+            json = loads(f.read())
+            results = json['results']
+
+    # Store 'max_xcorr' and 'time_freq_dist' fields in the lists
+    for k, v in sorted(results.items()):
+        tfd_xcorr_list.append(v['max_xcorr'])
+        tfd_tfd_list.append(v['time_freq_dist'])
 
     # Convert xcorr and tfd lists to np arrays
     tfd_xcorr_array = np.array(list(tfd_xcorr_list), dtype=float)
@@ -299,22 +339,36 @@ def process_tfd(json_file):
 
 
 # ToDo: merge all aggregate functions into one with input feature param
-def aggregate_afp():
+def aggregate_afp(scenario):
 
     # Audio feature
     feature = 'audioFingerprint'
 
-    # Path to result files
-    feature_path = ROOT_PATH + 'Sensor-*/audio/' + feature + '/*/Sensor-*.json'
+    # Generate folder list depending on the scenario
+    if scenario == 'car':
+        # Path to result files
+        feature_path = ROOT_PATH + 'Sensor-*/audio/' + feature + '/*/Sensor-*.json'
+    elif scenario == 'office':
+        # Path to result files
+        feature_path = ROOT_PATH + 'Sensor-*/audio/' + feature + '/*/Sensor-*.json.gz'
 
     # Get the list of JSON files for each timeInterval folder, e.g. 5sec, 1min, etc.
     folder_list = parse_folders(feature_path, feature)
+
+    # Sort results of folder_list
+    for file_list in folder_list:
+        file_list.sort()
+
+    # Check if the folder list was successfully created
+    if not folder_list:
+        print('aggregate_afp: Folder list is empty, exiting...')
+        sys.exit(0)
 
     # Initiate a pool of workers
     pool = Pool(processes=NUM_WORKERS, maxtasksperchild=1)
 
     # Use partial to pass a static feature parameter
-    func = partial(process_folder, feature=feature)
+    func = partial(process_folder, feature=feature, scenario=scenario)
 
     # Let workers do the job
     pool.imap(func, folder_list)
@@ -324,22 +378,36 @@ def aggregate_afp():
     pool.join()
 
 
-def aggregate_nfp():
+def aggregate_nfp(scenario):
 
     # Audio feature
     feature = 'noiseFingerprint'
 
-    # Path to result files
-    feature_path = ROOT_PATH + 'Sensor-*/audio/' + feature + '/*/Sensor-*.json'
+    # Generate folder list depending on the scenario
+    if scenario == 'car':
+        # Path to result files
+        feature_path = ROOT_PATH + 'Sensor-*/audio/' + feature + '/*/Sensor-*.json'
+    elif scenario == 'office':
+        # Path to result files
+        feature_path = ROOT_PATH + 'Sensor-*/audio/' + feature + '/*/Sensor-*.json.gz'
 
     # Get the list of JSON files for each timeInterval folder, e.g. 5sec, 1min, etc.
     folder_list = parse_folders(feature_path, feature)
+
+    # Sort results of folder_list
+    for file_list in folder_list:
+        file_list.sort()
+
+    # Check if the folder list was successfully created
+    if not folder_list:
+        print('aggregate_nfp: Folder list is empty, exiting...')
+        sys.exit(0)
 
     # Initiate a pool of workers
     pool = Pool(processes=NUM_WORKERS, maxtasksperchild=1)
 
     # Use partial to pass a static feature parameter
-    func = partial(process_folder, feature=feature)
+    func = partial(process_folder, feature=feature, scenario=scenario)
 
     # Let workers do the job
     pool.imap(func, folder_list)
@@ -349,22 +417,36 @@ def aggregate_nfp():
     pool.join()
 
 
-def aggregate_spf():
+def aggregate_spf(scenario):
 
     # Audio feature
     feature = 'soundProofXcorr'
 
-    # Path to result files
-    feature_path = ROOT_PATH + 'Sensor-*/audio/' + feature + '/*/Sensor-*.json'
+    # Generate folder list depending on the scenario
+    if scenario == 'car':
+        # Path to result files
+        feature_path = ROOT_PATH + 'Sensor-*/audio/' + feature + '/*/Sensor-*.json'
+    elif scenario == 'office':
+        # Path to result files
+        feature_path = ROOT_PATH + 'Sensor-*/audio/' + feature + '/*/Sensor-*.json.gz'
 
     # Get the list of JSON files for each timeInterval folder, e.g. 5sec, 1min, etc.
     folder_list = parse_folders(feature_path, feature)
+
+    # Sort results of folder_list
+    for file_list in folder_list:
+        file_list.sort()
+
+    # Check if the folder list was successfully created
+    if not folder_list:
+        print('aggregate_spf: Folder list is empty, exiting...')
+        sys.exit(0)
 
     # Initiate a pool of workers
     pool = Pool(processes=NUM_WORKERS, maxtasksperchild=1)
 
     # Use partial to pass a static feature parameter
-    func = partial(process_folder, feature=feature)
+    func = partial(process_folder, feature=feature, scenario=scenario)
 
     # Let workers do the job
     pool.imap(func, folder_list)
@@ -374,22 +456,36 @@ def aggregate_spf():
     pool.join()
 
 
-def aggregate_tfd():
+def aggregate_tfd(scenario):
 
     # Audio feature
     feature = 'timeFreqDistance'
 
-    # Path to result files
-    feature_path = ROOT_PATH + 'Sensor-*/audio/' + feature + '/*/Sensor-*.json'
+    # Generate folder list depending on the scenario
+    if scenario == 'car':
+        # Path to result files
+        feature_path = ROOT_PATH + 'Sensor-*/audio/' + feature + '/*/Sensor-*.json'
+    elif scenario == 'office':
+        # Path to result files
+        feature_path = ROOT_PATH + 'Sensor-*/audio/' + feature + '/*/Sensor-*.json.gz'
 
     # Get the list of JSON files for each timeInterval folder, e.g. 5sec, 1min, etc.
     folder_list = parse_folders(feature_path, feature)
+
+    # Sort results of folder_list
+    for file_list in folder_list:
+        file_list.sort()
+
+    # Check if the folder list was successfully created
+    if not folder_list:
+        print('aggregate_tfd: Folder list is empty, exiting...')
+        sys.exit(0)
 
     # Initiate a pool of workers
     pool = Pool(processes=NUM_WORKERS, maxtasksperchild=1)
 
     # Use partial to pass a static feature parameter
-    func = partial(process_folder, feature=feature)
+    func = partial(process_folder, feature=feature, scenario=scenario)
 
     # Let workers do the job
     pool.imap(func, folder_list)
@@ -401,14 +497,16 @@ def aggregate_tfd():
 
 if __name__ == '__main__':
     # Check the number of input args
-    if len(sys.argv) == 2:
+    if len(sys.argv) == 3:
         # Assign input args
         ROOT_PATH = sys.argv[1]
+        scenario = sys.argv[2]
 
-    elif len(sys.argv) == 3:
+    elif len(sys.argv) == 4:
         # Assign input args
         ROOT_PATH = sys.argv[1]
-        NUM_WORKERS = sys.argv[2]
+        scenario = sys.argv[2]
+        NUM_WORKERS = sys.argv[3]
 
         # Check if <num_workers> is an integer more than 2
         try:
@@ -420,7 +518,7 @@ if __name__ == '__main__':
             print('Error: <num_workers> must be a positive number > 1!')
             sys.exit(0)
     else:
-        print('Usage: aggregate_results.py <root_path> (optional - <num_workers>)')
+        print('Usage: aggregate_results.py <root_path> <scenario> (optional - <num_workers>)')
         sys.exit(0)
 
     # Get the number of cores on the system
@@ -441,27 +539,28 @@ if __name__ == '__main__':
     if ROOT_PATH[-1] != '/':
         ROOT_PATH = ROOT_PATH + '/'
 
-    '''
+    # Check if <scenario> is a string 'car' or 'office'
+    if not (scenario == 'car' or scenario == 'office'):
+        print('Error: <scenario> can only be "car" or "office"!')
+        sys.exit(0)
+
     # Aggregate results
     start_time = time.time()
     print('Aggregating AFP using %d workers...' % NUM_WORKERS)
-    aggregate_afp()
+    aggregate_afp(scenario)
     print("--- %s seconds ---" % (time.time() - start_time))
     
     start_time = time.time()
-    print('Aggregating NFP using %d workers...' % NUM_WORKERS')
-    aggregate_nfp()
+    print('Aggregating NFP using %d workers...' % NUM_WORKERS)
+    aggregate_nfp(scenario)
     print("--- %s seconds ---" % (time.time() - start_time))
 
     start_time = time.time()
-    print('Aggregating SPF using %d workers...' % NUM_WORKERS')
-    aggregate_spf()
+    print('Aggregating SPF using %d workers...' % NUM_WORKERS)
+    aggregate_spf(scenario)
     print("--- %s seconds ---" % (time.time() - start_time))
 
     start_time = time.time()
-    print('Aggregating TFD using %d workers...' % NUM_WORKERS')
-    aggregate_tfd()
+    print('Aggregating TFD using %d workers...' % NUM_WORKERS)
+    aggregate_tfd(scenario)
     print("--- %s seconds ---" % (time.time() - start_time))
-    '''
-
-
