@@ -149,12 +149,9 @@ def compute(file1, slotsize, fp_len, delta_rel, delta_abs):
             this = avgs[tstrings[i]]
             prev = avgs[tstrings[i - 1]]
 
-            if len(fp) == fp_len:
-                fp = fp_bit(this, prev, delta_rel, delta_abs) + fp[:fp_len - 1]
-            else:
-                fp = fp_bit(this, prev, delta_rel, delta_abs) + fp
+            fp += fp_bit(this, prev, delta_rel, delta_abs)
 
-            rv[tstrings[i]] = fp
+        rv[tstrings[-1]] = fp
 
         return rv
     except Exception:
