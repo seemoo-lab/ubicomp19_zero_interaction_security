@@ -645,6 +645,15 @@ def format_power():
     # Get the list of JSON files for each timeInterval folder, e.g. 5sec, 1min, etc.
     folder_list = parse_folders(feature_path, feature)
 
+    # Sort results of folder_list
+    for file_list in folder_list:
+        file_list.sort()
+
+    # Check if the folder list was successfully created
+    if not folder_list:
+        print('format_power: Folder list is empty, exiting...')
+        sys.exit(0)
+
     # Initiate a pool of workers
     pool = Pool(processes=NUM_WORKERS, maxtasksperchild=1)
 
@@ -724,7 +733,6 @@ if __name__ == '__main__':
         sys.exit(0)
 
     # Format results
-    '''
     start_time = time.time()
     print('Formatting AFP...')
     format_afp()
@@ -744,4 +752,3 @@ if __name__ == '__main__':
     print('Formatting TFD...')
     format_tfd()
     print('--- %s seconds ---' % (time.time() - start_time))
-    '''
