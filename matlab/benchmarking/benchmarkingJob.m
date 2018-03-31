@@ -16,7 +16,6 @@ if strcmp(scenario, 'car') == 0 & strcmp(scenario, 'office') == 0
     return;
 end
 
-tic;
 % Iterate over *.txt files
 for i=1:length(inFolder)
     % Get file name
@@ -27,7 +26,6 @@ for i=1:length(inFolder)
     % Launch audio banchmarking 
     audioBenchmarking(fileName, scenario)
 end
-toc;
 
 end
 
