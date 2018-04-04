@@ -473,7 +473,7 @@ def process_ble(file_tuple, slotsize=10, default=-100):
         rv["metadata"] = create_metadata([pop1, pop2], SCRIPT, params=params)
 
         # Compute results
-        rv["results"] = compute(pop1, pop2, default=-100, slotsize=10,
+        rv["results"] = compute(pop1, pop2, default=-100, slotsize=slotsize,
                                 mode=MODE_BLE)
 
         # Save timestamp of finished processing
