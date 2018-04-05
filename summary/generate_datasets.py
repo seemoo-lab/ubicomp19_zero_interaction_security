@@ -111,7 +111,7 @@ def process_dataset(json_file, dataset='', feature='', time_interval='', root_pa
         elif dataset == 'big':
             match = re.search(r'Sensor-(.*)(?:/|\\)temp(?:/|\\)', check_json)
         else:
-            print('process_dataset: uknown dataset type = %s, exiting...', dataset)
+            print('process_dataset: unknown dataset type = %s, exiting...', dataset)
             sys.exit(0)
 
         # If there is no match - exit
@@ -242,6 +242,12 @@ def build_small_dataset(json_file, ble_path, wifi_path, tmp_path, label, feature
         # A row in a libsvm file
         libsvm_row = ''
 
+        # NA counter
+        na_count = 0
+
+        # Feature counter
+        feature_count = 0
+
         # Iterate until the proximity of the first audio ts
         # Adjust here to '< first_audio_ts'(car - from 30 to 20)
         if date_to_sec(key) + time_delta - extra <= first_audio_ts:
@@ -254,6 +260,20 @@ def build_small_dataset(json_file, ble_path, wifi_path, tmp_path, label, feature
                     if not 'error' in ble_res[key]:
                         # Add ble features to libsvm_row
                         libsvm_row = add_features('ble', ble_res[key], libsvm_row)
+                    else:
+                        # Add NA for ble features in libsvm_row
+                        libsvm_row = add_features('ble', 'NA', libsvm_row)
+                        # Increment NA counter
+                        na_count += 1
+                else:
+                    # Add NA for ble features in libsvm_row
+                    libsvm_row = add_features('ble', 'NA', libsvm_row)
+                    # Increment NA counter
+                    na_count += 1
+
+                # Increment feature counter
+                feature_count += 1
+
                 # Remove element ble_res[key] from the ble_res
                 # used to sync with the audio data later on
                 del ble_res[key]
@@ -266,14 +286,29 @@ def build_small_dataset(json_file, ble_path, wifi_path, tmp_path, label, feature
                     if not 'error' in wifi_res[key]:
                         # Add wifi features to libsvm_row
                         libsvm_row = add_features('wifi', wifi_res[key], libsvm_row)
+                    else:
+                        # Add NA for wifi features in libsvm_row
+                        libsvm_row = add_features('wifi', 'NA', libsvm_row)
+                        # Increment NA counter
+                        na_count += 1
+                else:
+                    # Add NA for wifi features in libsvm_row
+                    libsvm_row = add_features('wifi', 'NA', libsvm_row)
+                    # Increment NA counter
+                    na_count += 1
+
+                # Increment feature counter
+                feature_count += 1
+
                 # Remove element wifi_res[key] from the wifi_res
                 # used to sync with the audio data later on
                 del wifi_res[key]
 
             # Add libsvm_row to the list
             if libsvm_row:
-                libsvm_row = label + libsvm_row
-                libsvm_list.append(libsvm_row)
+                if feature_count != na_count:
+                    libsvm_row = label + libsvm_row
+                    libsvm_list.append(libsvm_row)
         else:
             break
 
@@ -302,6 +337,12 @@ def build_small_dataset(json_file, ble_path, wifi_path, tmp_path, label, feature
                 if not 'error' in ble_res[check_ts]:
                     # Add ble features to libsvm_row
                     libsvm_row = add_features('ble', ble_res[check_ts], libsvm_row)
+                else:
+                    # Add NA for ble features in libsvm_row
+                    libsvm_row = add_features('ble', 'NA', libsvm_row)
+            else:
+                # Add NA for ble features in libsvm_row
+                libsvm_row = add_features('ble', 'NA', libsvm_row)
             # Remove ble_res[check_ts]
             del ble_res[check_ts]
 
@@ -313,6 +354,12 @@ def build_small_dataset(json_file, ble_path, wifi_path, tmp_path, label, feature
                 if not 'error' in wifi_res[check_ts]:
                     # Add wifi features to libsvm_row
                     libsvm_row = add_features('wifi', wifi_res[check_ts], libsvm_row)
+                else:
+                    # Add NA for wifi features in libsvm_row
+                    libsvm_row = add_features('wifi', 'NA', libsvm_row)
+            else:
+                # Add NA for wifi features in libsvm_row
+                libsvm_row = add_features('wifi', 'NA', libsvm_row)
             # Remove wifi_res[check_ts]
             del wifi_res[check_ts]
 
@@ -342,6 +389,12 @@ def build_small_dataset(json_file, ble_path, wifi_path, tmp_path, label, feature
         # A row in a libsvm file
         libsvm_row = ''
 
+        # NA counter
+        na_count = 0
+
+        # Feature counter
+        feature_count = 0
+
         # Check ble features
         if key in ble_res:
             # Check if the value ble_res[key] is not empty
@@ -350,6 +403,19 @@ def build_small_dataset(json_file, ble_path, wifi_path, tmp_path, label, feature
                 if not 'error' in ble_res[key]:
                     # Add ble features to libsvm_row
                     libsvm_row = add_features('ble', ble_res[key], libsvm_row)
+                else:
+                    # Add NA for ble features in libsvm_row
+                    libsvm_row = add_features('ble', 'NA', libsvm_row)
+                    # Increment NA counter
+                    na_count += 1
+            else:
+                # Add NA for ble features in libsvm_row
+                libsvm_row = add_features('ble', 'NA', libsvm_row)
+                # Increment NA counter
+                na_count += 1
+
+            # Increment feature counter
+            feature_count += 1
 
         # Check wifi features
         if key in wifi_res:
@@ -359,11 +425,25 @@ def build_small_dataset(json_file, ble_path, wifi_path, tmp_path, label, feature
                 if not 'error' in wifi_res[key]:
                     # Add wifi features to libsvm_row
                     libsvm_row = add_features('wifi', wifi_res[key], libsvm_row)
+                else:
+                    # Add NA for wifi features in libsvm_row
+                    libsvm_row = add_features('wifi', 'NA', libsvm_row)
+                    # Increment NA counter
+                    na_count += 1
+            else:
+                # Add NA for wifi features in libsvm_row
+                libsvm_row = add_features('wifi', 'NA', libsvm_row)
+                # Increment NA counter
+                na_count += 1
+
+            # Increment feature counter
+            feature_count += 1
 
         # Add libsvm_row to the list
         if libsvm_row:
-            libsvm_row = label + libsvm_row
-            libsvm_list.append(libsvm_row)
+            if feature_count != na_count:
+                libsvm_row = label + libsvm_row
+                libsvm_list.append(libsvm_row)
 
     # Save the results
     with open(tmp_path, 'w') as f:
@@ -427,24 +507,33 @@ def build_big_dataset(json_file, hum_path, press_path, tmp_path, label):
 
         # Check if temp_res contains key
         if key in temp_res:
+            temp_feature = ' ' + '1:' + str(temp_res[key])
+            '''
             if float(temp_res[key]) == 0:
                 temp_feature = ' ' + '1:' + '0.000001'
             else:
                 temp_feature = ' ' + '1:' + str(temp_res[key])
+            '''
 
         # Check if hum_res contains key
         if key in hum_res:
+            hum_feature = ' ' + '2:' + str(hum_res[key])
+            '''
             if float(hum_res[key]) == 0:
                 hum_feature = ' ' + '2:' + '0.000001'
             else:
                 hum_feature = ' ' + '2:' + str(hum_res[key])
+            '''
 
         # Check if press_res contains key
         if key in press_res:
+            press_feature = ' ' + '3:' + str(press_res[key])
+            '''
             if float(press_res[key]) == 0:
                 press_feature = ' ' + '3:' + '0.000001'
             else:
                 press_feature = ' ' + '3:' + str(press_res[key])
+            '''
 
         # Construct libsvm_row
         libsvm_row = label + temp_feature + hum_feature + press_feature
@@ -568,57 +657,79 @@ def add_features(feature, value, libsvm_row):
 
         # Check if xcorr values is not NaN (incident with Sensor-07)
         if not math.isnan(float(xcorr)):
+            xcorr_feature = ' ' + '1:' + str(xcorr)
+            '''
             if float(xcorr) == 0:
                 xcorr_feature = ' ' + '1:' + '0.000001'
             else:
                 xcorr_feature = ' ' + '1:' + str(xcorr)
+            '''
+        else:
+            xcorr_feature = ' ' + '1:NA'
 
         # Get tfd value
         tfd = value['time_freq_dist']
 
         # Check if xcorr values is not NaN due (incident with Sensor-07)
         if not math.isnan(float(tfd)):
+            tfd_feature = ' ' + '2:' + str(tfd)
+            '''
             if float(tfd) == 0:
                 tfd_feature = ' ' + '2:' + '0.000001'
             else:
                 tfd_feature = ' ' + '2:' + str(tfd)
+            '''
+        else:
+            tfd_feature = ' ' + '2:NA'
 
         # Construct libsvm_row
         libsvm_row = libsvm_row + xcorr_feature + tfd_feature
 
     elif feature == 'ble':
-        # Starting index of ble features in the libsvm file
-        idx = 3
+        if value == 'NA':
+            libsvm_row = libsvm_row + ' ' + '3:NA 4:NA'
+        else:
+            # Starting index of ble features in the libsvm file
+            idx = 3
 
-        # Iterate over ble features: 'euclidean' and 'jaccard'
-        for k, v in sorted(value.items()):
+            # Iterate over ble features: 'euclidean' and 'jaccard'
+            for k, v in sorted(value.items()):
 
-            # Construct libsvm_row
-            if float(v) == 0:
-                libsvm_row = libsvm_row + ' ' + str(idx) + ':' + '0.000001'
-            else:
+                # Construct libsvm_row
                 libsvm_row = libsvm_row + ' ' + str(idx) + ':' + str(v)
+                '''
+                if float(v) == 0:
+                    libsvm_row = libsvm_row + ' ' + str(idx) + ':' + '0.000001'
+                else:
+                    libsvm_row = libsvm_row + ' ' + str(idx) + ':' + str(v)
+                '''
 
-            idx += 1
+                idx += 1
 
     elif feature == 'wifi':
-        # Starting index of ble features in the libsvm file
-        idx = 5
+        # Check if wifi features have valid values or NA
+        if value == 'NA':
+            libsvm_row = libsvm_row + ' ' + '5:NA 6:NA 7:NA 8:NA 9:NA'
+        else:
+            # Starting index of ble features in the libsvm file
+            idx = 5
 
-        # Iterate over ble features:
-        # 'euclidean', 'jaccard', 'mean_exp', 'mean_hamming', 'sum_squared_ranks'
-        for k, v in sorted(value.items()):
+            # Iterate over ble features:
+            # 'euclidean', 'jaccard', 'mean_exp', 'mean_hamming', 'sum_squared_ranks'
+            for k, v in sorted(value.items()):
 
-            if v == None:
-                v = '10000'
+                if v == None:
+                    v = '10000'
 
-            if float(v) == 0:
-                v = '0.000001'
+                '''
+                if float(v) == 0:
+                    v = '0.000001'
+                '''
 
-            # Construct libsvm_row
-            libsvm_row = libsvm_row + ' ' + str(idx) + ':' + str(v)
+                # Construct libsvm_row
+                libsvm_row = libsvm_row + ' ' + str(idx) + ':' + str(v)
 
-            idx += 1
+                idx += 1
     else:
         print('add_features: unknown feature "%s", exiting...' % feature)
         sys.exit(0)
@@ -716,22 +827,16 @@ def get_small_dataset(scenario):
     # Wait for processes to terminate
     pool.close()
     pool.join()
-
-    #ToDo: We may not need it
-    # Check reduce flag and reflect in the file name
-    reduce_str = ''
-    if REDUCE_FLAG:
-        reduce_str = 'red_'
-
+    #'''
     # Path of the resulting file
-    filename = RESULT_PATH + reduce_str + dataset + '_dataset' + '_' + scenario + '.txt'
+    filename = RESULT_PATH + dataset + '_dataset' + '_' + scenario + '.txt'
 
     # Merge tmp files into a single resulting file
     os.system('cat ' + tmp_path + '*.txt >> ' + filename)
 
     # Delete tmp folder and its content
     shutil.rmtree(tmp_path)
-
+    #'''
 
 def get_big_dataset(scenario):
 
@@ -784,7 +889,7 @@ def get_big_dataset(scenario):
     # Check reduce flag and reflect in the file name
     reduce_str = ''
     if REDUCE_FLAG:
-        reduce_str = 'red_'
+        reduce_str = '10th_'
 
     # Path of the resulting file
     filename = RESULT_PATH + reduce_str + dataset + '_dataset' + '_' + scenario + '.txt'
@@ -797,7 +902,21 @@ def get_big_dataset(scenario):
 
 
 if __name__ == '__main__':
+    '''
+    ROOT_PATH = 'D:/data/car/'
+    RESULT_PATH = 'C:/Users/mfomichev/Desktop/'
+    scenario = 'car'
+    NUM_WORKERS = 4
 
+    SENSORS.append(SENSORS_CAR1)
+    SENSORS.append(SENSORS_CAR2)
+
+    TIME_DELTA = 5
+
+    get_small_dataset(scenario)
+    '''
+
+    #'''
     # Check the number of input args
     if len(sys.argv) == 4:
         # Assign input args
@@ -858,17 +977,17 @@ if __name__ == '__main__':
         SENSORS.append(SENSORS_CAR2)
         
         TIME_DELTA = 5
-        '''
+
         start_time = time.time()
         print('%s: building the small dataset using %d workers...' % (scenario, NUM_WORKERS))
         get_small_dataset(scenario)
         print('--- %s seconds ---' % (time.time() - start_time))
-        '''
+
         start_time = time.time()
         print('%s: building the big dataset using %d workers...' % (scenario, NUM_WORKERS))
         get_big_dataset(scenario)
         print('--- %s seconds ---' % (time.time() - start_time))
-
+        
     elif scenario == 'office':
         SENSORS.append(SENSORS_OFFICE1)
         SENSORS.append(SENSORS_OFFICE2)
@@ -889,3 +1008,4 @@ if __name__ == '__main__':
     else:
         print('Error: <scenario> can only be "car" or "office"!')
         sys.exit(0)
+    #'''

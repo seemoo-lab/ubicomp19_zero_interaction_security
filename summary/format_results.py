@@ -10,7 +10,7 @@ from functools import partial
 import time
 import itertools
 
-# Number of sensors to compare each sensor with
+# Number of sensors to compare each sensor with (= all sensors - 1)
 NUM_SENSORS = 0
 
 # Sensor mapping: car experiment
@@ -88,7 +88,7 @@ def parse_folders(path, feature):
 def align_summary(path):
     # Iterate over matched files
     for json_file in glob(path, recursive=True):
-        print('parsed file: ' + json_file)
+        # print('parsed file: ' + json_file)
 
         # Get target sensor number, e.g. 01, 02, etc.
         # (take different slashes into account: / or \)
@@ -125,7 +125,7 @@ def align_summary(path):
                 # Path of file to be parsed (take different slashes into account: / or \)
                 sym_path = re.sub(r'Sensor-(.*)(?:/|\\)audio(?:/|\\)', insert_sensor + '/audio/', json_file)
 
-                print('sym file: %s ---- with field: %s' % (sym_path, target_sensor.lower()))
+                # print('sym file: %s ---- with field: %s' % (sym_path, target_sensor.lower()))
 
                 # Open and read JSON file
                 with open(sym_path, 'r') as f:
@@ -147,7 +147,7 @@ def add_last_summary(path, feature):
     # Iterate over matched files
     for json_file in glob(path, recursive=True):
 
-        print('parsed file: ' + json_file)
+        # print('parsed file: ' + json_file)
 
         # Get the current folder, e.g. 10sec, 1min, etc.
         # (take different slashes into account: / or \)
@@ -189,7 +189,7 @@ def add_last_summary(path, feature):
             sym_path = re.sub(r'Sensor-(.*)(?:/|\\)audio(?:/|\\)', insert_sensor + '/audio/', json_file) \
             + SUMMARY_FILE
 
-            print('sym file: %s ---- with field: %s' % (sym_path, target_sensor.lower()))
+            # print('sym file: %s ---- with field: %s' % (sym_path, target_sensor.lower()))
 
             # Open and read JSON file
             with open(sym_path, 'r') as f:
@@ -225,7 +225,7 @@ def add_last_summary(path, feature):
         rv['results'] = json_dict
 
         filename = json_file + SUMMARY_FILE
-        print('Saving a file: %s' % filename)
+        # print('Saving a file: %s' % filename)
         # Save the new JSON file
         with open(filename, 'w') as f:
             f.write(dumps(rv, indent=4, sort_keys=True))
@@ -334,7 +334,7 @@ def wrap_up_results(path, feature):
     # Iterate over matched files
     for json_file in glob(path, recursive=True):
 
-        print('parsed file: %s' % json_file)
+        # print('parsed file: %s' % json_file)
 
         co_located_list = []
         non_colocated_list = []
@@ -558,7 +558,7 @@ def wrap_up_results(path, feature):
         json['results']['co_located'] = co_located_dict
         json['results']['non_colocated'] = non_colocated_dict
 
-        print('saving a file: %s' % json_file)
+        # print('saving a file: %s' % json_file)
 
         # Save the updated JSON file
         with open(json_file, 'w') as f:

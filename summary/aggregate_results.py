@@ -9,6 +9,7 @@ import time
 from functools import partial
 import os
 import gzip
+import math
 
 # Number of workers to be used in parallel
 NUM_WORKERS = 0
@@ -267,9 +268,11 @@ def process_spf(json_file, scenario):
 
     # Store 'max_xcorr' fields in the list
     for k, v in sorted(results.items()):
-        # Take into account the power threshold
-        if v['power1_db'] >= 40 and v['power2_db'] >= 40:
-            spf_xcorr_list.append(v['max_xcorr'])
+        # Take into account accident with Sensor-07
+        if not math.isnan(float(v['max_xcorr'])):
+            # Take into account the power threshold
+            if v['power1_db'] >= 40 and v['power2_db'] >= 40:
+                spf_xcorr_list.append(v['max_xcorr'])
 
     # Convert list to np array
     spf_xcorr_array = np.array(list(spf_xcorr_list), dtype=float)
@@ -306,8 +309,10 @@ def process_tfd(json_file, scenario):
 
     # Store 'max_xcorr' and 'time_freq_dist' fields in the lists
     for k, v in sorted(results.items()):
-        tfd_xcorr_list.append(v['max_xcorr'])
-        tfd_tfd_list.append(v['time_freq_dist'])
+        # Take into account accident with Sensor-07
+        if not math.isnan(float(v['max_xcorr'])):
+            tfd_xcorr_list.append(v['max_xcorr'])
+            tfd_tfd_list.append(v['time_freq_dist'])
 
     # Convert xcorr and tfd lists to np arrays
     tfd_xcorr_array = np.array(list(tfd_xcorr_list), dtype=float)
