@@ -93,6 +93,9 @@ def derive_result_path(sensor, feature, script, sensor2=None, params={}):
     path = "results/{}/{}/{}/".format(sensor, feature, script)
 
     for param in sorted(params.keys()):
+        if param == "chunk_len":
+            path += str(params[param]) + "sec/"
+            continue
         path += param + "-" + str(params[param]) + "/"
 
     # Ensure that the folders exist
