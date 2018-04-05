@@ -3,7 +3,7 @@ function [] = audioBenchmarking(inFile, scenario)
 %   Detailed explanation goes here
 
 % Version of the script
-scriptVersion = 'v.1.0.0';
+scriptVersion = 'v1.0.0';
 
 % Date format for logs
 dateFormat = 'yyyy-mm-dd HH:MM:SS.FFF';
