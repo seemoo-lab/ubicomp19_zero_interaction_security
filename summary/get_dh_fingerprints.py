@@ -30,10 +30,10 @@ RESULT_PATH = ''
 # Number of workers to be used in parallel
 NUM_WORKERS = 0
 
-# Length of unsigned 32 bit integer
+# Length of unsigned 32-bit integer
 UINT_LEN = 32
 
-# Maximum number of digits for the max 32 bit unsigned int: 4294967295
+# Maximum number of digits for the max 32-bit unsigned int: 4294967295
 MAX_UINT_DIGITS = 10
 
 
@@ -138,16 +138,16 @@ def process_fingerprints(file_list, feature='', scenario='', out_path=''):
                 fingerprint_list.append(v['fingerprint_chunk2'])
 
         # Temporary path to store intermediate results
-        out_path = out_path + scenario + '_' + prefix + '.txt'
+        out_path = out_path + 'input_dh_' + scenario + '_' + prefix + '.txt'
 
-        # Convert binary input to 32bit unsigned int as recommended by dieHarder
-        fingerprint_list = convert_to_uint(fingerprint_list)
+        # Convert binary input to 32-bit unsigned int as recommended by dieHarder
+        #fingerprint_list = convert_to_uint(fingerprint_list)
 
         # Save the results
         with open(out_path, 'w') as f:
             fingerprint_list = map(lambda line: line + '\n', fingerprint_list)
             f.writelines(fingerprint_list)
-
+        '''
         # Count number of lines in the output file
         cmd = "wc -l " + out_path + " | awk '{print $1}'"
         file_count = int(os.popen(cmd).read())
@@ -157,7 +157,7 @@ def process_fingerprints(file_list, feature='', scenario='', out_path=''):
 
         # Add dieHarder header to the output file
         prepend_dh_header(out_path, dh_header)
-
+        '''
     except Exception as e:
         print(e)
 
@@ -174,7 +174,7 @@ def convert_to_uint(bin_list):
     num_uint = int(len(bin_str)/UINT_LEN)
 
     for i in range(0, num_uint):
-        # Take consecutive 32 bits from bin string
+        # Take consecutive 32-bits from bin string
         bin_chunk = bin_str[i * UINT_LEN:(i + 1) * UINT_LEN]
 
         # Convert binary chunk to binary number
@@ -210,7 +210,7 @@ def get_dh_input(feature, scenario, file_list):
         sys.exit(0)
 
     # Path to a temporary folder to store intermediate results
-    out_path = RESULT_PATH + 'dh_' + feature_abbr + '/'
+    out_path = RESULT_PATH + 'dh_' + scenario + '_' + feature_abbr + '/'
 
     # Create a temporary folder to store intermediate results
     if not os.path.exists(out_path):
