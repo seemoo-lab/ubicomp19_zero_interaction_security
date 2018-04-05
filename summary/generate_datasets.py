@@ -168,6 +168,10 @@ def process_dataset(json_file, dataset='', feature='', time_interval='', root_pa
                 # Update json_file
                 json_file = audio_res
 
+                # Update time_delta for the cases where time_interval != 10sec
+                if time_interval == '30sec':
+                    time_delta = time_delta + 10
+
             # Build the small data set
             build_small_dataset(json_file, ble_path, wifi_path, tmp_path, label, feature, time_delta)
 
@@ -744,7 +748,7 @@ def get_small_dataset(scenario):
     feature = 'timeFreqDistance'
 
     # Time interval of the feature
-    time_interval = '10sec'
+    time_interval = '30sec'
 
     # Type of the dataset
     dataset = 'small'
@@ -982,19 +986,19 @@ if __name__ == '__main__':
         print('%s: building the small dataset using %d workers...' % (scenario, NUM_WORKERS))
         get_small_dataset(scenario)
         print('--- %s seconds ---' % (time.time() - start_time))
-
+        '''
         start_time = time.time()
         print('%s: building the big dataset using %d workers...' % (scenario, NUM_WORKERS))
         get_big_dataset(scenario)
         print('--- %s seconds ---' % (time.time() - start_time))
-        
+        '''
     elif scenario == 'office':
         SENSORS.append(SENSORS_OFFICE1)
         SENSORS.append(SENSORS_OFFICE2)
         SENSORS.append(SENSORS_OFFICE3)
         
         TIME_DELTA = 6
-        '''
+
         start_time = time.time()
         print('%s: building the small dataset using %d workers...' % (scenario, NUM_WORKERS))
         get_small_dataset(scenario)
@@ -1004,7 +1008,7 @@ if __name__ == '__main__':
         print('%s: building the big dataset using %d workers...' % (scenario, NUM_WORKERS))
         get_big_dataset(scenario)
         print('--- %s seconds ---' % (time.time() - start_time))
-
+        '''
     else:
         print('Error: <scenario> can only be "car" or "office"!')
         sys.exit(0)
