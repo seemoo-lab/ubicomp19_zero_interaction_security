@@ -94,7 +94,7 @@ def derive_result_path(sensor, feature, script, sensor2=None, params={}):
 
     for param in sorted(params.keys()):
         if param == "chunk_len":
-            path += str(params[param]) + "s/"
+            path += str(params[param]) + "sec/"
             continue
         path += param + "-" + str(params[param]) + "/"
 
