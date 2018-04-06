@@ -231,6 +231,7 @@ def add_last_summary(path, feature):
             f.write(dumps(rv, indent=4, sort_keys=True))
 
 
+# ToDo: switch to gz json files
 def process_power(file_list, feature=''):
 
     # Get the current folder, e.g. 10sec, 1min, etc.
@@ -710,6 +711,7 @@ def format_tfd():
     wrap_up_results(feature_summary, feature)
 
 
+# ToDo: switch to gz json files
 def format_power():
 
     # Audio feature

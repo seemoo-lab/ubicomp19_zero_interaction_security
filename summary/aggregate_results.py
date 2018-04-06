@@ -69,14 +69,9 @@ def parse_folders(path, feature):
     return folder_list
 
 
-def process_folder(file_list, feature='', scenario=''):
+def process_folder(file_list, feature=''):
 
     try:
-        # In the office scenario we deal with *.json.gz files
-        gz_str = ''
-        if scenario == 'office':
-            gz_str = '.gz'
-
         # Get the current folder, e.g. 10sec, 1min, etc.
         # (take different slashes into account: / or \)
         regex = re.escape(feature) + r'(?:/|\\)(.*)(?:/|\\)Sensor-'
@@ -119,7 +114,7 @@ def process_folder(file_list, feature='', scenario=''):
         # Iterate over all files in the file_list (i.e. one folder)
         for json_file in file_list:
             # Get results from a single file
-            feature_res = process_feature(json_file, feature, scenario)
+            feature_res = process_feature(json_file, feature)
 
             if not feature_res:
                 print('process_folder: feature processing failed, feature = %s, file = %s --- exiting...' % \
@@ -128,7 +123,7 @@ def process_folder(file_list, feature='', scenario=''):
 
             # Get the file name, e.g. Sensor-02 - a key in the json_dict
             # (take different slashes into account: / or \)
-            regex = re.escape(cur_folder) + r'(?:/|\\)(.*).json' + gz_str
+            regex = re.escape(cur_folder) + r'(?:/|\\)(.*).json.gz'
             match = re.search(regex, json_file)
 
             # If there is no match - exit
@@ -173,39 +168,33 @@ def process_folder(file_list, feature='', scenario=''):
         print(e)
 
 
-def process_feature(json_file, feature, scenario):
+def process_feature(json_file, feature):
     # Process each feature
     if feature == 'audioFingerprint':
-        return process_afp(json_file, scenario)
+        return process_afp(json_file)
     elif feature == 'noiseFingerprint':
-        return process_nfp(json_file, scenario)
+        return process_nfp(json_file)
     elif feature == 'soundProofXcorr':
-        return process_spf(json_file, scenario)
+        return process_spf(json_file)
     elif feature == 'timeFreqDistance':
-        return process_tfd(json_file, scenario)
+        return process_tfd(json_file)
     else:
         print('process_feature: unknown feature: %s --- ignoring...' % feature)
 
     return
 
 
-def process_afp(json_file, scenario):
+def process_afp(json_file):
     # Initialize res_dict
     res_dict = {}
 
     # List to store the 'fingerprints_similarity_percent' fields
     afp_similarity_list = []
 
-    if scenario == 'car':
-        # Open and read the JSON file
-        with open(json_file, 'r') as f:
-            json = loads(f.read())
-            results = json['results']
-    elif scenario == 'office':
-        # Open and read the GZIP file
-        with gzip.open(json_file, 'rt') as f:
-            json = loads(f.read())
-            results = json['results']
+    # Open and read the GZIP file
+    with gzip.open(json_file, 'rt') as f:
+        json = loads(f.read())
+        results = json['results']
 
     # Store 'fingerprints_similarity_percent' fields in the list
     for k, v in sorted(results.items()):
@@ -226,20 +215,14 @@ def process_afp(json_file, scenario):
     return res_dict
 
 
-def process_nfp(json_file, scenario):
+def process_nfp(json_file):
     # String to store the 'fingerprints_similarity_percent' value
     nfp_similarity = ''
 
-    if scenario == 'car':
-        # Open and read the JSON file
-        with open(json_file, 'r') as f:
-            json = loads(f.read())
-            results = json['results']
-    elif scenario == 'office':
-        # Open and read the GZIP file
-        with gzip.open(json_file, 'rt') as f:
-            json = loads(f.read())
-            results = json['results']
+    # Open and read the GZIP file
+    with gzip.open(json_file, 'rt') as f:
+        json = loads(f.read())
+        results = json['results']
 
     # Store 'fingerprints_similarity_percent' fields in the list
     for k, v in sorted(results.items()):
@@ -248,25 +231,18 @@ def process_nfp(json_file, scenario):
     return nfp_similarity
 
 
-def process_spf(json_file, scenario):
+def process_spf(json_file):
     # Initialize res_dict
     res_dict = {}
 
     # List to store the 'max_xcorr' fields
     spf_xcorr_list = []
 
-    if scenario == 'car':
-        # Open and read the JSON file
-        with open(json_file, 'r') as f:
-            json = loads(f.read())
-            results = json['results']
-            res_len = len(results)
-    elif scenario == 'office':
-        # Open and read the GZIP file
-        with gzip.open(json_file, 'rt') as f:
-            json = loads(f.read())
-            results = json['results']
-            res_len = len(results)
+    # Open and read the GZIP file
+    with gzip.open(json_file, 'rt') as f:
+        json = loads(f.read())
+        results = json['results']
+        res_len = len(results)
 
     # Store 'max_xcorr' fields in the list
     for k, v in sorted(results.items()):
@@ -292,7 +268,7 @@ def process_spf(json_file, scenario):
     return res_dict
 
 
-def process_tfd(json_file, scenario):
+def process_tfd(json_file):
     # Initialize res_dict
     res_dict = {}
 
@@ -300,16 +276,10 @@ def process_tfd(json_file, scenario):
     tfd_xcorr_list = []
     tfd_tfd_list = []
 
-    if scenario == 'car':
-        # Open and read the JSON file
-        with open(json_file, 'r') as f:
-            json = loads(f.read())
-            results = json['results']
-    elif scenario == 'office':
-        # Open and read the GZIP file
-        with gzip.open(json_file, 'rt') as f:
-            json = loads(f.read())
-            results = json['results']
+    # Open and read the GZIP file
+    with gzip.open(json_file, 'rt') as f:
+        json = loads(f.read())
+        results = json['results']
 
     # Store 'max_xcorr' and 'time_freq_dist' fields in the lists
     for k, v in sorted(results.items()):
@@ -352,18 +322,13 @@ def process_tfd(json_file, scenario):
 
 
 # ToDo: merge all aggregate functions into one with input feature param
-def aggregate_afp(scenario):
+def aggregate_afp():
 
     # Audio feature
     feature = 'audioFingerprint'
 
-    # Generate folder list depending on the scenario
-    if scenario == 'car':
-        # Path to result files
-        feature_path = ROOT_PATH + 'Sensor-*/audio/' + feature + '/*/Sensor-*.json'
-    elif scenario == 'office':
-        # Path to result files
-        feature_path = ROOT_PATH + 'Sensor-*/audio/' + feature + '/*/Sensor-*.json.gz'
+    # Path to result files
+    feature_path = ROOT_PATH + 'Sensor-*/audio/' + feature + '/*/Sensor-*.json.gz'
 
     # Get the list of JSON files for each timeInterval folder, e.g. 5sec, 1min, etc.
     folder_list = parse_folders(feature_path, feature)
@@ -381,7 +346,7 @@ def aggregate_afp(scenario):
     pool = Pool(processes=NUM_WORKERS, maxtasksperchild=1)
 
     # Use partial to pass a static feature parameter
-    func = partial(process_folder, feature=feature, scenario=scenario)
+    func = partial(process_folder, feature=feature)
 
     # Let workers do the job
     pool.imap(func, folder_list)
@@ -391,18 +356,13 @@ def aggregate_afp(scenario):
     pool.join()
 
 
-def aggregate_nfp(scenario):
+def aggregate_nfp():
 
     # Audio feature
     feature = 'noiseFingerprint'
 
-    # Generate folder list depending on the scenario
-    if scenario == 'car':
-        # Path to result files
-        feature_path = ROOT_PATH + 'Sensor-*/audio/' + feature + '/*/Sensor-*.json'
-    elif scenario == 'office':
-        # Path to result files
-        feature_path = ROOT_PATH + 'Sensor-*/audio/' + feature + '/*/Sensor-*.json.gz'
+    # Path to result files
+    feature_path = ROOT_PATH + 'Sensor-*/audio/' + feature + '/*/Sensor-*.json.gz'
 
     # Get the list of JSON files for each timeInterval folder, e.g. 5sec, 1min, etc.
     folder_list = parse_folders(feature_path, feature)
@@ -420,7 +380,7 @@ def aggregate_nfp(scenario):
     pool = Pool(processes=NUM_WORKERS, maxtasksperchild=1)
 
     # Use partial to pass a static feature parameter
-    func = partial(process_folder, feature=feature, scenario=scenario)
+    func = partial(process_folder, feature=feature)
 
     # Let workers do the job
     pool.imap(func, folder_list)
@@ -430,18 +390,13 @@ def aggregate_nfp(scenario):
     pool.join()
 
 
-def aggregate_spf(scenario):
+def aggregate_spf():
 
     # Audio feature
     feature = 'soundProofXcorr'
 
-    # Generate folder list depending on the scenario
-    if scenario == 'car':
-        # Path to result files
-        feature_path = ROOT_PATH + 'Sensor-*/audio/' + feature + '/*/Sensor-*.json'
-    elif scenario == 'office':
-        # Path to result files
-        feature_path = ROOT_PATH + 'Sensor-*/audio/' + feature + '/*/Sensor-*.json.gz'
+    # Path to result files
+    feature_path = ROOT_PATH + 'Sensor-*/audio/' + feature + '/*/Sensor-*.json.gz'
 
     # Get the list of JSON files for each timeInterval folder, e.g. 5sec, 1min, etc.
     folder_list = parse_folders(feature_path, feature)
@@ -459,7 +414,7 @@ def aggregate_spf(scenario):
     pool = Pool(processes=NUM_WORKERS, maxtasksperchild=1)
 
     # Use partial to pass a static feature parameter
-    func = partial(process_folder, feature=feature, scenario=scenario)
+    func = partial(process_folder, feature=feature)
 
     # Let workers do the job
     pool.imap(func, folder_list)
@@ -469,18 +424,13 @@ def aggregate_spf(scenario):
     pool.join()
 
 
-def aggregate_tfd(scenario):
+def aggregate_tfd():
 
     # Audio feature
     feature = 'timeFreqDistance'
 
-    # Generate folder list depending on the scenario
-    if scenario == 'car':
-        # Path to result files
-        feature_path = ROOT_PATH + 'Sensor-*/audio/' + feature + '/*/Sensor-*.json'
-    elif scenario == 'office':
-        # Path to result files
-        feature_path = ROOT_PATH + 'Sensor-*/audio/' + feature + '/*/Sensor-*.json.gz'
+    # Path to result files
+    feature_path = ROOT_PATH + 'Sensor-*/audio/' + feature + '/*/Sensor-*.json.gz'
 
     # Get the list of JSON files for each timeInterval folder, e.g. 5sec, 1min, etc.
     folder_list = parse_folders(feature_path, feature)
@@ -498,7 +448,7 @@ def aggregate_tfd(scenario):
     pool = Pool(processes=NUM_WORKERS, maxtasksperchild=1)
 
     # Use partial to pass a static feature parameter
-    func = partial(process_folder, feature=feature, scenario=scenario)
+    func = partial(process_folder, feature=feature)
 
     # Let workers do the job
     pool.imap(func, folder_list)
@@ -510,15 +460,13 @@ def aggregate_tfd(scenario):
 
 if __name__ == '__main__':
     # Check the number of input args
-    if len(sys.argv) == 3:
+    if len(sys.argv) == 2:
         # Assign input args
         ROOT_PATH = sys.argv[1]
-        scenario = sys.argv[2]
 
-    elif len(sys.argv) == 4:
+    elif len(sys.argv) == 3:
         # Assign input args
         ROOT_PATH = sys.argv[1]
-        scenario = sys.argv[2]
         NUM_WORKERS = sys.argv[3]
 
         # Check if <num_workers> is an integer more than 2
@@ -531,7 +479,7 @@ if __name__ == '__main__':
             print('Error: <num_workers> must be a positive number > 1!')
             sys.exit(0)
     else:
-        print('Usage: aggregate_results.py <root_path> <scenario> (optional - <num_workers>)')
+        print('Usage: aggregate_results.py <root_path> (optional - <num_workers>)')
         sys.exit(0)
 
     # Get the number of cores on the system
@@ -552,28 +500,23 @@ if __name__ == '__main__':
     if ROOT_PATH[-1] != '/':
         ROOT_PATH = ROOT_PATH + '/'
 
-    # Check if <scenario> is a string 'car' or 'office'
-    if not (scenario == 'car' or scenario == 'office'):
-        print('Error: <scenario> can only be "car" or "office"!')
-        sys.exit(0)
-
     # Aggregate results
     start_time = time.time()
     print('Aggregating AFP using %d workers...' % NUM_WORKERS)
-    aggregate_afp(scenario)
-    print("--- %s seconds ---" % (time.time() - start_time))
+    aggregate_afp()
+    print('--- %s seconds ---' % (time.time() - start_time))
     
     start_time = time.time()
     print('Aggregating NFP using %d workers...' % NUM_WORKERS)
-    aggregate_nfp(scenario)
-    print("--- %s seconds ---" % (time.time() - start_time))
+    aggregate_nfp()
+    print('--- %s seconds ---' % (time.time() - start_time))
 
     start_time = time.time()
     print('Aggregating SPF using %d workers...' % NUM_WORKERS)
-    aggregate_spf(scenario)
-    print("--- %s seconds ---" % (time.time() - start_time))
+    aggregate_spf()
+    print('--- %s seconds ---' % (time.time() - start_time))
 
     start_time = time.time()
     print('Aggregating TFD using %d workers...' % NUM_WORKERS)
-    aggregate_tfd(scenario)
-    print("--- %s seconds ---" % (time.time() - start_time))
+    aggregate_tfd()
+    print('--- %s seconds ---' % (time.time() - start_time))
