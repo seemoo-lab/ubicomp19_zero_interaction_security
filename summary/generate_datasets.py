@@ -122,7 +122,7 @@ def process_dataset(json_file, dataset='', feature='', time_interval='', root_pa
         target_sensor = match.group(1)
 
         # Get sensor number from all the sensor in the current folder, e.g. 01, 02, etc.
-        regex = re.escape(time_interval) + r'(?:/|\\)Sensor-(.*)\.json'
+        regex = re.escape(time_interval) + r'(?:/|\\)Sensor-(.*)\.json.gz'
         match = re.search(regex, check_json)
 
         # If there is no match - exit
@@ -150,10 +150,10 @@ def process_dataset(json_file, dataset='', feature='', time_interval='', root_pa
         if dataset == 'small':
             # Construct Wi-Fi and BLE paths
             ble_path = root_path + 'Sensor-' + target_sensor + '/ble/ble_wifi_truong/' + time_interval + \
-                       '/Sensor-' + sensor + '.json'
+                       '/Sensor-' + sensor + '.json.gz'
 
             wifi_path = root_path + 'Sensor-' + target_sensor + '/wifi/ble_wifi_truong/' + time_interval + \
-                        '/Sensor-' + sensor + '.json'
+                        '/Sensor-' + sensor + '.json.gz'
 
             # Handle the list case (do nothing for the string case)
             if isinstance(json_file, list):
@@ -178,10 +178,10 @@ def process_dataset(json_file, dataset='', feature='', time_interval='', root_pa
         elif dataset == 'big':
             # Construct hum and press paths
             hum_path = root_path + 'Sensor-' + target_sensor + '/hum/' + time_interval + \
-                       '/Sensor-' + sensor + '.json'
+                       '/Sensor-' + sensor + '.json.gz'
 
             press_path = root_path + 'Sensor-' + target_sensor + '/press/' + time_interval + \
-                        '/Sensor-' + sensor + '.json'
+                        '/Sensor-' + sensor + '.json.gz'
 
             # Build the big data set
             build_big_dataset(json_file, hum_path, press_path, tmp_path, label)
@@ -204,21 +204,21 @@ def build_small_dataset(json_file, ble_path, wifi_path, tmp_path, label, feature
         audio_res = json_file
         extra = 2
     elif isinstance(json_file, str):
-        # Read audio JSON
-        with open(json_file, 'r') as f:
+        # Read gzipped audio JSON
+        with gzip.open(json_file, 'rt') as f:
             audio_json = loads(f.read())
             audio_res = audio_json['results']
     else:
         print('build_small_dataset: json_file must be only of instance dict or str, exiting...')
         sys.exit(0)
 
-    # Read ble JSON
-    with open(ble_path, 'r') as f:
+    # Read gzipped ble JSON
+    with gzip.open(ble_path, 'rt') as f:
         ble_json = loads(f.read())
         ble_res = ble_json['results']
 
-    # Read wifi JSON
-    with open(wifi_path, 'r') as f:
+    # Read gzipped wifi JSON
+    with gzip.open(wifi_path, 'rt') as f:
         wifi_json = loads(f.read())
         wifi_res = wifi_json['results']
 
@@ -459,19 +459,18 @@ def build_big_dataset(json_file, hum_path, press_path, tmp_path, label):
     # List to store the results
     libsvm_list = []
 
-    # Read temperature JSON
-    with open(json_file, 'r') as f:
+    # Read gzipped temperature JSON
+    with gzip.open(json_file, 'rt') as f:
         temp_json = loads(f.read())
         temp_res = temp_json['results']
 
-    # Read humidity JSON
-    with open(hum_path, 'r') as f:
+    # Read gzipped humidity JSON
+    with gzip.open(hum_path, 'rt') as f:
         hum_json = loads(f.read())
         hum_res = hum_json['results']
 
-    # Read pressure JSON
-    press_res = []
-    with open(press_path, 'r') as f:
+    # Read gzipped pressure JSON
+    with gzip.open(press_path, 'rt') as f:
         press_json = loads(f.read())
         press_res = press_json['results']
 
@@ -748,7 +747,7 @@ def get_small_dataset(scenario):
     feature = 'timeFreqDistance'
 
     # Time interval of the feature
-    time_interval = '30sec'
+    time_interval = '10sec'
 
     # Type of the dataset
     dataset = 'small'
@@ -763,7 +762,7 @@ def get_small_dataset(scenario):
     # Generate file list depending on the scenario
     if scenario == 'car':
         # Path to result data files
-        feature_path = ROOT_PATH + 'Sensor-*/audio/' + feature + '/' + time_interval + '/Sensor-*.json'
+        feature_path = ROOT_PATH + 'Sensor-*/audio/' + feature + '/' + time_interval + '/Sensor-*.json.gz'
 
         # Get the list of JSON files for the specified interval folder
         # we need to flatten the result from parse_folders, because
@@ -798,7 +797,7 @@ def get_small_dataset(scenario):
 
                 # Construct feature path
                 feature_path = ROOT_PATH + '*h/' + 'Sensor-' + target_sensor + '/audio/' + feature + '/' \
-                               + time_interval + '/Sensor-' + sensor + '.json' + '.gz'
+                               + time_interval + '/Sensor-' + sensor + '.json.gz'
 
                 # List to store sensor values from each of *h folders
                 sensor_list = []
@@ -861,7 +860,7 @@ def get_big_dataset(scenario):
         os.makedirs(tmp_path)
 
     # Path to result data files
-    feature_path = ROOT_PATH + 'Sensor-*/' + feature + '/' + time_interval + '/Sensor-*.json'
+    feature_path = ROOT_PATH + 'Sensor-*/' + feature + '/' + time_interval + '/Sensor-*.json.gz'
 
     # Get the list of JSON files for the specified interval folder
     # we need to flatten the result from parse_folders, because
@@ -986,12 +985,12 @@ if __name__ == '__main__':
         print('%s: building the small dataset using %d workers...' % (scenario, NUM_WORKERS))
         get_small_dataset(scenario)
         print('--- %s seconds ---' % (time.time() - start_time))
-        '''
+
         start_time = time.time()
         print('%s: building the big dataset using %d workers...' % (scenario, NUM_WORKERS))
         get_big_dataset(scenario)
         print('--- %s seconds ---' % (time.time() - start_time))
-        '''
+
     elif scenario == 'office':
         SENSORS.append(SENSORS_OFFICE1)
         SENSORS.append(SENSORS_OFFICE2)
@@ -1003,12 +1002,12 @@ if __name__ == '__main__':
         print('%s: building the small dataset using %d workers...' % (scenario, NUM_WORKERS))
         get_small_dataset(scenario)
         print('--- %s seconds ---' % (time.time() - start_time))
-        '''
+        
         start_time = time.time()
         print('%s: building the big dataset using %d workers...' % (scenario, NUM_WORKERS))
         get_big_dataset(scenario)
         print('--- %s seconds ---' % (time.time() - start_time))
-        '''
+
     else:
         print('Error: <scenario> can only be "car" or "office"!')
         sys.exit(0)
