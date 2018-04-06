@@ -214,12 +214,14 @@ def process_afp(json_file, scenario):
     # Convert list to np array
     afp_similarity_array = np.array(list(afp_similarity_list), dtype=float)
 
-    # Compute mean, median, std, min, max and store results in res_dict
+    # Compute mean, median, std, min, max, q1, q3 and store results in res_dict
     res_dict['mean'] = np.mean(afp_similarity_array)
     res_dict['median'] = np.median(afp_similarity_array)
     res_dict['std'] = np.std(afp_similarity_array)
     res_dict['min'] = np.amin(afp_similarity_array)
     res_dict['max'] = np.amax(afp_similarity_array)
+    res_dict['q1'] = np.percentile(afp_similarity_array, 25)
+    res_dict['q3'] = np.percentile(afp_similarity_array, 75)
 
     return res_dict
 
@@ -277,13 +279,15 @@ def process_spf(json_file, scenario):
     # Convert list to np array
     spf_xcorr_array = np.array(list(spf_xcorr_list), dtype=float)
 
-    # Compute mean, median, std, min, max and store results in res_dict
+    # Compute mean, median, std, min, max, q1, q3 and store results in res_dict
     res_dict['mean'] = np.mean(spf_xcorr_array)
     res_dict['median'] = np.median(spf_xcorr_array)
     res_dict['std'] = np.std(spf_xcorr_array)
     res_dict['min'] = np.amin(spf_xcorr_array)
     res_dict['max'] = np.amax(spf_xcorr_array)
     res_dict['threshold_percent'] = (len(spf_xcorr_list) / res_len) * 100
+    res_dict['q1'] = np.percentile(spf_xcorr_array, 25)
+    res_dict['q3'] = np.percentile(spf_xcorr_array, 75)
 
     return res_dict
 
@@ -318,7 +322,7 @@ def process_tfd(json_file, scenario):
     tfd_xcorr_array = np.array(list(tfd_xcorr_list), dtype=float)
     tfd_tfd_array = np.array(list(tfd_tfd_list), dtype=float)
 
-    # Compute mean, median, std, min, max for xcorr
+    # Compute mean, median, std, min, max, q1, q3 for xcorr
     xcorr_dict = {}
 
     xcorr_dict['mean'] = np.mean(tfd_xcorr_array)
@@ -326,8 +330,10 @@ def process_tfd(json_file, scenario):
     xcorr_dict['std'] = np.std(tfd_xcorr_array)
     xcorr_dict['min'] = np.amin(tfd_xcorr_array)
     xcorr_dict['max'] = np.amax(tfd_xcorr_array)
+    xcorr_dict['q1'] = np.percentile(tfd_xcorr_array, 25)
+    xcorr_dict['q3'] = np.percentile(tfd_xcorr_array, 75)
 
-    # Compute mean, median, std, min, max for tfd
+    # Compute mean, median, std, min, max, q1, q3 for tfd
     tfd_dict = {}
 
     tfd_dict['mean'] = np.mean(tfd_tfd_array)
@@ -335,6 +341,8 @@ def process_tfd(json_file, scenario):
     tfd_dict['std'] = np.std(tfd_tfd_array)
     tfd_dict['min'] = np.amin(tfd_tfd_array)
     tfd_dict['max'] = np.amax(tfd_tfd_array)
+    tfd_dict['q1'] = np.percentile(tfd_tfd_array, 25)
+    tfd_dict['q3'] = np.percentile(tfd_tfd_array, 75)
 
     # Add xcorr and tfd to the res_dict
     res_dict['max_xcorr'] = xcorr_dict

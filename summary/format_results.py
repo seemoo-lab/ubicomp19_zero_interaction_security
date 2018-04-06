@@ -389,10 +389,14 @@ def wrap_up_results(path, feature):
             co_located_max_list = []
             co_located_min_list = []
             co_located_mean_list = []
+            co_located_q1_list = []
+            co_located_q3_list = []
 
             non_colocated_max_list = []
             non_colocated_min_list = []
             non_colocated_mean_list = []
+            non_colocated_q1_list = []
+            non_colocated_q3_list = []
 
             # Threshold percent for SPF
             if feature == 'soundProofXcorr':
@@ -404,6 +408,8 @@ def wrap_up_results(path, feature):
                 co_located_max_list.append(val['max'])
                 co_located_min_list.append(val['min'])
                 co_located_mean_list.append(val['mean'])
+                co_located_q1_list.append(val['q1'])
+                co_located_q3_list.append(val['q3'])
                 if feature == 'soundProofXcorr':
                     co_located_th_list.append(val['threshold_percent'])
 
@@ -412,6 +418,8 @@ def wrap_up_results(path, feature):
                 non_colocated_max_list.append(val['max'])
                 non_colocated_min_list.append(val['min'])
                 non_colocated_mean_list.append(val['mean'])
+                non_colocated_q1_list.append(val['q1'])
+                non_colocated_q3_list.append(val['q3'])
                 if feature == 'soundProofXcorr':
                     non_colocated_th_list.append(val['threshold_percent'])
 
@@ -419,19 +427,35 @@ def wrap_up_results(path, feature):
             co_located_mean_array = np.array(list(co_located_mean_list), dtype=float)
             non_colocated_mean_array = np.array(list(non_colocated_mean_list), dtype=float)
 
-            # Compute mean_mean, median_mean, std_mean, min_min, max_max, for co-located array
+            # Convert co-located and non-colocated q1 and q3 lists to np arrays
+            co_located_q1_array = np.array(list(co_located_q1_list), dtype=float)
+            co_located_q3_array = np.array(list(co_located_q3_list), dtype=float)
+            non_colocated_q1_array = np.array(list(non_colocated_q1_list), dtype=float)
+            non_colocated_q3_array = np.array(list(non_colocated_q3_list), dtype=float)
+
+            # Compute mean_mean, median_mean, std_mean, min_min, max_max, mean_q1, median_q1,
+            # mean_q3, median_q3, for co-located array
             co_located_dict['mean_mean'] = np.mean(co_located_mean_array)
             co_located_dict['median_mean'] = np.median(co_located_mean_array)
             co_located_dict['std_mean'] = np.std(co_located_mean_array)
+            co_located_dict['mean_q1'] = np.mean(co_located_q1_array)
+            co_located_dict['median_q1'] = np.median(co_located_q1_array)
+            co_located_dict['mean_q3'] = np.mean(co_located_q3_array)
+            co_located_dict['median_q3'] = np.median(co_located_q3_array)
             co_located_dict['min_min'] = np.amin(np.array(list(co_located_min_list), dtype=float))
             co_located_dict['max_max'] = np.amax(np.array(list(co_located_max_list), dtype=float))
             if feature == 'soundProofXcorr':
                 co_located_dict['threshold_percent_avg'] = np.mean(np.array(list(co_located_th_list), dtype=float))
 
-            # Compute mean_mean, median_mean, std_mean, min_min, max_max, for non-colocated array
+            # Compute mean_mean, median_mean, std_mean, min_min, max_max, mean_q1, median_q1,
+            # mean_q3, median_q3, for non-colocated array
             non_colocated_dict['mean_mean'] = np.mean(non_colocated_mean_array)
             non_colocated_dict['median_mean'] = np.median(non_colocated_mean_array)
             non_colocated_dict['std_mean'] = np.std(non_colocated_mean_array)
+            non_colocated_dict['mean_q1'] = np.mean(non_colocated_q1_array)
+            non_colocated_dict['median_q1'] = np.median(non_colocated_q1_array)
+            non_colocated_dict['mean_q3'] = np.mean(non_colocated_q3_array)
+            non_colocated_dict['median_q3'] = np.median(non_colocated_q3_array)
             non_colocated_dict['min_min'] = np.amin(np.array(list(non_colocated_min_list), dtype=float))
             non_colocated_dict['max_max'] = np.amax(np.array(list(non_colocated_max_list), dtype=float))
             if feature == 'soundProofXcorr':
@@ -442,38 +466,50 @@ def wrap_up_results(path, feature):
             co_located_array = np.array(list(co_located_val), dtype=float)
             non_colocated_array = np.array(list(non_colocated_val), dtype=float)
 
-            # Compute mean, median, std, min, max for co-located array
+            # Compute mean, median, std, min, max, q1, q3 for co-located array
             co_located_dict['mean'] = np.mean(co_located_array)
             co_located_dict['median'] = np.median(co_located_array)
             co_located_dict['std'] = np.std(co_located_array)
             co_located_dict['min'] = np.amin(co_located_array)
             co_located_dict['max'] = np.amax(co_located_array)
+            co_located_dict['q1'] = np.percentile(co_located_array, 25)
+            co_located_dict['q3'] = np.percentile(co_located_array, 75)
 
-            # Compute mean, median, std, min, max for non-colocated array
+            # Compute mean, median, std, min, max, q1, q3 for non-colocated array
             non_colocated_dict['mean'] = np.mean(non_colocated_array)
             non_colocated_dict['median'] = np.median(non_colocated_array)
             non_colocated_dict['std'] = np.std(non_colocated_array)
             non_colocated_dict['min'] = np.amin(non_colocated_array)
             non_colocated_dict['max'] = np.amax(non_colocated_array)
+            non_colocated_dict['q1'] = np.percentile(non_colocated_array, 25)
+            non_colocated_dict['q3'] = np.percentile(non_colocated_array, 75)
 
         elif feature == 'timeFreqDistance':
-            # Xcorr lists for max, min, mean (co-located and non-colocated)
+            # Xcorr lists for max, min, mean, q1, q3 (co-located and non-colocated)
             co_located_max_xcorr_list = []
             co_located_min_xcorr_list = []
             co_located_mean_xcorr_list = []
+            co_located_q1_xcorr_list = []
+            co_located_q3_xcorr_list = []
 
             non_colocated_max_xcorr_list = []
             non_colocated_min_xcorr_list = []
             non_colocated_mean_xcorr_list = []
+            non_colocated_q1_xcorr_list = []
+            non_colocated_q3_xcorr_list = []
 
-            # Tfd lists for max, min, mean (co-located and non-colocated)
+            # Tfd lists for max, min, mean, q1, q3 (co-located and non-colocated)
             co_located_max_tfd_list = []
             co_located_min_tfd_list = []
             co_located_mean_tfd_list = []
+            co_located_q1_tfd_list = []
+            co_located_q3_tfd_list = []
 
             non_colocated_max_tfd_list = []
             non_colocated_min_tfd_list = []
             non_colocated_mean_tfd_list = []
+            non_colocated_q1_tfd_list = []
+            non_colocated_q3_tfd_list = []
 
             # Get co-located values
             for val in co_located_val:
@@ -481,10 +517,14 @@ def wrap_up_results(path, feature):
                 co_located_max_xcorr_list.append(val['max_xcorr']['max'])
                 co_located_min_xcorr_list.append(val['max_xcorr']['min'])
                 co_located_mean_xcorr_list.append(val['max_xcorr']['mean'])
+                co_located_q1_xcorr_list.append(val['max_xcorr']['q1'])
+                co_located_q3_xcorr_list.append(val['max_xcorr']['q3'])
                 # time_freq_dist
                 co_located_max_tfd_list.append(val['time_freq_dist']['max'])
                 co_located_min_tfd_list.append(val['time_freq_dist']['min'])
                 co_located_mean_tfd_list.append(val['time_freq_dist']['mean'])
+                co_located_q1_tfd_list.append(val['time_freq_dist']['q1'])
+                co_located_q3_tfd_list.append(val['time_freq_dist']['q3'])
 
             # Get non-colocated values
             for val in non_colocated_val:
@@ -492,10 +532,14 @@ def wrap_up_results(path, feature):
                 non_colocated_max_xcorr_list.append(val['max_xcorr']['max'])
                 non_colocated_min_xcorr_list.append(val['max_xcorr']['min'])
                 non_colocated_mean_xcorr_list.append(val['max_xcorr']['mean'])
+                non_colocated_q1_xcorr_list.append(val['max_xcorr']['q1'])
+                non_colocated_q3_xcorr_list.append(val['max_xcorr']['q3'])
                 # time_freq_dist
                 non_colocated_max_tfd_list.append(val['time_freq_dist']['max'])
                 non_colocated_min_tfd_list.append(val['time_freq_dist']['min'])
                 non_colocated_mean_tfd_list.append(val['time_freq_dist']['mean'])
+                non_colocated_q1_tfd_list.append(val['time_freq_dist']['q1'])
+                non_colocated_q3_tfd_list.append(val['time_freq_dist']['q3'])
 
             # Result dictionaries for xcorr and tfd (co-located and non-colocated)
             co_located_xcorr_dict = {}
@@ -511,31 +555,63 @@ def wrap_up_results(path, feature):
             co_located_mean_tfd_array = np.array(list(co_located_mean_tfd_list), dtype=float)
             non_colocated_mean_tfd_array = np.array(list(non_colocated_mean_tfd_list), dtype=float)
 
-            # Compute mean_mean, median_mean, std_mean, min_min, max_max, for co-located array xcorr
+            # Convert co-located and non-colocated q1 and q3 lists of xcorr to np arrays
+            co_located_q1_xcorr_array = np.array(list(co_located_q1_xcorr_list), dtype=float)
+            non_colocated_q1_xcorr_array = np.array(list(non_colocated_q1_xcorr_list), dtype=float)
+            co_located_q3_xcorr_array = np.array(list(co_located_q3_xcorr_list), dtype=float)
+            non_colocated_q3_xcorr_array = np.array(list(non_colocated_q3_xcorr_list), dtype=float)
+
+            # Convert co-located and non-colocated q1 and q3 lists of tfd to np arrays
+            co_located_q1_tfd_array = np.array(list(co_located_q1_tfd_list), dtype=float)
+            non_colocated_q1_tfd_array = np.array(list(non_colocated_q1_tfd_list), dtype=float)
+            co_located_q3_tfd_array = np.array(list(co_located_q3_tfd_list), dtype=float)
+            non_colocated_q3_tfd_array = np.array(list(non_colocated_q3_tfd_list), dtype=float)
+
+            # Compute mean_mean, median_mean, std_mean, min_min, max_max, mean_q1, median_q1,
+            # mean_q3, median_q3, for co-located array xcorr
             co_located_xcorr_dict['mean_mean'] = np.mean(co_located_mean_xcorr_array)
             co_located_xcorr_dict['median_mean'] = np.median(co_located_mean_xcorr_array)
             co_located_xcorr_dict['std_mean'] = np.std(co_located_mean_xcorr_array)
+            co_located_xcorr_dict['mean_q1'] = np.mean(co_located_q1_xcorr_array)
+            co_located_xcorr_dict['median_q1'] = np.median(co_located_q1_xcorr_array)
+            co_located_xcorr_dict['mean_q3'] = np.mean(co_located_q3_xcorr_array)
+            co_located_xcorr_dict['median_q3'] = np.median(co_located_q3_xcorr_array)
             co_located_xcorr_dict['min_min'] = np.amin((np.array(list(co_located_min_xcorr_list), dtype=float)))
             co_located_xcorr_dict['max_max'] = np.amax((np.array(list(co_located_max_xcorr_list), dtype=float)))
 
-            # Compute mean_mean, median_mean, std_mean, min_min, max_max, for non-colocated array xcorr
+            # Compute mean_mean, median_mean, std_mean, min_min, max_max, mean_q1, median_q1,
+            # mean_q3, median_q3, for non-colocated array xcorr
             non_colocated_xcorr_dict['mean_mean'] = np.mean(non_colocated_mean_xcorr_array)
             non_colocated_xcorr_dict['median_mean'] = np.median(non_colocated_mean_xcorr_array)
             non_colocated_xcorr_dict['std_mean'] = np.std(non_colocated_mean_xcorr_array)
+            non_colocated_xcorr_dict['mean_q1'] = np.mean(non_colocated_q1_xcorr_array)
+            non_colocated_xcorr_dict['median_q1'] = np.median(non_colocated_q1_xcorr_array)
+            non_colocated_xcorr_dict['mean_q3'] = np.mean(non_colocated_q3_xcorr_array)
+            non_colocated_xcorr_dict['median_q3'] = np.median(non_colocated_q3_xcorr_array)
             non_colocated_xcorr_dict['min_min'] = np.amin((np.array(list(non_colocated_min_xcorr_list), dtype=float)))
             non_colocated_xcorr_dict['max_max'] = np.amax((np.array(list(non_colocated_max_xcorr_list), dtype=float)))
 
-            # Compute mean_mean, median_mean, std_mean, min_min, max_max, for co-located array tfd
+            # Compute mean_mean, median_mean, std_mean, min_min, max_max, mean_q1, median_q1,
+            # mean_q3, median_q3, for co-located array tfd
             co_located_tfd_dict['mean_mean'] = np.mean(co_located_mean_tfd_array)
             co_located_tfd_dict['median_mean'] = np.median(co_located_mean_tfd_array)
             co_located_tfd_dict['std_mean'] = np.std(co_located_mean_tfd_array)
+            co_located_tfd_dict['mean_q1'] = np.mean(co_located_q1_tfd_array)
+            co_located_tfd_dict['median_q1'] = np.median(co_located_q1_tfd_array)
+            co_located_tfd_dict['mean_q3'] = np.mean(co_located_q3_tfd_array)
+            co_located_tfd_dict['median_q3'] = np.median(co_located_q3_tfd_array)
             co_located_tfd_dict['min_min'] = np.amin((np.array(list(co_located_min_tfd_list), dtype=float)))
             co_located_tfd_dict['max_max'] = np.amax((np.array(list(co_located_max_tfd_list), dtype=float)))
 
-            # Compute mean_mean, median_mean, std_mean, min_min, max_max, for non-colocated array tfd
+            # Compute mean_mean, median_mean, std_mean, min_min, max_max, mean_q1, median_q1,
+            # mean_q3, median_q3 for non-colocated array tfd
             non_colocated_tfd_dict['mean_mean'] = np.mean(non_colocated_mean_tfd_array)
-            non_colocated_tfd_dict['median_mean'] = np.mean(non_colocated_mean_tfd_array)
-            non_colocated_tfd_dict['std_mean'] = np.mean(non_colocated_mean_tfd_array)
+            non_colocated_tfd_dict['median_mean'] = np.median(non_colocated_mean_tfd_array)
+            non_colocated_tfd_dict['std_mean'] = np.std(non_colocated_mean_tfd_array)
+            non_colocated_tfd_dict['mean_q1'] = np.mean(non_colocated_q1_tfd_array)
+            non_colocated_tfd_dict['median_q1'] = np.median(non_colocated_q1_tfd_array)
+            non_colocated_tfd_dict['mean_q3'] = np.mean(non_colocated_q3_tfd_array)
+            non_colocated_tfd_dict['median_q3'] = np.median(non_colocated_q3_tfd_array)
             non_colocated_tfd_dict['min_min']= np.amin((np.array(list(non_colocated_min_tfd_list), dtype=float)))
             non_colocated_tfd_dict['max_max']= np.amax((np.array(list(non_colocated_max_tfd_list), dtype=float)))
 
