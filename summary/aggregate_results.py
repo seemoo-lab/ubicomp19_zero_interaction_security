@@ -203,19 +203,28 @@ def process_afp(json_file):
     # Convert list to np array
     afp_similarity_array = np.array(list(afp_similarity_list), dtype=float)
 
+    # Compute mean, median, std, min, max, q1, q3 for afp_similarity_percent
+    fp_sim_dict = {}
+
     # Compute mean, median, std, min, max, q1, q3 and store results in res_dict
-    res_dict['mean'] = np.mean(afp_similarity_array)
-    res_dict['median'] = np.median(afp_similarity_array)
-    res_dict['std'] = np.std(afp_similarity_array)
-    res_dict['min'] = np.amin(afp_similarity_array)
-    res_dict['max'] = np.amax(afp_similarity_array)
-    res_dict['q1'] = np.percentile(afp_similarity_array, 25)
-    res_dict['q3'] = np.percentile(afp_similarity_array, 75)
+    fp_sim_dict['mean'] = np.mean(afp_similarity_array)
+    fp_sim_dict['median'] = np.median(afp_similarity_array)
+    fp_sim_dict['std'] = np.std(afp_similarity_array)
+    fp_sim_dict['min'] = np.amin(afp_similarity_array)
+    fp_sim_dict['max'] = np.amax(afp_similarity_array)
+    fp_sim_dict['q1'] = np.percentile(afp_similarity_array, 25)
+    fp_sim_dict['q3'] = np.percentile(afp_similarity_array, 75)
+
+    # Add fp_sim_dict to the res_dict
+    res_dict['fingerprints_similarity_percent'] = fp_sim_dict
 
     return res_dict
 
 
 def process_nfp(json_file):
+    # Initialize res_dict
+    res_dict = {}
+
     # String to store the 'fingerprints_similarity_percent' value
     nfp_similarity = ''
 
@@ -228,7 +237,10 @@ def process_nfp(json_file):
     for k, v in sorted(results.items()):
         nfp_similarity = v['fingerprints_similarity_percent']
 
-    return nfp_similarity
+    # Add fp_sim_dict to the res_dict
+    res_dict['fingerprints_similarity_percent'] = nfp_similarity
+
+    return res_dict
 
 
 def process_spf(json_file):
@@ -255,15 +267,21 @@ def process_spf(json_file):
     # Convert list to np array
     spf_xcorr_array = np.array(list(spf_xcorr_list), dtype=float)
 
+    # Compute mean, median, std, min, max, q1, q3 for xcorr
+    xcorr_dict = {}
+
     # Compute mean, median, std, min, max, q1, q3 and store results in res_dict
-    res_dict['mean'] = np.mean(spf_xcorr_array)
-    res_dict['median'] = np.median(spf_xcorr_array)
-    res_dict['std'] = np.std(spf_xcorr_array)
-    res_dict['min'] = np.amin(spf_xcorr_array)
-    res_dict['max'] = np.amax(spf_xcorr_array)
-    res_dict['threshold_percent'] = (len(spf_xcorr_list) / res_len) * 100
-    res_dict['q1'] = np.percentile(spf_xcorr_array, 25)
-    res_dict['q3'] = np.percentile(spf_xcorr_array, 75)
+    xcorr_dict['mean'] = np.mean(spf_xcorr_array)
+    xcorr_dict['median'] = np.median(spf_xcorr_array)
+    xcorr_dict['std'] = np.std(spf_xcorr_array)
+    xcorr_dict['min'] = np.amin(spf_xcorr_array)
+    xcorr_dict['max'] = np.amax(spf_xcorr_array)
+    xcorr_dict['threshold_percent'] = (len(spf_xcorr_list) / res_len) * 100
+    xcorr_dict['q1'] = np.percentile(spf_xcorr_array, 25)
+    xcorr_dict['q3'] = np.percentile(spf_xcorr_array, 75)
+
+    # Add xcorr to the res_dict
+    res_dict['max_xcorr'] = xcorr_dict
 
     return res_dict
 
@@ -467,7 +485,7 @@ if __name__ == '__main__':
     elif len(sys.argv) == 3:
         # Assign input args
         ROOT_PATH = sys.argv[1]
-        NUM_WORKERS = sys.argv[3]
+        NUM_WORKERS = sys.argv[2]
 
         # Check if <num_workers> is an integer more than 2
         try:

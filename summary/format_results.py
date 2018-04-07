@@ -330,6 +330,193 @@ def add_spf_power(json_file, power_file):
     os.remove(power_file)
 
 
+def wrap_up_summary(path):
+    # Iterate over matched files
+    for json_file in glob(path, recursive=True):
+
+        co_located_list = []
+        non_colocated_list = []
+
+        # Open and read JSON file
+        with open(json_file, 'r') as f:
+            json = loads(f.read())
+            results = json['results']
+            metadata = json['metadata']
+
+        # Get the target sensor
+        target_sensor = metadata['sensor']
+
+        # Make a copy of list of sensors' lists
+        sensors_lists = list(SENSORS)
+
+        # Iterate over list of sensors' lists
+        for sensor_list in SENSORS:
+            # Check if target sensor is in sensor_list
+            if target_sensor in sensor_list:
+                # Construct co-located list excluding target sensor
+                co_located_list = list(sensor_list)
+                co_located_list.remove(target_sensor)
+
+                # Construct non-colocated list
+                sensors_lists.remove(sensor_list)
+                non_colocated_list = list(itertools.chain.from_iterable(sensors_lists))
+
+                # Get out from the loop
+                break
+
+        # Lists of co-located and non-colocated values
+        co_located_val = []
+        non_colocated_val = []
+
+        # Accumulate co-located and non-colocated values
+        for k, v in sorted(results.items()):
+            # Get the sensor number, e.g. 01, 02, etc.
+            sensor_num = k.split('-')[1]
+
+            if sensor_num in co_located_list:
+                co_located_val.append(v)
+            else:
+                non_colocated_val.append(v)
+
+        # Get names of feature keys
+        feature_keys = list(co_located_val[0].keys())
+
+        # Sort feature_keys
+        feature_keys.sort()
+
+        # Dictionaries of co-located and non-colocated results
+        co_located_dict = {}
+        non_colocated_dict = {}
+
+        for feature_key in feature_keys:
+            result_list = wrap_up_feature(co_located_val, non_colocated_val, feature_key)
+            co_located_dict[feature_key] = result_list[0]
+            non_colocated_dict[feature_key] = result_list[1]
+
+        # Append co-located and non-colocated sensor lists
+        co_located_dict['_sensors'] = co_located_list
+        non_colocated_dict['_sensors'] = non_colocated_list
+
+        # Add new fields to the results
+        json['results']['co_located'] = co_located_dict
+        json['results']['non_colocated'] = non_colocated_dict
+
+        # Save the updated JSON file
+        with open(json_file, 'w') as f:
+            f.write(dumps(json, indent=4, sort_keys=True))
+
+
+def wrap_up_feature(co_located_val, non_colocated_val, feature_key):
+
+    if isinstance(co_located_val[0][feature_key], float):
+        # List to store feature metrics, e.g. mean, max, threshold_percent
+        feature_metric_list = []
+    elif isinstance(co_located_val[0][feature_key], dict):
+        # List to store feature metrics, e.g. mean, max, threshold_percent
+        feature_metric_list = list(co_located_val[0][feature_key].keys())
+        feature_metric_list.sort()
+    else:
+        print('wrap_up_afp: instance of feature: %s must be dict or float --- exiting...' %
+              co_located_val[0][feature_key])
+        sys.exit(0)
+
+    # Initialize list of lists for feature metrics
+    co_located_lists = [[] for i in range(len(feature_metric_list))]
+    non_colocated_lists = [[] for i in range(len(feature_metric_list))]
+
+    # Get co-located values
+    for val in co_located_val:
+        feature_metrics = val[feature_key]
+        if isinstance(feature_metrics, float):
+            co_located_lists.append(feature_metrics)
+        else:
+            idx = 0
+            for feature_metric in feature_metric_list:
+                co_located_lists[idx].append(feature_metrics[feature_metric])
+                idx += 1
+
+    # Get non-colocated values
+    for val in non_colocated_val:
+        feature_metrics = val[feature_key]
+        if isinstance(feature_metrics, float):
+            non_colocated_lists.append(feature_metrics)
+        else:
+            idx = 0
+            for feature_metric in feature_metric_list:
+                non_colocated_lists[idx].append(feature_metrics[feature_metric])
+                idx += 1
+
+    # Dictionaries of co-located and non-colocated results
+    co_located_dict = {}
+    non_colocated_dict = {}
+
+    # Check if co_located_lists is a simple list or list of lists
+    if isinstance(co_located_lists[0], float):
+
+        # Convert co-located and non-colocated values to np arrays
+        co_located_array = np.array(list(co_located_lists), dtype=float)
+        non_colocated_array = np.array(list(non_colocated_lists), dtype=float)
+
+        # Compute mean, median, std, min, max, q1, q3 for co-located array
+        co_located_dict['mean'] = np.mean(co_located_array)
+        co_located_dict['median'] = np.median(co_located_array)
+        co_located_dict['std'] = np.std(co_located_array)
+        co_located_dict['min'] = np.amin(co_located_array)
+        co_located_dict['max'] = np.amax(co_located_array)
+        co_located_dict['q1'] = np.percentile(co_located_array, 25)
+        co_located_dict['q3'] = np.percentile(co_located_array, 75)
+
+        # Compute mean, median, std, min, max, q1, q3 for non-colocated array
+        non_colocated_dict['mean'] = np.mean(non_colocated_array)
+        non_colocated_dict['median'] = np.median(non_colocated_array)
+        non_colocated_dict['std'] = np.std(non_colocated_array)
+        non_colocated_dict['min'] = np.amin(non_colocated_array)
+        non_colocated_dict['max'] = np.amax(non_colocated_array)
+        non_colocated_dict['q1'] = np.percentile(non_colocated_array, 25)
+        non_colocated_dict['q3'] = np.percentile(non_colocated_array, 75)
+
+    else:
+        # Iterate over feature metrics
+        idx = 0
+        for feature_metric in feature_metric_list:
+            # Dictionaries of co-located and non-colocated metrics
+            co_located_metric = {}
+            non_colocated_metric = {}
+
+            # Convert both co-located and non-colocated feature metrics to np arrays
+            co_located_array = np.array(list(co_located_lists[idx]), dtype=float)
+            non_colocated_array = np.array(list(non_colocated_lists[idx]), dtype=float)
+
+            # Compute mean, median, std, min, max, q1, q3 for co-located array
+            co_located_metric['mean'] = np.mean(co_located_array)
+            co_located_metric['median'] = np.median(co_located_array)
+            co_located_metric['std'] = np.std(co_located_array)
+            co_located_metric['min'] = np.amin(co_located_array)
+            co_located_metric['max'] = np.amax(co_located_array)
+            co_located_metric['q1'] = np.percentile(co_located_array, 25)
+            co_located_metric['q3'] = np.percentile(co_located_array, 75)
+
+            # Compute mean, median, std, min, max, q1, q3 for non-colocated array
+            non_colocated_metric['mean'] = np.mean(non_colocated_array)
+            non_colocated_metric['median'] = np.median(non_colocated_array)
+            non_colocated_metric['std'] = np.std(non_colocated_array)
+            non_colocated_metric['min'] = np.amin(non_colocated_array)
+            non_colocated_metric['max'] = np.amax(non_colocated_array)
+            non_colocated_metric['q1'] = np.percentile(non_colocated_array, 25)
+            non_colocated_metric['q3'] = np.percentile(non_colocated_array, 75)
+
+            # Store metrics in dictionaries
+            co_located_dict[feature_metric] = co_located_metric
+            non_colocated_dict[feature_metric] = non_colocated_metric
+
+            idx += 1
+
+    # Result list to be returned
+    result_list = [co_located_dict, non_colocated_dict]
+
+    return result_list
+
+
 # Todo: split to individual functions, e.g. wrap_up_afp(), etc.
 def wrap_up_results(path, feature):
     # Iterate over matched files
@@ -657,7 +844,8 @@ def format_afp():
     add_last_summary(last_feature_summary, feature)
 
     # Wrap up results: overview of co-located vs. non-colocated
-    wrap_up_results(feature_summary, feature)
+    # wrap_up_results(feature_summary, feature)
+    wrap_up_summary(feature_summary)
 
 
 def format_nfp():
@@ -674,7 +862,8 @@ def format_nfp():
     add_last_summary(last_feature_summary, feature)
 
     # Wrap up results: overview of co-located vs. non-colocated
-    wrap_up_results(feature_summary, feature)
+    # wrap_up_results(feature_summary, feature)
+    wrap_up_summary(feature_summary)
 
 
 def format_spf():
@@ -691,7 +880,8 @@ def format_spf():
     add_last_summary(last_feature_summary, feature)
 
     # Wrap up results: overview of co-located vs. non-colocated
-    wrap_up_results(feature_summary, feature)
+    # wrap_up_results(feature_summary, feature)
+    wrap_up_summary(feature_summary)
 
 
 def format_tfd():
@@ -708,7 +898,8 @@ def format_tfd():
     add_last_summary(last_feature_summary, feature)
 
     # Wrap up results: overview of co-located vs. non-colocated
-    wrap_up_results(feature_summary, feature)
+    # wrap_up_results(feature_summary, feature)
+    wrap_up_summary(feature_summary)
 
 
 # ToDo: switch to gz json files
@@ -747,6 +938,23 @@ def format_power():
 
 
 if __name__ == '__main__':
+    '''
+    NUM_SENSORS = 11
+    SENSORS.append(SENSORS_CAR1)
+    SENSORS.append(SENSORS_CAR2)
+
+    ROOT_PATH = 'D:/data/car/'
+    RESULT_PATH = 'C:/Users/mfomichev/Desktop/'
+    NUM_WORKERS = 1
+
+    scenario = 'car'
+
+    #format_afp()
+    #format_nfp()
+    #format_tfd()
+    #format_spf()
+    '''
+    #'''
     # Check the number of input args
     if len(sys.argv) == 3:
         # Assign input args
@@ -830,3 +1038,4 @@ if __name__ == '__main__':
     print('Formatting TFD...')
     format_tfd()
     print('--- %s seconds ---' % (time.time() - start_time))
+    #'''
