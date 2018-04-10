@@ -269,7 +269,27 @@ def process_fp_feature(feature, scenario):
 
 
 if __name__ == '__main__':
-	# Check the number of input args
+    '''
+    SENSORS.append(SENSORS_OFFICE1)
+    SENSORS.append(SENSORS_OFFICE2)
+    SENSORS.append(SENSORS_OFFICE3)
+
+    #ROOT_PATH = 'E:/OfficeExp/audio_results/'
+    ROOT_PATH = 'D:/data/car/'
+    RESULT_PATH = 'C:/Users/mfomichev/Desktop/'
+    NUM_WORKERS = 1
+
+    #scenario = 'office'
+    scenario = 'car'
+
+    # Audio feature
+    feature = 'audioFingerprint'
+    
+    process_fp_feature(feature, scenario)
+
+    print('hello')
+    '''
+    #'''
     if len(sys.argv) == 4:
         # Assign input args
         ROOT_PATH = sys.argv[1]
@@ -339,4 +359,4 @@ if __name__ == '__main__':
     else:
         print('Error: <scenario> can only be "car" or "office"!')
         sys.exit(0)
-	
+    #'''

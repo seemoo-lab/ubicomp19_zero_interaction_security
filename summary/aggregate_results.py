@@ -10,6 +10,19 @@ from functools import partial
 import os
 import gzip
 import math
+import itertools
+
+# Sensor mapping: car experiment
+SENSORS_CAR1 = ['01', '02', '03', '04', '05', '06']
+SENSORS_CAR2 = ['07', '08', '09', '10', '11', '12']
+
+# Sensor mapping: office experiment
+SENSORS_OFFICE1 = ['01', '02', '03', '04', '05', '06', '07', '08']
+SENSORS_OFFICE2 = ['09', '10', '11', '12', '13', '14', '15', '16']
+SENSORS_OFFICE3 = ['17', '18', '19', '20', '21', '22', '23', '24']
+
+# List of sensor mappings
+SENSORS = []
 
 # Number of workers to be used in parallel
 NUM_WORKERS = 0
@@ -69,21 +82,24 @@ def parse_folders(path, feature):
     return folder_list
 
 
-def process_folder(file_list, feature=''):
-
+def process_folder(file_list, feature='', feature_class=''):
     try:
-        # Get the current folder, e.g. 10sec, 1min, etc.
-        # (take different slashes into account: / or \)
-        regex = re.escape(feature) + r'(?:/|\\)(.*)(?:/|\\)Sensor-'
-        match = re.search(regex, file_list[0])
+        # Check if the feature contains time intervals or not
+        if feature != 'temp_hum_press_shrestha':
+            # Get the current folder, e.g. 10sec, 1min, etc.
+            # (take different slashes into account: / or \)
+            regex = re.escape(feature) + r'(?:/|\\)(.*)(?:/|\\)Sensor-'
+            match = re.search(regex, file_list[0])
 
-        # If there is no match - exit
-        if not match:
-            print('process_folder: no match for the folder name, exiting...')
-            sys.exit(0)
+            # If there is no match - exit
+            if not match:
+                print('process_folder: no match for the folder name, exiting...')
+                sys.exit(0)
 
-        cur_folder = match.group(1)
-        # print(cur_folder)
+            cur_folder = match.group(1)
+            # print(cur_folder)
+        else:
+            cur_folder = feature
 
         # Get the base path for logging
         match = re.search(r'(.*)Sensor-', file_list[0])
@@ -98,7 +114,8 @@ def process_folder(file_list, feature=''):
 
         # Get target sensor number, e.g. 01, 02, etc.
         # (take different slashes into account: / or \)
-        match = re.search(r'Sensor-(.*)(?:/|\\)audio(?:/|\\)', file_list[0])
+        regex = r'Sensor-(.*)(?:/|\\)' + re.escape(feature_class) + r'(?:/|\\)'
+        match = re.search(regex, file_list[0])
 
         # If there is no match - exit
         if not match:
@@ -114,7 +131,7 @@ def process_folder(file_list, feature=''):
         # Iterate over all files in the file_list (i.e. one folder)
         for json_file in file_list:
             # Get results from a single file
-            feature_res = process_feature(json_file, feature)
+            feature_res = process_feature(json_file, feature, feature_class)
 
             if not feature_res:
                 print('process_folder: feature processing failed, feature = %s, file = %s --- exiting...' % \
@@ -143,7 +160,10 @@ def process_folder(file_list, feature=''):
         # Metadata fields: target sensor, feature, duration and value
         meta_dict['sensor'] = target_sensor
         meta_dict['feature'] = feature
-        meta_dict['duration'] = cur_folder
+        if cur_folder == feature:
+            meta_dict['time_interval'] = 'n/a'
+        else:
+            meta_dict['time_interval'] = cur_folder
 
         if feature == 'audioFingerprint' or feature == 'noiseFingerprint':
             meta_dict['value'] = 'fingerprints_similarity_percent'
@@ -151,6 +171,12 @@ def process_folder(file_list, feature=''):
             meta_dict['value'] = 'max_xcorr'
         elif feature == 'timeFreqDistance':
             meta_dict['value'] = 'max_xcorr, time_freq_dist'
+        elif feature == 'ble_wifi_truong' and feature_class == 'ble':
+            meta_dict['value'] = 'euclidean, jaccard'
+        elif feature == 'ble_wifi_truong' and feature_class == 'wifi':
+            meta_dict['value'] = 'euclidean, jaccard, mean_exp, mean_hamming, sum_squared_ranks'
+        elif feature == 'temp_hum_press_shrestha':
+            meta_dict['value'] = 'hamming_dist'
 
         # Add metadata
         rv['metadata'] = meta_dict
@@ -160,7 +186,7 @@ def process_folder(file_list, feature=''):
 
         # Save the summary JSON file
         filename = log_path + SUMMARY_FILE
-        # print('Saving a file: %s' % filename)
+        #print('Saving a file: %s' % filename)
         with open(filename, 'w') as f:
             f.write(dumps(rv, indent=4, sort_keys=True))
 
@@ -168,7 +194,7 @@ def process_folder(file_list, feature=''):
         print(e)
 
 
-def process_feature(json_file, feature):
+def process_feature(json_file, feature, feature_class):
     # Process each feature
     if feature == 'audioFingerprint':
         return process_afp(json_file)
@@ -178,6 +204,12 @@ def process_feature(json_file, feature):
         return process_spf(json_file)
     elif feature == 'timeFreqDistance':
         return process_tfd(json_file)
+    elif feature == 'ble_wifi_truong' and feature_class == 'ble':
+        return process_ble(json_file)
+    elif feature == 'ble_wifi_truong' and feature_class == 'wifi':
+        return process_wifi(json_file)
+    elif feature == 'temp_hum_press_shrestha':
+        return process_phy(json_file)
     else:
         print('process_feature: unknown feature: %s --- ignoring...' % feature)
 
@@ -203,17 +235,8 @@ def process_afp(json_file):
     # Convert list to np array
     afp_similarity_array = np.array(list(afp_similarity_list), dtype=float)
 
-    # Compute mean, median, std, min, max, q1, q3 for afp_similarity_percent
-    fp_sim_dict = {}
-
-    # Compute mean, median, std, min, max, q1, q3 and store results in res_dict
-    fp_sim_dict['mean'] = np.mean(afp_similarity_array)
-    fp_sim_dict['median'] = np.median(afp_similarity_array)
-    fp_sim_dict['std'] = np.std(afp_similarity_array)
-    fp_sim_dict['min'] = np.amin(afp_similarity_array)
-    fp_sim_dict['max'] = np.amax(afp_similarity_array)
-    fp_sim_dict['q1'] = np.percentile(afp_similarity_array, 25)
-    fp_sim_dict['q3'] = np.percentile(afp_similarity_array, 75)
+    # Compute mean, median, std, min, max, q1, q3 for afp_similarity_array
+    fp_sim_dict = compute_metrics(afp_similarity_array)
 
     # Add fp_sim_dict to the res_dict
     res_dict['fingerprints_similarity_percent'] = fp_sim_dict
@@ -267,20 +290,13 @@ def process_spf(json_file):
     # Convert list to np array
     spf_xcorr_array = np.array(list(spf_xcorr_list), dtype=float)
 
-    # Compute mean, median, std, min, max, q1, q3 for xcorr
-    xcorr_dict = {}
+    # Compute mean, median, std, min, max, q1, q3 for spf_xcorr_array
+    xcorr_dict = compute_metrics(spf_xcorr_array)
 
-    # Compute mean, median, std, min, max, q1, q3 and store results in res_dict
-    xcorr_dict['mean'] = np.mean(spf_xcorr_array)
-    xcorr_dict['median'] = np.median(spf_xcorr_array)
-    xcorr_dict['std'] = np.std(spf_xcorr_array)
-    xcorr_dict['min'] = np.amin(spf_xcorr_array)
-    xcorr_dict['max'] = np.amax(spf_xcorr_array)
+    # Add threshold percent to xcorr_dict
     xcorr_dict['threshold_percent'] = (len(spf_xcorr_list) / res_len) * 100
-    xcorr_dict['q1'] = np.percentile(spf_xcorr_array, 25)
-    xcorr_dict['q3'] = np.percentile(spf_xcorr_array, 75)
 
-    # Add xcorr to the res_dict
+    # Add xcorr_dict to the res_dict
     res_dict['max_xcorr'] = xcorr_dict
 
     return res_dict
@@ -310,43 +326,183 @@ def process_tfd(json_file):
     tfd_xcorr_array = np.array(list(tfd_xcorr_list), dtype=float)
     tfd_tfd_array = np.array(list(tfd_tfd_list), dtype=float)
 
-    # Compute mean, median, std, min, max, q1, q3 for xcorr
-    xcorr_dict = {}
+    # Compute mean, median, std, min, max, q1, q3 for tfd_xcorr_array
+    xcorr_dict = compute_metrics(tfd_xcorr_array)
 
-    xcorr_dict['mean'] = np.mean(tfd_xcorr_array)
-    xcorr_dict['median'] = np.median(tfd_xcorr_array)
-    xcorr_dict['std'] = np.std(tfd_xcorr_array)
-    xcorr_dict['min'] = np.amin(tfd_xcorr_array)
-    xcorr_dict['max'] = np.amax(tfd_xcorr_array)
-    xcorr_dict['q1'] = np.percentile(tfd_xcorr_array, 25)
-    xcorr_dict['q3'] = np.percentile(tfd_xcorr_array, 75)
+    # Compute mean, median, std, min, max, q1, q3 for tfd_tfd_array
+    tfd_dict = compute_metrics(tfd_tfd_array)
 
-    # Compute mean, median, std, min, max, q1, q3 for tfd
-    tfd_dict = {}
-
-    tfd_dict['mean'] = np.mean(tfd_tfd_array)
-    tfd_dict['median'] = np.median(tfd_tfd_array)
-    tfd_dict['std'] = np.std(tfd_tfd_array)
-    tfd_dict['min'] = np.amin(tfd_tfd_array)
-    tfd_dict['max'] = np.amax(tfd_tfd_array)
-    tfd_dict['q1'] = np.percentile(tfd_tfd_array, 25)
-    tfd_dict['q3'] = np.percentile(tfd_tfd_array, 75)
-
-    # Add xcorr and tfd to the res_dict
+    # Add xcorr_dict and tfd_dict to the res_dict
     res_dict['max_xcorr'] = xcorr_dict
     res_dict['time_freq_dist'] = tfd_dict
 
     return res_dict
 
 
-# ToDo: merge all aggregate functions into one with input feature param
-def aggregate_afp():
+def process_ble(json_file):
+    # Initialize res_dict
+    res_dict = {}
 
-    # Audio feature
-    feature = 'audioFingerprint'
+    # List to store the 'euclidean' and 'jaccard' fields
+    ble_eucl_list = []
+    ble_jacc_list = []
 
+    # Open and read the GZIP file
+    with gzip.open(json_file, 'rt') as f:
+        json = loads(f.read())
+        results = json['results']
+
+    # Store 'euclidean' and 'jaccard' fields in the lists
+    for k, v in sorted(results.items()):
+        # Discard empty samples in aggregation
+        if v:
+            # Discard error samples in aggregation
+            if not 'error' in v:
+                ble_eucl_list.append(v['euclidean'])
+                ble_jacc_list.append(v['jaccard'])
+
+    # Convert eucl and jacc lists to np arrays
+    ble_eucl_array = np.array(list(ble_eucl_list), dtype=float)
+    ble_jacc_array = np.array(list(ble_jacc_list), dtype=float)
+
+    # Compute mean, median, std, min, max, q1, q3 for ble_eucl_array
+    eucl_dict = compute_metrics(ble_eucl_array)
+
+    # Compute mean, median, std, min, max, q1, q3 for ble_jacc_array
+    jacc_dict = compute_metrics(ble_jacc_array)
+
+    # Add eucl_dict and jacc_dict to the res_dict
+    res_dict['euclidean'] = eucl_dict
+    res_dict['jaccard'] = jacc_dict
+
+    return res_dict
+
+
+def process_wifi(json_file):
+    # Initialize res_dict
+    res_dict = {}
+
+    # List to store the 'euclidean', 'jaccard', 'mean_exp', 'mean_hamming'
+    # and 'sum_squared_ranks'
+    wifi_eucl_list = []
+    wifi_jacc_list = []
+    wifi_exp_list = []
+    wifi_ham_list = []
+    wifi_rank_list = []
+
+    # Open and read the GZIP file
+    with gzip.open(json_file, 'rt') as f:
+        json = loads(f.read())
+        results = json['results']
+
+    # Count valid samples
+    record_count = 0
+
+    # Store 'euclidean' and 'jaccard' fields in the lists
+    for k, v in sorted(results.items()):
+        # Discard empty samples in aggregation
+        if v:
+            # Discard error samples in aggregation
+            if not 'error' in v:
+                wifi_eucl_list.append(v['euclidean'])
+                wifi_jacc_list.append(v['jaccard'])
+                wifi_exp_list.append(v['mean_exp'])
+                wifi_ham_list.append(v['mean_hamming'])
+                rank_val = v['sum_squared_ranks']
+                # Check if rank value is null
+                if rank_val != None:
+                    wifi_rank_list.append(rank_val)
+
+                # Increment the record counter
+                record_count += 1
+
+    if record_count != 0:
+        # Convert eucl, jacc, exp, ham and rank lists to np arrays
+        wifi_eucl_array = np.array(list(wifi_eucl_list), dtype=float)
+        wifi_jacc_array = np.array(list(wifi_jacc_list), dtype=float)
+        wifi_exp_array = np.array(list(wifi_exp_list), dtype=float)
+        wifi_ham_array = np.array(list(wifi_ham_list), dtype=float)
+        wifi_rank_array = np.array(list(wifi_rank_list), dtype=float)
+
+        # Compute mean, median, std, min, max, q1, q3 for wifi_eucl_array
+        eucl_dict = compute_metrics(wifi_eucl_array)
+
+        # Compute mean, median, std, min, max, q1, q3 for wifi_jacc_array
+        jacc_dict = compute_metrics(wifi_jacc_array)
+
+        # Compute mean, median, std, min, max, q1, q3 for wifi_exp_array
+        exp_dict = compute_metrics(wifi_exp_array)
+
+        # Compute mean, median, std, min, max, q1, q3 for wifi_ham_array
+        ham_dict = compute_metrics(wifi_ham_array)
+
+        # Compute mean, median, std, min, max, q1, q3 for wifi_rank_array
+        rank_dict = compute_metrics(wifi_rank_array)
+    else:
+        eucl_dict = 'no overlap'
+        jacc_dict = 'no overlap'
+        exp_dict = 'no overlap'
+        ham_dict = 'no overlap'
+        rank_dict = 'no overlap'
+
+    # Add eucl_dict, jacc_dict, ham_dict and rank_dict to the res_dict
+    res_dict['euclidean'] = eucl_dict
+    res_dict['jaccard'] = jacc_dict
+    res_dict['mean_exp'] = exp_dict
+    res_dict['mean_hamming'] = ham_dict
+    res_dict['sum_squared_ranks'] = rank_dict
+
+    return res_dict
+
+
+def process_phy(json_file):
+    # Initialize res_dict
+    res_dict = {}
+
+    # List to store the 'hamming_dist'
+    phy_ham_list = []
+
+    # Open and read the GZIP file
+    with gzip.open(json_file, 'rt') as f:
+        json = loads(f.read())
+        results = json['results']
+
+    # Store values in the list
+    for k, v in sorted(results.items()):
+        phy_ham_list.append(v)
+
+    # Convert hamming_dist to np array
+    phy_ham_array = np.array(list(phy_ham_list), dtype=float)
+
+    # Compute mean, median, std, min, max, q1, q3 for phy_ham_array
+    ham_dict = compute_metrics(phy_ham_array)
+
+    # Add ham_dict to the res_dict
+    res_dict['hamming_dist'] = ham_dict
+
+    return res_dict
+
+
+def compute_metrics(feature_np_array):
+    # Dictionary to store the results of metric computation
+    feature_dict = {}
+
+    # Compute mean, median, std, min, max, q1, q3 and store results in feature_dict
+    feature_dict['mean'] = np.mean(feature_np_array)
+    feature_dict['median'] = np.median(feature_np_array)
+    feature_dict['std'] = np.std(feature_np_array)
+    feature_dict['min'] = np.amin(feature_np_array)
+    feature_dict['max'] = np.amax(feature_np_array)
+    feature_dict['q1'] = np.percentile(feature_np_array, 25)
+    feature_dict['q3'] = np.percentile(feature_np_array, 75)
+
+    return feature_dict
+
+
+def aggregate_interval_features(feature, feature_class):
     # Path to result files
-    feature_path = ROOT_PATH + 'Sensor-*/audio/' + feature + '/*/Sensor-*.json.gz'
+    feature_path = ROOT_PATH + 'Sensor-*/' + feature_class + '/' + feature \
+                   + '/*/Sensor-*.json.gz'
 
     # Get the list of JSON files for each timeInterval folder, e.g. 5sec, 1min, etc.
     folder_list = parse_folders(feature_path, feature)
@@ -357,14 +513,15 @@ def aggregate_afp():
 
     # Check if the folder list was successfully created
     if not folder_list:
-        print('aggregate_afp: Folder list is empty, exiting...')
+        print('aggregate_interval_features: Folder list is empty, feature = %s --- exiting...'
+              % feature)
         sys.exit(0)
 
     # Initiate a pool of workers
     pool = Pool(processes=NUM_WORKERS, maxtasksperchild=1)
 
     # Use partial to pass a static feature parameter
-    func = partial(process_folder, feature=feature)
+    func = partial(process_folder, feature=feature, feature_class=feature_class)
 
     # Let workers do the job
     pool.imap(func, folder_list)
@@ -374,118 +531,135 @@ def aggregate_afp():
     pool.join()
 
 
-def aggregate_nfp():
+def aggregate_non_interval_features(feature, feature_class):
+    # Flatten the SENSORS list
+    sensor_list = list(itertools.chain.from_iterable(SENSORS))
+
+    # List to store list of files for each sensor: Sensor-01/hum/temp_hum_press_shrestha
+    folder_list = []
+
+    # Iterate over all sensors
+    for sensor in sensor_list:
+        # Path to result files
+        feature_path = ROOT_PATH + 'Sensor-' + sensor + '/' + feature_class + \
+                       '/' + feature + '/Sensor-*.json.gz'
+
+        # Store files corresponding to feature_path in a list
+        file_list = glob(feature_path, recursive=True)
+
+        # Sort file list
+        file_list.sort()
+
+        # Add file list to folder list
+        if file_list:
+            folder_list.append(file_list)
+
+    # Check if the file list was successfully created
+    if not folder_list:
+        print('aggregate_non_interval_features: Folder list is empty, feature = %s --- exiting...'
+              % feature)
+        sys.exit(0)
+
+    # Initiate a pool of workers
+    pool = Pool(processes=NUM_WORKERS, maxtasksperchild=1)
+
+    # Use partial to pass a static feature parameter
+    func = partial(process_folder, feature=feature, feature_class=feature_class)
+
+    # Let workers do the job
+    pool.imap(func, folder_list)
+
+    # Wait for processes to terminate
+    pool.close()
+    pool.join()
+
+
+def aggregate_features():
+    # Audio feature
+    feature = 'audioFingerprint'
+
+    # Feature class
+    feature_class = 'audio'
+
+    # Aggregate AFP
+    print('aggregating AFP...')
+    aggregate_interval_features(feature, feature_class)
 
     # Audio feature
     feature = 'noiseFingerprint'
 
-    # Path to result files
-    feature_path = ROOT_PATH + 'Sensor-*/audio/' + feature + '/*/Sensor-*.json.gz'
-
-    # Get the list of JSON files for each timeInterval folder, e.g. 5sec, 1min, etc.
-    folder_list = parse_folders(feature_path, feature)
-
-    # Sort results of folder_list
-    for file_list in folder_list:
-        file_list.sort()
-
-    # Check if the folder list was successfully created
-    if not folder_list:
-        print('aggregate_nfp: Folder list is empty, exiting...')
-        sys.exit(0)
-
-    # Initiate a pool of workers
-    pool = Pool(processes=NUM_WORKERS, maxtasksperchild=1)
-
-    # Use partial to pass a static feature parameter
-    func = partial(process_folder, feature=feature)
-
-    # Let workers do the job
-    pool.imap(func, folder_list)
-
-    # Wait for processes to terminate
-    pool.close()
-    pool.join()
-
-
-def aggregate_spf():
+    # Aggregate NFP
+    print('aggregating NFP...')
+    aggregate_interval_features(feature, feature_class)
 
     # Audio feature
     feature = 'soundProofXcorr'
 
-    # Path to result files
-    feature_path = ROOT_PATH + 'Sensor-*/audio/' + feature + '/*/Sensor-*.json.gz'
-
-    # Get the list of JSON files for each timeInterval folder, e.g. 5sec, 1min, etc.
-    folder_list = parse_folders(feature_path, feature)
-
-    # Sort results of folder_list
-    for file_list in folder_list:
-        file_list.sort()
-
-    # Check if the folder list was successfully created
-    if not folder_list:
-        print('aggregate_spf: Folder list is empty, exiting...')
-        sys.exit(0)
-
-    # Initiate a pool of workers
-    pool = Pool(processes=NUM_WORKERS, maxtasksperchild=1)
-
-    # Use partial to pass a static feature parameter
-    func = partial(process_folder, feature=feature)
-
-    # Let workers do the job
-    pool.imap(func, folder_list)
-
-    # Wait for processes to terminate
-    pool.close()
-    pool.join()
-
-
-def aggregate_tfd():
+    # Aggregate SPF
+    print('aggregating SPF...')
+    aggregate_interval_features(feature, feature_class)
 
     # Audio feature
     feature = 'timeFreqDistance'
 
-    # Path to result files
-    feature_path = ROOT_PATH + 'Sensor-*/audio/' + feature + '/*/Sensor-*.json.gz'
+    # Aggregate TFD
+    print('aggregating TFD...')
+    aggregate_interval_features(feature, feature_class)
 
-    # Get the list of JSON files for each timeInterval folder, e.g. 5sec, 1min, etc.
-    folder_list = parse_folders(feature_path, feature)
+    # BLE feature
+    feature = 'ble_wifi_truong'
 
-    # Sort results of folder_list
-    for file_list in folder_list:
-        file_list.sort()
+    # Feature class
+    feature_class = 'ble'
 
-    # Check if the folder list was successfully created
-    if not folder_list:
-        print('aggregate_tfd: Folder list is empty, exiting...')
-        sys.exit(0)
+    # Aggregate BLE
+    print('aggregating ble...')
+    aggregate_interval_features(feature, feature_class)
 
-    # Initiate a pool of workers
-    pool = Pool(processes=NUM_WORKERS, maxtasksperchild=1)
+    # Feature class
+    feature_class = 'wifi'
 
-    # Use partial to pass a static feature parameter
-    func = partial(process_folder, feature=feature)
+    # Aggregate Wi-fi
+    print('aggregating wifi...')
+    aggregate_interval_features(feature, feature_class)
 
-    # Let workers do the job
-    pool.imap(func, folder_list)
+    # PHY feature
+    feature = 'temp_hum_press_shrestha'
 
-    # Wait for processes to terminate
-    pool.close()
-    pool.join()
+    # Feature class
+    feature_class = 'temp'
+
+    # Aggregate temperature
+    print('aggregating temp...')
+    aggregate_non_interval_features(feature, feature_class)
+
+    # Feature class
+    feature_class = 'hum'
+
+    # Aggregate humidity
+    print('aggregating hum...')
+    aggregate_non_interval_features(feature, feature_class)
+
+    # Feature class
+    feature_class = 'press'
+
+    # Aggregate pressure
+    print('aggregating press...')
+    aggregate_non_interval_features(feature, feature_class)
 
 
 if __name__ == '__main__':
     # Check the number of input args
-    if len(sys.argv) == 2:
+    if len(sys.argv) == 3:
         # Assign input args
         ROOT_PATH = sys.argv[1]
+        scenario = sys.argv[2]
 
-    elif len(sys.argv) == 3:
+    elif len(sys.argv) == 4:
         # Assign input args
         ROOT_PATH = sys.argv[1]
-        NUM_WORKERS = sys.argv[2]
+        scenario = sys.argv[2]
+        NUM_WORKERS = sys.argv[3]
 
         # Check if <num_workers> is an integer more than 2
         try:
@@ -497,7 +671,7 @@ if __name__ == '__main__':
             print('Error: <num_workers> must be a positive number > 1!')
             sys.exit(0)
     else:
-        print('Usage: aggregate_results.py <root_path> (optional - <num_workers>)')
+        print('Usage: aggregate_results.py <root_path> <scenario> (optional - <num_workers>)')
         sys.exit(0)
 
     # Get the number of cores on the system
@@ -518,23 +692,16 @@ if __name__ == '__main__':
     if ROOT_PATH[-1] != '/':
         ROOT_PATH = ROOT_PATH + '/'
 
-    # Aggregate results
-    start_time = time.time()
-    print('Aggregating AFP using %d workers...' % NUM_WORKERS)
-    aggregate_afp()
-    print('--- %s seconds ---' % (time.time() - start_time))
-    
-    start_time = time.time()
-    print('Aggregating NFP using %d workers...' % NUM_WORKERS)
-    aggregate_nfp()
-    print('--- %s seconds ---' % (time.time() - start_time))
+    if scenario == 'car':
+        SENSORS.append(SENSORS_CAR1)
+        SENSORS.append(SENSORS_CAR2)
+    elif scenario == 'office':
+        SENSORS.append(SENSORS_OFFICE1)
+        SENSORS.append(SENSORS_OFFICE2)
+        SENSORS.append(SENSORS_OFFICE3)
+    else:
+        print('Error: <scenario> can only be "car" or "office"!')
+        sys.exit(0)
 
-    start_time = time.time()
-    print('Aggregating SPF using %d workers...' % NUM_WORKERS)
-    aggregate_spf()
-    print('--- %s seconds ---' % (time.time() - start_time))
-
-    start_time = time.time()
-    print('Aggregating TFD using %d workers...' % NUM_WORKERS)
-    aggregate_tfd()
-    print('--- %s seconds ---' % (time.time() - start_time))
+    # Aggregate features
+    aggregate_features()
