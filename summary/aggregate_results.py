@@ -38,6 +38,9 @@ ROOT_PATH = ''
 
 INCLUDE_INTERVALS = []
 
+USE_AUDIO = True
+USE_SENSOR = True 
+
 
 def include_result(time):
     if INCLUDE_INTERVALS == []:
@@ -148,6 +151,7 @@ def process_folder(file_list, feature='', feature_class=''):
             feature_res = process_feature(json_file, feature, feature_class)
 
             if not feature_res:
+                return
                 print('process_folder: feature processing failed, feature = %s, file = %s --- exiting...' % \
                       + (feature, json_file))
                 sys.exit(0)
@@ -214,24 +218,26 @@ def process_folder(file_list, feature='', feature_class=''):
 
 def process_feature(json_file, feature, feature_class):
     # Process each feature
-    if feature == 'audioFingerprint':
-        return process_afp(json_file)
-    elif feature == 'noiseFingerprint':
-        return process_nfp(json_file)
-    elif feature == 'soundProofXcorr':
-        return process_spf(json_file)
-    elif feature == 'timeFreqDistance':
-        return process_tfd(json_file)
-    elif feature == 'ble_wifi_truong' and feature_class == 'ble':
-        return process_ble(json_file)
-    elif feature == 'ble_wifi_truong' and feature_class == 'wifi':
-        return process_wifi(json_file)
-    elif feature == 'temp_hum_press_shrestha':
-        return process_phy(json_file)
-    else:
-        print('process_feature: unknown feature: %s --- ignoring...' % feature)
+    if USE_AUDIO:
+        if feature == 'audioFingerprint':
+            return process_afp(json_file)
+        elif feature == 'noiseFingerprint':
+            return process_nfp(json_file)
+        elif feature == 'soundProofXcorr':
+            return process_spf(json_file)
+        elif feature == 'timeFreqDistance':
+            return process_tfd(json_file)
+    if USE_SENSOR:
+        if feature == 'ble_wifi_truong' and feature_class == 'ble':
+            return process_ble(json_file)
+        elif feature == 'ble_wifi_truong' and feature_class == 'wifi':
+            return process_wifi(json_file)
+        elif feature == 'temp_hum_press_shrestha':
+            return process_phy(json_file)
+    # else:
+    #     print('process_feature: unknown feature: %s --- ignoring...' % feature)
 
-    return
+    return False
 
 
 def process_afp(json_file):
@@ -702,7 +708,7 @@ if __name__ == '__main__':
         except ValueError:
             print('Error: <num_workers> must be a positive number > 1!')
             sys.exit(0)
-    elif len(sys.argv) == 5:
+    elif len(sys.argv) >= 5:
         # Assign input args
         ROOT_PATH = sys.argv[1]
         scenario = sys.argv[2]
@@ -761,8 +767,17 @@ if __name__ == '__main__':
                 sys.exit(0)
 
     else:
-        print('Usage: aggregate_results.py <root_path> <scenario> (optional - <num_workers>) (optional - <subset>)')
+        print('Usage: aggregate_results.py <root_path> <scenario> (optional - <num_workers>) (optional - <subset>) (optional - <feature set (audio|sensor)>')
         sys.exit(0)
+
+    if len(sys.argv) == 6:
+        if sys.argv[5] == 'audio':
+            USE_SENSOR = False
+        elif sys.argv[5] == 'sensor':
+            USE_AUDIO = False
+        else:
+            print("Error, feature set must be one of audio, sensor")
+            sys.exit(0)
 
     # Get the number of cores on the system
     num_cores = multiprocessing.cpu_count()
