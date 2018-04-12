@@ -5,7 +5,8 @@ import numpy as np
 import sys
 from multiprocessing import Pool
 import multiprocessing
-import time
+from dateutil import parser
+from datetime import datetime
 from functools import partial
 import os
 import gzip
@@ -33,6 +34,19 @@ SUMMARY_FILE = 'Summary.json'
 # Root path - points to the result folder of structure:
 # /Sensor-xx/audio/<audio_features>/<time_intervals>
 ROOT_PATH = ''
+
+
+INCLUDE_INTERVALS = []
+
+
+def include_result(time):
+    if INCLUDE_INTERVALS == []:
+        return True
+    dt = parser.parse(time)
+    for int_start, int_end in INCLUDE_INTERVALS:
+        if int_start <= dt <= int_end:
+            return True
+    return False
 
 
 def parse_folders(path, feature):
@@ -177,6 +191,7 @@ def process_folder(file_list, feature='', feature_class=''):
             meta_dict['value'] = 'euclidean, jaccard, mean_exp, mean_hamming, sum_squared_ranks'
         elif feature == 'temp_hum_press_shrestha':
             meta_dict['value'] = 'hamming_dist'
+        meta_dict['time_intervals'] = str(INCLUDE_INTERVALS)
 
         # Add metadata
         rv['metadata'] = meta_dict
@@ -185,7 +200,10 @@ def process_folder(file_list, feature='', feature_class=''):
         rv['results'] = json_dict
 
         # Save the summary JSON file
-        filename = log_path + SUMMARY_FILE
+        if SUFFIX:
+            filename = log_path + "Summary-{}.json".format(SUFFIX)
+        else:
+            filename = log_path + SUMMARY_FILE
         #print('Saving a file: %s' % filename)
         with open(filename, 'w') as f:
             f.write(dumps(rv, indent=4, sort_keys=True))
@@ -230,6 +248,8 @@ def process_afp(json_file):
 
     # Store 'fingerprints_similarity_percent' fields in the list
     for k, v in sorted(results.items()):
+        if not include_result(k):
+            continue
         afp_similarity_list.append(v['fingerprints_similarity_percent'])
 
     # Convert list to np array
@@ -258,6 +278,8 @@ def process_nfp(json_file):
 
     # Store 'fingerprints_similarity_percent' fields in the list
     for k, v in sorted(results.items()):
+        if not include_result(k):
+            continue
         nfp_similarity = v['fingerprints_similarity_percent']
 
     # Add fp_sim_dict to the res_dict
@@ -281,6 +303,8 @@ def process_spf(json_file):
 
     # Store 'max_xcorr' fields in the list
     for k, v in sorted(results.items()):
+        if not include_result(k):
+            continue
         # Take into account accident with Sensor-07
         if not math.isnan(float(v['max_xcorr'])):
             # Take into account the power threshold
@@ -317,6 +341,8 @@ def process_tfd(json_file):
 
     # Store 'max_xcorr' and 'time_freq_dist' fields in the lists
     for k, v in sorted(results.items()):
+        if not include_result(k):
+            continue
         # Take into account accident with Sensor-07
         if not math.isnan(float(v['max_xcorr'])):
             tfd_xcorr_list.append(v['max_xcorr'])
@@ -356,6 +382,8 @@ def process_ble(json_file):
     for k, v in sorted(results.items()):
         # Discard empty samples in aggregation
         if v:
+            if not include_result(k):
+                continue
             # Discard error samples in aggregation
             if not 'error' in v:
                 ble_eucl_list.append(v['euclidean'])
@@ -402,6 +430,8 @@ def process_wifi(json_file):
     for k, v in sorted(results.items()):
         # Discard empty samples in aggregation
         if v:
+            if not include_result(k):
+                continue
             # Discard error samples in aggregation
             if not 'error' in v:
                 wifi_eucl_list.append(v['euclidean'])
@@ -469,6 +499,8 @@ def process_phy(json_file):
 
     # Store values in the list
     for k, v in sorted(results.items()):
+        if not include_result(k):
+            continue
         phy_ham_list.append(v)
 
     # Convert hamming_dist to np array
@@ -670,8 +702,66 @@ if __name__ == '__main__':
         except ValueError:
             print('Error: <num_workers> must be a positive number > 1!')
             sys.exit(0)
+    elif len(sys.argv) == 5:
+        # Assign input args
+        ROOT_PATH = sys.argv[1]
+        scenario = sys.argv[2]
+        NUM_WORKERS = sys.argv[3]
+        subset = sys.argv[4]
+        SUFFIX = subset
+
+        # Check if <num_workers> is an integer more than 2
+        try:
+            NUM_WORKERS = int(NUM_WORKERS)
+            if NUM_WORKERS < 2:
+                print('Error: <num_workers> must be a positive number > 1!')
+                sys.exit(0)
+        except ValueError:
+            print('Error: <num_workers> must be a positive number > 1!')
+            sys.exit(0)
+
+        if scenario == 'car':
+            if subset == 'static':
+                INCLUDE_INTERVALS = [(datetime(2017, 11, 23, 14, 40, 0), datetime(2017, 11, 23, 14, 46, 0)),
+                                     (datetime(2017, 11, 23, 15, 15, 0), datetime(2017, 11, 23, 15, 18, 0)),
+                                     (datetime(2017, 11, 23, 16, 43, 0), datetime(2017, 11, 23, 17, 5, 0)),
+                                     (datetime(2017, 11, 23, 17, 31, 0), datetime(2017, 11, 23, 17, 50, 0))]
+            elif subset == 'city':
+                INCLUDE_INTERVALS = [(datetime(2017, 11, 23, 14, 46, 0), datetime(2017, 11, 23, 15, 15, 0)),
+                                     (datetime(2017, 11, 23, 15, 55, 0), datetime(2017, 11, 23, 16, 25, 0)),
+                                     (datetime(2017, 11, 23, 17, 18, 0), datetime(2017, 11, 23, 17, 31, 0))]
+            elif subset == 'highway':
+                INCLUDE_INTERVALS = [(datetime(2017, 11, 23, 15, 18, 0), datetime(2017, 11, 23, 15, 55, 0)),
+                                     (datetime(2017, 11, 23, 16, 25, 0), datetime(2017, 11, 23, 16, 43, 0)),
+                                     (datetime(2017, 11, 23, 17, 5, 0), datetime(2017, 11, 23, 17, 18, 0))]
+            else:
+                print("Unknown subset, must be one of static, city, highway for car scenario!")
+                sys.exit(0)
+        if scenario == 'office':
+            if subset == 'night':
+                INCLUDE_INTERVALS = [(datetime(2017, 11, 27, 21, 0, 0), datetime(2017, 11, 28, 8, 0, 0)),
+                                     (datetime(2017, 11, 28, 21, 0, 0), datetime(2017, 11, 29, 8, 0, 0)),
+                                     (datetime(2017, 11, 29, 21, 0, 0), datetime(2017, 11, 30, 8, 0, 0)),
+                                     (datetime(2017, 11, 30, 21, 0, 0), datetime(2017, 12, 1, 8, 0, 0)),
+                                     (datetime(2017, 12, 1, 21, 0, 0), datetime(2017, 12, 2, 8, 0, 0)),
+                                     (datetime(2017, 12, 2, 21, 0, 0), datetime(2017, 12, 3, 8, 0, 0)),
+                                     (datetime(2017, 12, 3, 21, 0, 0), datetime(2017, 12, 4, 8, 0, 0))]
+            elif subset == "weekday":
+                INCLUDE_INTERVALS = [(datetime(2017, 11, 27, 8, 0, 0), datetime(2017, 11, 27, 21, 0, 0)),
+                                     (datetime(2017, 11, 28, 8, 0, 0), datetime(2017, 11, 28, 21, 0, 0)),
+                                     (datetime(2017, 11, 29, 8, 0, 0), datetime(2017, 11, 29, 21, 0, 0)),
+                                     (datetime(2017, 11, 30, 8, 0, 0), datetime(2017, 11, 30, 21, 0, 0)),
+                                     (datetime(2017, 12, 1, 8, 0, 0), datetime(2017, 12, 1, 21, 0, 0)),
+                                     (datetime(2017, 12, 4, 8, 0, 0), datetime(2017, 12, 4, 21, 0, 0))]
+            elif subset == "weekend":
+                INCLUDE_INTERVALS = [(datetime(2017, 12, 2, 8, 0, 0), datetime(2017, 12, 2, 21, 0, 0)),
+                                     (datetime(2017, 12, 3, 8, 0, 0), datetime(2017, 12, 3, 21, 0, 0))]
+            else:
+                print("Unknown subset, must be one of night, weekday, weekend for office scenario!")
+                sys.exit(0)
+
     else:
-        print('Usage: aggregate_results.py <root_path> <scenario> (optional - <num_workers>)')
+        print('Usage: aggregate_results.py <root_path> <scenario> (optional - <num_workers>) (optional - <subset>)')
         sys.exit(0)
 
     # Get the number of cores on the system
