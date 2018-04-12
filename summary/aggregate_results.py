@@ -151,7 +151,6 @@ def process_folder(file_list, feature='', feature_class=''):
             feature_res = process_feature(json_file, feature, feature_class)
 
             if not feature_res:
-                return
                 print('process_folder: feature processing failed, feature = %s, file = %s --- exiting...' % \
                       + (feature, json_file))
                 sys.exit(0)
@@ -217,27 +216,25 @@ def process_folder(file_list, feature='', feature_class=''):
 
 
 def process_feature(json_file, feature, feature_class):
-    # Process each feature
-    if USE_AUDIO:
-        if feature == 'audioFingerprint':
-            return process_afp(json_file)
-        elif feature == 'noiseFingerprint':
-            return process_nfp(json_file)
-        elif feature == 'soundProofXcorr':
-            return process_spf(json_file)
-        elif feature == 'timeFreqDistance':
-            return process_tfd(json_file)
-    if USE_SENSOR:
-        if feature == 'ble_wifi_truong' and feature_class == 'ble':
-            return process_ble(json_file)
-        elif feature == 'ble_wifi_truong' and feature_class == 'wifi':
-            return process_wifi(json_file)
-        elif feature == 'temp_hum_press_shrestha':
-            return process_phy(json_file)
-    # else:
-    #     print('process_feature: unknown feature: %s --- ignoring...' % feature)
+# Process each feature
+    if feature == 'audioFingerprint':
+        return process_afp(json_file)
+    elif feature == 'noiseFingerprint':
+        return process_nfp(json_file)
+    elif feature == 'soundProofXcorr':
+        return process_spf(json_file)
+    elif feature == 'timeFreqDistance':
+        return process_tfd(json_file)
+    elif feature == 'ble_wifi_truong' and feature_class == 'ble':
+        return process_ble(json_file)
+    elif feature == 'ble_wifi_truong' and feature_class == 'wifi':
+        return process_wifi(json_file)
+    elif feature == 'temp_hum_press_shrestha':
+        return process_phy(json_file)
+    else:
+        print('process_feature: unknown feature: %s --- ignoring...' % feature)
 
-    return False
+    return
 
 
 def process_afp(json_file):
@@ -613,77 +610,81 @@ def aggregate_non_interval_features(feature, feature_class):
 
 
 def aggregate_features():
-    # Audio feature
-    feature = 'audioFingerprint'
 
-    # Feature class
-    feature_class = 'audio'
+    if USE_AUDIO:
+        # Audio feature
+        feature = 'audioFingerprint'
 
-    # Aggregate AFP
-    print('aggregating AFP...')
-    aggregate_interval_features(feature, feature_class)
+        # Feature class
+        feature_class = 'audio'
 
-    # Audio feature
-    feature = 'noiseFingerprint'
+        # Aggregate AFP
+        print('aggregating AFP...')
+        aggregate_interval_features(feature, feature_class)
 
-    # Aggregate NFP
-    print('aggregating NFP...')
-    aggregate_interval_features(feature, feature_class)
+        # Audio feature
+        feature = 'noiseFingerprint'
 
-    # Audio feature
-    feature = 'soundProofXcorr'
+        # Aggregate NFP
+        print('aggregating NFP...')
+        aggregate_interval_features(feature, feature_class)
 
-    # Aggregate SPF
-    print('aggregating SPF...')
-    aggregate_interval_features(feature, feature_class)
+        # Audio feature
+        feature = 'soundProofXcorr'
 
-    # Audio feature
-    feature = 'timeFreqDistance'
+        # Aggregate SPF
+        print('aggregating SPF...')
+        aggregate_interval_features(feature, feature_class)
 
-    # Aggregate TFD
-    print('aggregating TFD...')
-    aggregate_interval_features(feature, feature_class)
+        # Audio feature
+        feature = 'timeFreqDistance'
 
-    # BLE feature
-    feature = 'ble_wifi_truong'
+        # Aggregate TFD
+        print('aggregating TFD...')
+        aggregate_interval_features(feature, feature_class)
 
-    # Feature class
-    feature_class = 'ble'
+    if USE_SENSOR:
 
-    # Aggregate BLE
-    print('aggregating ble...')
-    aggregate_interval_features(feature, feature_class)
+        # BLE feature
+        feature = 'ble_wifi_truong'
 
-    # Feature class
-    feature_class = 'wifi'
+        # Feature class
+        feature_class = 'ble'
 
-    # Aggregate Wi-fi
-    print('aggregating wifi...')
-    aggregate_interval_features(feature, feature_class)
+        # Aggregate BLE
+        print('aggregating ble...')
+        aggregate_interval_features(feature, feature_class)
 
-    # PHY feature
-    feature = 'temp_hum_press_shrestha'
+        # Feature class
+        feature_class = 'wifi'
 
-    # Feature class
-    feature_class = 'temp'
+        # Aggregate Wi-fi
+        print('aggregating wifi...')
+        aggregate_interval_features(feature, feature_class)
 
-    # Aggregate temperature
-    print('aggregating temp...')
-    aggregate_non_interval_features(feature, feature_class)
+        # PHY feature
+        feature = 'temp_hum_press_shrestha'
 
-    # Feature class
-    feature_class = 'hum'
+        # Feature class
+        feature_class = 'temp'
 
-    # Aggregate humidity
-    print('aggregating hum...')
-    aggregate_non_interval_features(feature, feature_class)
+        # Aggregate temperature
+        print('aggregating temp...')
+        aggregate_non_interval_features(feature, feature_class)
 
-    # Feature class
-    feature_class = 'press'
+        # Feature class
+        feature_class = 'hum'
 
-    # Aggregate pressure
-    print('aggregating press...')
-    aggregate_non_interval_features(feature, feature_class)
+        # Aggregate humidity
+        print('aggregating hum...')
+        aggregate_non_interval_features(feature, feature_class)
+
+        # Feature class
+        feature_class = 'press'
+
+        # Aggregate pressure
+        print('aggregating press...')
+        aggregate_non_interval_features(feature, feature_class)
 
 
 if __name__ == '__main__':
