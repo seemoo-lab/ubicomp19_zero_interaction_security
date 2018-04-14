@@ -150,10 +150,15 @@ def process_folder(file_list, feature='', feature_class=''):
             # Get results from a single file
             feature_res = process_feature(json_file, feature, feature_class)
 
+            '''
             if not feature_res:
                 print('process_folder: feature processing failed, feature = %s, file = %s --- exiting...' % \
                       + (feature, json_file))
                 sys.exit(0)
+            '''
+
+            if not feature_res:
+                print('empty dictionary is returned - do not save json file')
 
             # Get the file name, e.g. Sensor-02 - a key in the json_dict
             # (take different slashes into account: / or \)
@@ -165,8 +170,9 @@ def process_folder(file_list, feature='', feature_class=''):
                 print('process_folder: no match for the file name, exiting...')
                 sys.exit(0)
 
-            # Add data to json_dict
-            json_dict[match.group(1).lower()] = feature_res
+            if feature_res:
+                # Add data to json_dict
+                json_dict[match.group(1).lower()] = feature_res
 
         # Result that goes into JSON (name stolen from Max;))
         rv = {}
@@ -208,8 +214,9 @@ def process_folder(file_list, feature='', feature_class=''):
         else:
             filename = log_path + SUMMARY_FILE
         #print('Saving a file: %s' % filename)
-        with open(filename, 'w') as f:
-            f.write(dumps(rv, indent=4, sort_keys=True))
+        if feature_res:
+            with open(filename, 'w') as f:
+                f.write(dumps(rv, indent=4, sort_keys=True))
 
     except Exception as e:
         print(e)
