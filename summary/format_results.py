@@ -430,6 +430,10 @@ def wrap_up_feature(co_located_val, non_colocated_val, feature_key):
         # List to store feature metrics, e.g. mean, max, threshold_percent
         feature_metric_list = list(co_located_val[0][feature_key].keys())
         feature_metric_list.sort()
+    elif isinstance(co_located_val[0][feature_key], str):
+        if co_located_val[0][feature_key] == 'no overlap':
+            result_list = ['no overlap', 'no overlap']
+            return result_list
     else:
         print('wrap_up_feature: instance of feature: %s must be dict or float --- exiting...' %
               co_located_val[0][feature_key])
@@ -592,6 +596,7 @@ def format_non_interval_features(feature, feature_class):
 
 
 def format_features():
+
     # Audio feature
     feature = 'audioFingerprint'
 
