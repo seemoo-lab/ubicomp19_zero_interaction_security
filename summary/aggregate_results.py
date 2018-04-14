@@ -261,6 +261,9 @@ def process_afp(json_file):
         if not include_result(k):
             continue
         afp_similarity_list.append(v['fingerprints_similarity_percent'])
+    if len(afp_similarity_list) == 0:
+        print("process_afp: No applicable data, skipping", json_file)
+        return {}
 
     # Convert list to np array
     afp_similarity_array = np.array(list(afp_similarity_list), dtype=float)
@@ -291,6 +294,9 @@ def process_nfp(json_file):
         if not include_result(k):
             continue
         nfp_similarity = v['fingerprints_similarity_percent']
+    if len(nfp_similarity) == 0:
+        print("process_nfp: No applicable data, skipping", json_file)
+        return {}
 
     # Add fp_sim_dict to the res_dict
     res_dict['fingerprints_similarity_percent'] = nfp_similarity
@@ -320,6 +326,9 @@ def process_spf(json_file):
             # Take into account the power threshold
             if v['power1_db'] >= 40 and v['power2_db'] >= 40:
                 spf_xcorr_list.append(v['max_xcorr'])
+    if len(spf_xcorr_list) == 0:
+        print("process_spf: No applicable data, skipping", json_file)
+        return {}
 
     # Convert list to np array
     spf_xcorr_array = np.array(list(spf_xcorr_list), dtype=float)
@@ -357,6 +366,9 @@ def process_tfd(json_file):
         if not math.isnan(float(v['max_xcorr'])):
             tfd_xcorr_list.append(v['max_xcorr'])
             tfd_tfd_list.append(v['time_freq_dist'])
+    if len(tfd_xcorr_list) == 0:
+        print("process_tfd: No applicable data, skipping", json_file)
+        return {}
 
     # Convert xcorr and tfd lists to np arrays
     tfd_xcorr_array = np.array(list(tfd_xcorr_list), dtype=float)
@@ -398,6 +410,9 @@ def process_ble(json_file):
             if not 'error' in v:
                 ble_eucl_list.append(v['euclidean'])
                 ble_jacc_list.append(v['jaccard'])
+    if len(ble_eucl_list) == 0:
+        print("process_ble: No applicable data, skipping", json_file)
+        return {}
 
     # Convert eucl and jacc lists to np arrays
     ble_eucl_array = np.array(list(ble_eucl_list), dtype=float)
@@ -512,6 +527,9 @@ def process_phy(json_file):
         if not include_result(k):
             continue
         phy_ham_list.append(v)
+    if len(phy_ham_list) == 0:
+        print("process_phy: No applicable data, skipping", json_file)
+        return {}
 
     # Convert hamming_dist to np array
     phy_ham_array = np.array(list(phy_ham_list), dtype=float)
