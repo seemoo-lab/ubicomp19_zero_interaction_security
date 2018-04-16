@@ -740,7 +740,7 @@ if __name__ == '__main__':
         except ValueError:
             print('Error: <num_workers> must be a positive number > 1!')
             sys.exit(0)
-    elif len(sys.argv) == 5:
+    elif len(sys.argv) >= 5:
         # Assign input args
         ROOT_PATH = sys.argv[1]
         scenario = sys.argv[2]
