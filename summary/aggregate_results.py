@@ -157,9 +157,6 @@ def process_folder(file_list, feature='', feature_class=''):
                 sys.exit(0)
             '''
 
-            if not feature_res:
-                print('empty dictionary is returned - do not save json file')
-
             # Get the file name, e.g. Sensor-02 - a key in the json_dict
             # (take different slashes into account: / or \)
             regex = re.escape(cur_folder) + r'(?:/|\\)(.*).json.gz'
@@ -170,9 +167,7 @@ def process_folder(file_list, feature='', feature_class=''):
                 print('process_folder: no match for the file name, exiting...')
                 sys.exit(0)
 
-            if feature_res:
-                # Add data to json_dict
-                json_dict[match.group(1).lower()] = feature_res
+            json_dict[match.group(1).lower()] = feature_res
 
         # Result that goes into JSON (name stolen from Max;))
         rv = {}
@@ -214,9 +209,8 @@ def process_folder(file_list, feature='', feature_class=''):
         else:
             filename = log_path + SUMMARY_FILE
         #print('Saving a file: %s' % filename)
-        if feature_res:
-            with open(filename, 'w') as f:
-                f.write(dumps(rv, indent=4, sort_keys=True))
+        with open(filename, 'w') as f:
+            f.write(dumps(rv, indent=4, sort_keys=True))
 
     except Exception as e:
         print(e)
@@ -262,8 +256,9 @@ def process_afp(json_file):
             continue
         afp_similarity_list.append(v['fingerprints_similarity_percent'])
     if len(afp_similarity_list) == 0:
-        print("process_afp: No applicable data, skipping", json_file)
-        return {}
+        #print("process_afp: No applicable data, skipping", json_file)
+        res_dict['fingerprints_similarity_percent'] = 'no overlap'
+        return res_dict
 
     # Convert list to np array
     afp_similarity_array = np.array(list(afp_similarity_list), dtype=float)
@@ -289,14 +284,19 @@ def process_nfp(json_file):
         json = loads(f.read())
         results = json['results']
 
+    # Count valid samples
+    record_count = 0
+
     # Store 'fingerprints_similarity_percent' fields in the list
     for k, v in sorted(results.items()):
         if not include_result(k):
             continue
         nfp_similarity = v['fingerprints_similarity_percent']
-    if len(nfp_similarity) == 0:
-        print("process_nfp: No applicable data, skipping", json_file)
-        return {}
+        record_count += 1
+    if record_count == 0:
+        #print("process_nfp: No applicable data, skipping", json_file)
+        res_dict['fingerprints_similarity_percent'] = 'no overlap'
+        return res_dict
 
     # Add fp_sim_dict to the res_dict
     res_dict['fingerprints_similarity_percent'] = nfp_similarity
@@ -327,8 +327,9 @@ def process_spf(json_file):
             if v['power1_db'] >= 40 and v['power2_db'] >= 40:
                 spf_xcorr_list.append(v['max_xcorr'])
     if len(spf_xcorr_list) == 0:
-        print("process_spf: No applicable data, skipping", json_file)
-        return {}
+        #print("process_spf: No applicable data, skipping", json_file)
+        res_dict['max_xcorr'] = 'no overlap'
+        return res_dict
 
     # Convert list to np array
     spf_xcorr_array = np.array(list(spf_xcorr_list), dtype=float)
@@ -367,8 +368,10 @@ def process_tfd(json_file):
             tfd_xcorr_list.append(v['max_xcorr'])
             tfd_tfd_list.append(v['time_freq_dist'])
     if len(tfd_xcorr_list) == 0:
-        print("process_tfd: No applicable data, skipping", json_file)
-        return {}
+        #print("process_tfd: No applicable data, skipping", json_file)
+        res_dict['max_xcorr'] = 'no overlap'
+        res_dict['time_freq_dist'] = 'no overlap'
+        return res_dict
 
     # Convert xcorr and tfd lists to np arrays
     tfd_xcorr_array = np.array(list(tfd_xcorr_list), dtype=float)
@@ -411,8 +414,10 @@ def process_ble(json_file):
                 ble_eucl_list.append(v['euclidean'])
                 ble_jacc_list.append(v['jaccard'])
     if len(ble_eucl_list) == 0:
-        print("process_ble: No applicable data, skipping", json_file)
-        return {}
+        #print("process_ble: No applicable data, skipping", json_file)
+        res_dict['euclidean'] = 'no overlap'
+        res_dict['jaccard'] = 'no overlap'
+        return res_dict
 
     # Convert eucl and jacc lists to np arrays
     ble_eucl_array = np.array(list(ble_eucl_list), dtype=float)
@@ -528,8 +533,9 @@ def process_phy(json_file):
             continue
         phy_ham_list.append(v)
     if len(phy_ham_list) == 0:
-        print("process_phy: No applicable data, skipping", json_file)
-        return {}
+        #print("process_phy: No applicable data, skipping", json_file)
+        res_dict['hamming_dist'] = 'no overlap'
+        return res_dict
 
     # Convert hamming_dist to np array
     phy_ham_array = np.array(list(phy_ham_list), dtype=float)
@@ -734,7 +740,7 @@ if __name__ == '__main__':
         except ValueError:
             print('Error: <num_workers> must be a positive number > 1!')
             sys.exit(0)
-    elif len(sys.argv) >= 5:
+    elif len(sys.argv) == 5:
         # Assign input args
         ROOT_PATH = sys.argv[1]
         scenario = sys.argv[2]
