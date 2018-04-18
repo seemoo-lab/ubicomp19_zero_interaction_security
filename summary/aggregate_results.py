@@ -317,6 +317,21 @@ def process_spf(json_file):
         results = json['results']
         res_len = len(results)
 
+    # Get list of band names
+    band_dict = results[next(iter(sorted(results)))]['xcorr_freq_bands']
+    band_list = list(band_dict.keys())
+
+    # Sort band list
+    band_list.sort()
+
+    # Check if we have a legitimate number of bands
+    if len(band_list) != 20:
+        print('Error in file %s, number of bands must be 20!' % json_file)
+        return
+
+    # Initialize list of lists for spf band xcorr scores
+    band_lists = [[] for i in range(len(band_list))]
+
     # Store 'max_xcorr' fields in the list
     for k, v in sorted(results.items()):
         if not include_result(k):
@@ -326,6 +341,9 @@ def process_spf(json_file):
             # Take into account the power threshold
             if v['power1_db'] >= 40 and v['power2_db'] >= 40:
                 spf_xcorr_list.append(v['max_xcorr'])
+                for key, val in sorted(v['xcorr_freq_bands'].items()):
+                    idx = get_band_number(key)
+                    band_lists[idx-1].append(val)
     if len(spf_xcorr_list) == 0:
         #print("process_spf: No applicable data, skipping", json_file)
         res_dict['max_xcorr'] = 'no overlap'
@@ -343,7 +361,25 @@ def process_spf(json_file):
     # Add xcorr_dict to the res_dict
     res_dict['max_xcorr'] = xcorr_dict
 
+    # Index for band in band_lists
+    idx = 0
+
+    # Iterate over all bands
+    for band in band_list:
+        spf_band_array = np.array(list(band_lists[idx]), dtype=float)
+        res_dict[band] = compute_metrics(spf_band_array)
+        idx += 1
+
     return res_dict
+
+
+def get_band_number(spf_band):
+
+    # Split the band name, e.g. 01_50 and convert 01 to int index
+    res = spf_band.split('_')
+    res = int(res[0])
+
+    return res
 
 
 def process_tfd(json_file):
@@ -643,6 +679,7 @@ def aggregate_non_interval_features(feature, feature_class):
 def aggregate_features():
 
     if USE_AUDIO:
+	
         # Audio feature
         feature = 'audioFingerprint'
 
@@ -673,7 +710,7 @@ def aggregate_features():
         # Aggregate TFD
         print('aggregating TFD...')
         aggregate_interval_features(feature, feature_class)
-
+	
     if USE_SENSOR:
 
         # BLE feature
@@ -772,6 +809,8 @@ if __name__ == '__main__':
                 INCLUDE_INTERVALS = [(datetime(2017, 11, 23, 15, 18, 0), datetime(2017, 11, 23, 15, 55, 0)),
                                      (datetime(2017, 11, 23, 16, 25, 0), datetime(2017, 11, 23, 16, 43, 0)),
                                      (datetime(2017, 11, 23, 17, 5, 0), datetime(2017, 11, 23, 17, 18, 0))]
+            elif subset == 'all':
+                SUFFIX = ''
             else:
                 print("Unknown subset, must be one of static, city, highway for car scenario!")
                 sys.exit(0)
@@ -794,6 +833,9 @@ if __name__ == '__main__':
             elif subset == "weekend":
                 INCLUDE_INTERVALS = [(datetime(2017, 12, 2, 8, 0, 0), datetime(2017, 12, 2, 21, 0, 0)),
                                      (datetime(2017, 12, 3, 8, 0, 0), datetime(2017, 12, 3, 21, 0, 0))]
+
+            elif subset == 'all':
+                SUFFIX = ''
             else:
                 print("Unknown subset, must be one of night, weekday, weekend for office scenario!")
                 sys.exit(0)
