@@ -332,6 +332,8 @@ def process_spf(json_file):
     # Initialize list of lists for spf band xcorr scores
     band_lists = [[] for i in range(len(band_list))]
 
+    res_count = 0
+
     # Store 'max_xcorr' fields in the list
     for k, v in sorted(results.items()):
         if not include_result(k):
@@ -344,6 +346,9 @@ def process_spf(json_file):
                 for key, val in sorted(v['xcorr_freq_bands'].items()):
                     idx = get_band_number(key)
                     band_lists[idx-1].append(val)
+
+        res_count += 1
+
     if len(spf_xcorr_list) == 0:
         #print("process_spf: No applicable data, skipping", json_file)
         res_dict['max_xcorr'] = 'no overlap'
@@ -356,7 +361,8 @@ def process_spf(json_file):
     xcorr_dict = compute_metrics(spf_xcorr_array)
 
     # Add threshold percent to xcorr_dict
-    xcorr_dict['threshold_percent'] = (len(spf_xcorr_list) / res_len) * 100
+    xcorr_dict['threshold_percent'] = (len(spf_xcorr_list) / res_count) * 100
+    #xcorr_dict['threshold_percent'] = (len(spf_xcorr_list) / res_len) * 100
 
     # Add xcorr_dict to the res_dict
     res_dict['max_xcorr'] = xcorr_dict
@@ -679,7 +685,7 @@ def aggregate_non_interval_features(feature, feature_class):
 def aggregate_features():
 
     if USE_AUDIO:
-	
+        '''
         # Audio feature
         feature = 'audioFingerprint'
 
@@ -710,7 +716,19 @@ def aggregate_features():
         # Aggregate TFD
         print('aggregating TFD...')
         aggregate_interval_features(feature, feature_class)
-	
+        '''
+
+        # Audio feature
+        feature = 'soundProofXcorr'
+
+        # Feature class
+        feature_class = 'audio'
+
+        # Aggregate SPF
+        print('aggregating SPF...')
+        aggregate_interval_features(feature, feature_class)
+
+    '''
     if USE_SENSOR:
 
         # BLE feature
@@ -753,6 +771,7 @@ def aggregate_features():
         # Aggregate pressure
         print('aggregating press...')
         aggregate_non_interval_features(feature, feature_class)
+    '''
 
 
 if __name__ == '__main__':
