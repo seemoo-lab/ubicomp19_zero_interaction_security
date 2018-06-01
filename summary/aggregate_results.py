@@ -685,7 +685,7 @@ def aggregate_non_interval_features(feature, feature_class):
 def aggregate_features():
 
     if USE_AUDIO:
-        '''
+
         # Audio feature
         feature = 'audioFingerprint'
 
@@ -716,7 +716,6 @@ def aggregate_features():
         # Aggregate TFD
         print('aggregating TFD...')
         aggregate_interval_features(feature, feature_class)
-        '''
 
         # Audio feature
         feature = 'soundProofXcorr'
@@ -728,7 +727,6 @@ def aggregate_features():
         print('aggregating SPF...')
         aggregate_interval_features(feature, feature_class)
 
-    '''
     if USE_SENSOR:
 
         # BLE feature
@@ -771,7 +769,6 @@ def aggregate_features():
         # Aggregate pressure
         print('aggregating press...')
         aggregate_non_interval_features(feature, feature_class)
-    '''
 
 
 if __name__ == '__main__':
@@ -801,8 +798,8 @@ if __name__ == '__main__':
         ROOT_PATH = sys.argv[1]
         scenario = sys.argv[2]
         NUM_WORKERS = sys.argv[3]
-        subset = sys.argv[4]
-        SUFFIX = subset
+        sub_scenario = sys.argv[4]
+        SUFFIX = sub_scenario
 
         # Check if <num_workers> is an integer more than 2
         try:
@@ -815,26 +812,29 @@ if __name__ == '__main__':
             sys.exit(0)
 
         if scenario == 'car':
-            if subset == 'static':
+            if sub_scenario == 'all':
+                SUFFIX = ''
+            elif sub_scenario == 'city':
+                INCLUDE_INTERVALS = [(datetime(2017, 11, 23, 14, 46, 0), datetime(2017, 11, 23, 15, 15, 0)),
+                                     (datetime(2017, 11, 23, 15, 55, 0), datetime(2017, 11, 23, 16, 25, 0)),
+                                     (datetime(2017, 11, 23, 17, 18, 0), datetime(2017, 11, 23, 17, 31, 0))]
+            elif sub_scenario == 'highway':
+                INCLUDE_INTERVALS = [(datetime(2017, 11, 23, 15, 18, 0), datetime(2017, 11, 23, 15, 55, 0)),
+                                     (datetime(2017, 11, 23, 16, 25, 0), datetime(2017, 11, 23, 16, 43, 0)),
+                                     (datetime(2017, 11, 23, 17, 5, 0), datetime(2017, 11, 23, 17, 18, 0))]
+            elif sub_scenario == 'static':
                 INCLUDE_INTERVALS = [(datetime(2017, 11, 23, 14, 40, 0), datetime(2017, 11, 23, 14, 46, 0)),
                                      (datetime(2017, 11, 23, 15, 15, 0), datetime(2017, 11, 23, 15, 18, 0)),
                                      (datetime(2017, 11, 23, 16, 43, 0), datetime(2017, 11, 23, 17, 5, 0)),
                                      (datetime(2017, 11, 23, 17, 31, 0), datetime(2017, 11, 23, 17, 50, 0))]
-            elif subset == 'city':
-                INCLUDE_INTERVALS = [(datetime(2017, 11, 23, 14, 46, 0), datetime(2017, 11, 23, 15, 15, 0)),
-                                     (datetime(2017, 11, 23, 15, 55, 0), datetime(2017, 11, 23, 16, 25, 0)),
-                                     (datetime(2017, 11, 23, 17, 18, 0), datetime(2017, 11, 23, 17, 31, 0))]
-            elif subset == 'highway':
-                INCLUDE_INTERVALS = [(datetime(2017, 11, 23, 15, 18, 0), datetime(2017, 11, 23, 15, 55, 0)),
-                                     (datetime(2017, 11, 23, 16, 25, 0), datetime(2017, 11, 23, 16, 43, 0)),
-                                     (datetime(2017, 11, 23, 17, 5, 0), datetime(2017, 11, 23, 17, 18, 0))]
-            elif subset == 'all':
-                SUFFIX = ''
             else:
-                print("Unknown subset, must be one of static, city, highway for car scenario!")
+                print('Error: <sub_scenario> for the car scenario can only be "all", "city", "highway" or "static"!')
                 sys.exit(0)
+
         if scenario == 'office':
-            if subset == 'night':
+            if sub_scenario == 'all':
+                SUFFIX = ''
+            elif sub_scenario == 'night':
                 INCLUDE_INTERVALS = [(datetime(2017, 11, 27, 21, 0, 0), datetime(2017, 11, 28, 8, 0, 0)),
                                      (datetime(2017, 11, 28, 21, 0, 0), datetime(2017, 11, 29, 8, 0, 0)),
                                      (datetime(2017, 11, 29, 21, 0, 0), datetime(2017, 11, 30, 8, 0, 0)),
@@ -842,25 +842,21 @@ if __name__ == '__main__':
                                      (datetime(2017, 12, 1, 21, 0, 0), datetime(2017, 12, 2, 8, 0, 0)),
                                      (datetime(2017, 12, 2, 21, 0, 0), datetime(2017, 12, 3, 8, 0, 0)),
                                      (datetime(2017, 12, 3, 21, 0, 0), datetime(2017, 12, 4, 8, 0, 0))]
-            elif subset == "weekday":
+            elif sub_scenario == 'weekday':
                 INCLUDE_INTERVALS = [(datetime(2017, 11, 27, 8, 0, 0), datetime(2017, 11, 27, 21, 0, 0)),
                                      (datetime(2017, 11, 28, 8, 0, 0), datetime(2017, 11, 28, 21, 0, 0)),
                                      (datetime(2017, 11, 29, 8, 0, 0), datetime(2017, 11, 29, 21, 0, 0)),
                                      (datetime(2017, 11, 30, 8, 0, 0), datetime(2017, 11, 30, 21, 0, 0)),
                                      (datetime(2017, 12, 1, 8, 0, 0), datetime(2017, 12, 1, 21, 0, 0)),
                                      (datetime(2017, 12, 4, 8, 0, 0), datetime(2017, 12, 4, 21, 0, 0))]
-            elif subset == "weekend":
+            elif sub_scenario == 'weekend':
                 INCLUDE_INTERVALS = [(datetime(2017, 12, 2, 8, 0, 0), datetime(2017, 12, 2, 21, 0, 0)),
                                      (datetime(2017, 12, 3, 8, 0, 0), datetime(2017, 12, 3, 21, 0, 0))]
-
-            elif subset == 'all':
-                SUFFIX = ''
             else:
-                print("Unknown subset, must be one of night, weekday, weekend for office scenario!")
+                print('Error: <sub_scenario> for the office scenario can only be "all", "night", "weekday" or "weekend"!')
                 sys.exit(0)
-
     else:
-        print('Usage: aggregate_results.py <root_path> <scenario> (optional - <num_workers>) (optional - <subset>) (optional - <feature set (audio|sensor)>')
+        print('Usage: aggregate_results.py <root_path> <scenario> (optional - <num_workers>) (optional - <sub_scenario>) (optional - <feature set (audio|sensor)>')
         sys.exit(0)
 
     if len(sys.argv) == 6:
@@ -869,7 +865,7 @@ if __name__ == '__main__':
         elif sys.argv[5] == 'sensor':
             USE_AUDIO = False
         else:
-            print("Error, feature set must be one of audio, sensor")
+            print('Error: feature set must be either "audio" or "sensor"!')
             sys.exit(0)
 
     # Get the number of cores on the system

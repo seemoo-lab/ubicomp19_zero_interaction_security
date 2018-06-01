@@ -32,9 +32,6 @@ ROOT_PATH = ''
 # Number of workers to be used in parallel
 NUM_WORKERS = 0
 
-# Summary file name
-SUMMARY_FILE = 'Summary.json'
-
 
 def parse_folders(path, feature):
     # Local vars
@@ -145,7 +142,7 @@ def align_summary(path, feature_class):
 
 # This function creates Summary.json for the last sensor (e.g. 12 - car, 24 - office)
 # folders of which do not contain any results
-def add_last_summary(path, feature, feature_class):
+def add_last_summary(path, feature, feature_class, summary_file):
     # Iterate over matched files
     for json_file in glob(path, recursive=True):
 
@@ -194,7 +191,7 @@ def add_last_summary(path, feature, feature_class):
             # Path of file to be parsed (take different slashes into account: / or \)
             regex = r'Sensor-(.*)(?:/|\\)' + re.escape(feature_class) + r'(?:/|\\)'
             sub_str = insert_sensor + '/' + feature_class + '/'
-            sym_path = re.sub(regex, sub_str, json_file) + SUMMARY_FILE
+            sym_path = re.sub(regex, sub_str, json_file) + summary_file
             # print('sym file: %s ---- with field: %s' % (sym_path, target_sensor.lower()))
 
             # Open and read JSON file
@@ -239,7 +236,7 @@ def add_last_summary(path, feature, feature_class):
         # Add results
         rv['results'] = json_dict
 
-        filename = json_file + SUMMARY_FILE
+        filename = json_file + summary_file
         # print('Saving a file: %s' % filename)
         # Save the new JSON file
         with open(filename, 'w') as f:
@@ -563,39 +560,39 @@ def format_power():
     pool.join()
 
 
-def format_interval_features(feature, feature_class):
+def format_interval_features(feature, feature_class, summary_file):
 
     # Path to summary.json files
     feature_summary = ROOT_PATH + 'Sensor-*/' + feature_class + '/' + feature + \
-                      '/*/' + SUMMARY_FILE
+                      '/*/' + summary_file
     last_feature_summary = ROOT_PATH + 'Sensor-' + str(NUM_SENSORS + 1) + \
                            '/' + feature_class + '/' + feature + '/*/'
 
     # Format summary results
     align_summary(feature_summary, feature_class)
-    add_last_summary(last_feature_summary, feature, feature_class)
+    add_last_summary(last_feature_summary, feature, feature_class, summary_file)
 
     # Wrap up summary: overview of co-located vs. non-colocated
     wrap_up_summary(feature_summary)
 
 
-def format_non_interval_features(feature, feature_class):
+def format_non_interval_features(feature, feature_class, summary_file):
 
     # Path to summary.json files
     feature_summary = ROOT_PATH + 'Sensor-*/' + feature_class + '/' + feature + \
-                      '/' +  SUMMARY_FILE
+                      '/' +  summary_file
     last_feature_summary = ROOT_PATH + 'Sensor-' + str(NUM_SENSORS + 1) +\
                            '/' + feature_class + '/' + feature + '/'
 
     # Format summary results
     align_summary(feature_summary, feature_class)
-    add_last_summary(last_feature_summary, feature, feature_class)
+    add_last_summary(last_feature_summary, feature, feature_class, summary_file)
 
     # Wrap up summary: overview of co-located vs. non-colocated
     wrap_up_summary(feature_summary)
 
 
-def format_features():
+def format_features(summary_file):
 
     # Audio feature
     feature = 'audioFingerprint'
@@ -605,28 +602,28 @@ def format_features():
 
     # Format AFP
     print('formatting AFP...')
-    format_interval_features(feature, feature_class)
+    format_interval_features(feature, feature_class, summary_file)
 
     # Audio feature
     feature = 'noiseFingerprint'
 
     # Format NFP
     print('formatting NFP...')
-    format_interval_features(feature, feature_class)
+    format_interval_features(feature, feature_class, summary_file)
 
     # Audio feature
     feature = 'soundProofXcorr'
 
     # Format SPF
     print('formatting SPF...')
-    format_interval_features(feature, feature_class)
+    format_interval_features(feature, feature_class, summary_file)
 
     # Audio feature
     feature = 'timeFreqDistance'
 
     # Format TFD
     print('formatting TFD...')
-    format_interval_features(feature, feature_class)
+    format_interval_features(feature, feature_class, summary_file)
 
     # BLE feature
     feature = 'ble_wifi_truong'
@@ -636,14 +633,14 @@ def format_features():
 
     # Format BLE
     print('formatting ble...')
-    format_interval_features(feature, feature_class)
+    format_interval_features(feature, feature_class, summary_file)
 
     # Feature class
     feature_class = 'wifi'
 
     # Format Wi-fi
     print('formatting wifi...')
-    format_interval_features(feature, feature_class)
+    format_interval_features(feature, feature_class, summary_file)
 
     # PHY feature
     feature = 'temp_hum_press_shrestha'
@@ -653,35 +650,37 @@ def format_features():
 
     # Format temperature
     print('formatting temp...')
-    format_non_interval_features(feature, feature_class)
+    format_non_interval_features(feature, feature_class, summary_file)
 
     # Feature class
     feature_class = 'hum'
 
     # Format humidity
     print('formatting hum...')
-    format_non_interval_features(feature, feature_class)
+    format_non_interval_features(feature, feature_class, summary_file)
 
     # Feature class
     feature_class = 'press'
 
     # Format pressure
     print('formatting press...')
-    format_non_interval_features(feature, feature_class)
+    format_non_interval_features(feature, feature_class, summary_file)
 
 
 if __name__ == '__main__':
     # Check the number of input args
-    if len(sys.argv) == 3:
+    if len(sys.argv) == 4:
         # Assign input args
         ROOT_PATH = sys.argv[1]
         scenario = sys.argv[2]
+        sub_scenario = sys.argv[3]
 
-    elif len(sys.argv) == 4:
+    elif len(sys.argv) == 5:
         # Assign input args
         ROOT_PATH = sys.argv[1]
         scenario = sys.argv[2]
-        NUM_WORKERS = sys.argv[3]
+        sub_scenario = sys.argv[3]
+        NUM_WORKERS = sys.argv[4]
 
         # Check if <num_workers> is an integer more than 2
         try:
@@ -693,7 +692,7 @@ if __name__ == '__main__':
             print('Error: <num_workers> must be a positive number > 1!')
             sys.exit(0)
     else:
-        print('Usage: format_results.py <root_path> <scenario> (optional - <num_workers>)')
+        print('Usage: format_results.py <root_path> <scenario> <sub_scenario> (optional - <num_workers>)')
         sys.exit(0)
 
     # Get the number of cores on the system
@@ -726,8 +725,22 @@ if __name__ == '__main__':
         SENSORS.append(SENSORS_CAR1)
         SENSORS.append(SENSORS_CAR2)
 
-        # Format features
-        format_features()
+        # Check <sub_scenario>
+        if sub_scenario == 'all':
+            # Format features
+            format_features('Summary.json')
+        elif sub_scenario == 'city':
+            # Format features
+            format_features('Summary-city.json')
+        elif sub_scenario == 'highway':
+            # Format features
+            format_features('Summary-highway.json')
+        elif sub_scenario == 'static':
+            # Format features
+            format_features('Summary-static.json')
+        else:
+            print('Error: <sub_scenario> for the car scenario can only be "all", "city", "highway" or "static"!')
+            sys.exit(0)
 
     elif scenario == 'office':
         NUM_SENSORS = 23
@@ -735,10 +748,22 @@ if __name__ == '__main__':
         SENSORS.append(SENSORS_OFFICE2)
         SENSORS.append(SENSORS_OFFICE3)
 
-        # Format features
-        format_features()
-
+        # Check <sub_scenario>
+        if sub_scenario == 'all':
+            # Format features
+            format_features('Summary.json')
+        elif sub_scenario == 'night':
+            # Format features
+            format_features('Summary-night.json')
+        elif sub_scenario == 'weekday':
+            # Format features
+            format_features('Summary-weekday.json')
+        elif sub_scenario == 'weekend':
+            # Format features
+            format_features('Summary-weekend.json')
+        else:
+            print('Error: <sub_scenario> for the office scenario can only be "all", "night", "weekday" or "weekend"!')
+            sys.exit(0)
     else:
         print('Error: <scenario> can only be "power", "car" or "office"!')
         sys.exit(0)
-
