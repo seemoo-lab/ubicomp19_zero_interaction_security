@@ -265,7 +265,28 @@ for i = 1:length(timeInterval)
 
     % Array of delays between audio pairs in samples computed with xcorr
     audioPairDelay = zeros(nChunks, 1);
-
+	
+	% The commented part can be used to compute individual dealys between pairs of audio signals. 
+	% In this case we can acheive better alignment between two audio pairs. 
+	% Downside: the computations will take longer because the aligment will happen for all paris: 
+	% function 'alignTwoSignals' called in the individual feature functioins: 'audioFingerprint', 'soundProofXcorr'
+	% and 'timeFreqDistance'. Also, doing this kind of alignment is not realistic in the real deployment
+	% CURRENLY: we do not do the individual audio paris alignment, it can be enabled by 
+	% uncommenting the lines below: 278--288 . The alignment is currently done by finding 
+	% a lag between input audio sequences: S1 and S2 with xcorr (timeLag = 3; lines: 111--119) and shifting them.
+	
+	%{
+	% Here time lag should be samller as chunks can be small, e.g. 5 sec.
+    % Still not tight synch is assumed
+    timeLag = 1;
+    
+    % Find delays between audio chunks
+    fprintf('Computing delays...\n');
+    parfor j = 1:nChunks
+        audioPairDelay(j) = xcorrDelay(sig1{j}, sig2{j}, timeLag, Fs);
+    end
+	%}
+	
     % Construct commonData struct
     commonData = struct;
     commonData.Fs = Fs;

@@ -56,6 +56,10 @@ metadata.generator_script = strcat('audioJob.m', '/', mfilename);
 % Metadata struct: processing_start
 metadata.processing_start = datestr(datetime('now'), commonData.dateFormat);
 
+% Compute power in dB of two audio chunks
+powerS1 = pow2db(sum(abs(S1).^2)/length(S1));
+powerS2 = pow2db(sum(abs(S2).^2)/length(S2));
+
 % Compute SPF
 [maxXCorr, xcorrFreqBands] = soundProofXcorr(S1, S2, sampleDiff, ...
     commonData.Fs, spfFilterBank);
@@ -74,6 +78,8 @@ if sampleDiff ~= 0
     feature.delay_xcorr_sec = sampleDiff/commonData.Fs;
 end
 feature.max_xcorr = maxXCorr;
+feature.power1_db = powerS1;
+feature.power2_db = powerS2;
 feature.xcorr_freq_bands = xcorrFreqBands; 
 
 % Hashmap: "<timestamp>:" "<feature_struct>"
