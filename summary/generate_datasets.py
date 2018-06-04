@@ -39,7 +39,7 @@ NUM_WORKERS = 0
 TIME_DELTA = 0
 
 # Reduce flag
-REDUCE_FLAG = True
+REDUCE_FLAG = False
 
 
 # ToDo: move parse_folders into some helper.py (common for aggregate, format and plot)
@@ -132,7 +132,7 @@ def process_dataset(json_file, dataset='', feature='', time_interval='', root_pa
 
         sensor = match.group(1)
 
-        # Binary classification label (0 - non-colocated or 1 - co-located) for libsvm format
+        # Binary classification label (0 - non-colocated or 1 - co-located) for csv format
         label = '0'
 
         # Iterate over list of sensors' lists
@@ -145,7 +145,7 @@ def process_dataset(json_file, dataset='', feature='', time_interval='', root_pa
                 break
 
         # Temporary path to store intermediate results
-        tmp_path = tmp_path + target_sensor + '_' + sensor + '.txt'
+        tmp_path = tmp_path + target_sensor + '_' + sensor + '.csv'
 
         if dataset == 'small':
             # Construct Wi-Fi and BLE paths
@@ -197,7 +197,7 @@ def process_dataset(json_file, dataset='', feature='', time_interval='', root_pa
 def build_small_dataset(json_file, ble_path, wifi_path, tmp_path, label, feature, time_delta):
 
     # List to store the results
-    libsvm_list = []
+    csv_list = []
     extra = 0
 
     if isinstance(json_file, dict):
@@ -243,8 +243,8 @@ def build_small_dataset(json_file, ble_path, wifi_path, tmp_path, label, feature
     # Construct ble and wifi features before audio started
     for key in key_list:
 
-        # A row in a libsvm file
-        libsvm_row = ''
+        # A row in a csv file
+        csv_row = ''
 
         # NA counter
         na_count = 0
@@ -262,16 +262,16 @@ def build_small_dataset(json_file, ble_path, wifi_path, tmp_path, label, feature
                 if ble_res[key]:
                     # Check if the value ble_res[key] does not contain field 'error'
                     if not 'error' in ble_res[key]:
-                        # Add ble features to libsvm_row
-                        libsvm_row = add_features('ble', ble_res[key], libsvm_row)
+                        # Add ble features to csv_row
+                        csv_row = add_features('ble', ble_res[key], csv_row)
                     else:
-                        # Add NA for ble features in libsvm_row
-                        libsvm_row = add_features('ble', 'NA', libsvm_row)
+                        # Add NA for ble features in csv_row
+                        csv_row = add_features('ble', 'NA', csv_row)
                         # Increment NA counter
                         na_count += 1
                 else:
-                    # Add NA for ble features in libsvm_row
-                    libsvm_row = add_features('ble', 'NA', libsvm_row)
+                    # Add NA for ble features in csv_row
+                    csv_row = add_features('ble', 'NA', csv_row)
                     # Increment NA counter
                     na_count += 1
 
@@ -281,6 +281,9 @@ def build_small_dataset(json_file, ble_path, wifi_path, tmp_path, label, feature
                 # Remove element ble_res[key] from the ble_res
                 # used to sync with the audio data later on
                 del ble_res[key]
+            else:
+                # Add NA for ble features in csv_row
+                csv_row = add_features('ble', 'NA', csv_row)
 
             # Check if wifi_res has a key
             if key in wifi_res:
@@ -288,16 +291,16 @@ def build_small_dataset(json_file, ble_path, wifi_path, tmp_path, label, feature
                 if wifi_res[key]:
                     # Check if the value wifi_res[key] does not contain field 'error'
                     if not 'error' in wifi_res[key]:
-                        # Add wifi features to libsvm_row
-                        libsvm_row = add_features('wifi', wifi_res[key], libsvm_row)
+                        # Add wifi features to csv_row
+                        csv_row = add_features('wifi', wifi_res[key], csv_row)
                     else:
-                        # Add NA for wifi features in libsvm_row
-                        libsvm_row = add_features('wifi', 'NA', libsvm_row)
+                        # Add NA for wifi features in csv_row
+                        csv_row = add_features('wifi', 'NA', csv_row)
                         # Increment NA counter
                         na_count += 1
                 else:
-                    # Add NA for wifi features in libsvm_row
-                    libsvm_row = add_features('wifi', 'NA', libsvm_row)
+                    # Add NA for wifi features in csv_row
+                    csv_row = add_features('wifi', 'NA', csv_row)
                     # Increment NA counter
                     na_count += 1
 
@@ -307,20 +310,24 @@ def build_small_dataset(json_file, ble_path, wifi_path, tmp_path, label, feature
                 # Remove element wifi_res[key] from the wifi_res
                 # used to sync with the audio data later on
                 del wifi_res[key]
+            else:
+                # Add NA for wifi features in csv_row
+                csv_row = add_features('wifi', 'NA', csv_row)
 
-            # Add libsvm_row to the list
-            if libsvm_row:
+            # Add csv_row to the list
+            if csv_row:
                 if feature_count != na_count:
-                    libsvm_row = label + libsvm_row
-                    libsvm_list.append(libsvm_row)
+                    # First two NA account for missing audio features
+                    csv_row = 'NA,NA,' + csv_row + label
+                    csv_list.append(csv_row)
         else:
             break
 
     # Audio, wifi and ble samples
     for k, v in sorted(audio_res.items()):
 
-        # A row in a libsvm file
-        libsvm_row = ''
+        # A row in a csv file
+        csv_row = ''
 
         # Get the timestamp of audio chunk
         audio_ts = date_to_sec(k)
@@ -331,7 +338,7 @@ def build_small_dataset(json_file, ble_path, wifi_path, tmp_path, label, feature
 
         # ToDo: add support for adding more audio features
         # Add audio features
-        libsvm_row = add_features(feature, v, libsvm_row)
+        csv_row = add_features(feature, v, csv_row)
 
         # Check ble features
         if check_ts in ble_res:
@@ -339,16 +346,19 @@ def build_small_dataset(json_file, ble_path, wifi_path, tmp_path, label, feature
             if ble_res[check_ts]:
                 # Check if the value ble_res[check_ts] does not contain field 'error'
                 if not 'error' in ble_res[check_ts]:
-                    # Add ble features to libsvm_row
-                    libsvm_row = add_features('ble', ble_res[check_ts], libsvm_row)
+                    # Add ble features to csv_row
+                    csv_row = add_features('ble', ble_res[check_ts], csv_row)
                 else:
-                    # Add NA for ble features in libsvm_row
-                    libsvm_row = add_features('ble', 'NA', libsvm_row)
+                    # Add NA for ble features in csv_row
+                    csv_row = add_features('ble', 'NA', csv_row)
             else:
-                # Add NA for ble features in libsvm_row
-                libsvm_row = add_features('ble', 'NA', libsvm_row)
+                # Add NA for ble features in csv_row
+                csv_row = add_features('ble', 'NA', csv_row)
             # Remove ble_res[check_ts]
             del ble_res[check_ts]
+        else:
+            # Add NA for ble features in csv_row
+            csv_row = add_features('ble', 'NA', csv_row)
 
         # Check wifi features
         if check_ts in wifi_res:
@@ -356,21 +366,24 @@ def build_small_dataset(json_file, ble_path, wifi_path, tmp_path, label, feature
             if wifi_res[check_ts]:
                 # Check if the value wifi_res[check_ts] does not contain field 'error'
                 if not 'error' in wifi_res[check_ts]:
-                    # Add wifi features to libsvm_row
-                    libsvm_row = add_features('wifi', wifi_res[check_ts], libsvm_row)
+                    # Add wifi features to csv_row
+                    csv_row = add_features('wifi', wifi_res[check_ts], csv_row)
                 else:
-                    # Add NA for wifi features in libsvm_row
-                    libsvm_row = add_features('wifi', 'NA', libsvm_row)
+                    # Add NA for wifi features in csv_row
+                    csv_row = add_features('wifi', 'NA', csv_row)
             else:
-                # Add NA for wifi features in libsvm_row
-                libsvm_row = add_features('wifi', 'NA', libsvm_row)
+                # Add NA for wifi features in csv_row
+                csv_row = add_features('wifi', 'NA', csv_row)
             # Remove wifi_res[check_ts]
             del wifi_res[check_ts]
+        else:
+            # Add NA for wifi features in csv_row
+            csv_row = add_features('wifi', 'NA', csv_row)
 
-        # Add libsvm_row to the list
-        if libsvm_row:
-            libsvm_row = label + libsvm_row
-            libsvm_list.append(libsvm_row)
+        # Add csv_row to the list
+        if csv_row:
+            csv_row = csv_row + label
+            csv_list.append(csv_row)
 
     # Store lengths of reminder of ble and wifi dicts in len_list
     len_list = [len(ble_res), len(wifi_res)]
@@ -390,8 +403,8 @@ def build_small_dataset(json_file, ble_path, wifi_path, tmp_path, label, feature
     # Construct ble and wifi features after audio stopped
     for key in key_list:
 
-        # A row in a libsvm file
-        libsvm_row = ''
+        # A row in a csv file
+        csv_row = ''
 
         # NA counter
         na_count = 0
@@ -405,21 +418,24 @@ def build_small_dataset(json_file, ble_path, wifi_path, tmp_path, label, feature
             if ble_res[key]:
                 # Check if the value ble_res[key] does not contain field 'error'
                 if not 'error' in ble_res[key]:
-                    # Add ble features to libsvm_row
-                    libsvm_row = add_features('ble', ble_res[key], libsvm_row)
+                    # Add ble features to csv_row
+                    csv_row = add_features('ble', ble_res[key], csv_row)
                 else:
-                    # Add NA for ble features in libsvm_row
-                    libsvm_row = add_features('ble', 'NA', libsvm_row)
+                    # Add NA for ble features in csv_row
+                    csv_row = add_features('ble', 'NA', csv_row)
                     # Increment NA counter
                     na_count += 1
             else:
-                # Add NA for ble features in libsvm_row
-                libsvm_row = add_features('ble', 'NA', libsvm_row)
+                # Add NA for ble features in csv_row
+                csv_row = add_features('ble', 'NA', csv_row)
                 # Increment NA counter
                 na_count += 1
 
             # Increment feature counter
             feature_count += 1
+        else:
+            # Add NA for ble features in csv_row
+            csv_row = add_features('ble', 'NA', csv_row)
 
         # Check wifi features
         if key in wifi_res:
@@ -427,37 +443,41 @@ def build_small_dataset(json_file, ble_path, wifi_path, tmp_path, label, feature
             if wifi_res[key]:
                 # Check if the value wifi_res[key] does not contain field 'error'
                 if not 'error' in wifi_res[key]:
-                    # Add wifi features to libsvm_row
-                    libsvm_row = add_features('wifi', wifi_res[key], libsvm_row)
+                    # Add wifi features to csv_row
+                    csv_row = add_features('wifi', wifi_res[key], csv_row)
                 else:
-                    # Add NA for wifi features in libsvm_row
-                    libsvm_row = add_features('wifi', 'NA', libsvm_row)
+                    # Add NA for wifi features in csv_row
+                    csv_row = add_features('wifi', 'NA', csv_row)
                     # Increment NA counter
                     na_count += 1
             else:
-                # Add NA for wifi features in libsvm_row
-                libsvm_row = add_features('wifi', 'NA', libsvm_row)
+                # Add NA for wifi features in csv_row
+                csv_row = add_features('wifi', 'NA', csv_row)
                 # Increment NA counter
                 na_count += 1
 
             # Increment feature counter
             feature_count += 1
+        else:
+            # Add NA for wifi features in csv_row
+            csv_row = add_features('wifi', 'NA', csv_row)
 
-        # Add libsvm_row to the list
-        if libsvm_row:
+        # Add csv_row to the list
+        if csv_row:
             if feature_count != na_count:
-                libsvm_row = label + libsvm_row
-                libsvm_list.append(libsvm_row)
+                # First two NA account for missing audio features
+                csv_row = 'NA,NA,' + csv_row + label
+                csv_list.append(csv_row)
 
     # Save the results
     with open(tmp_path, 'w') as f:
-        libsvm_list = map(lambda line: line + '\n', libsvm_list)
-        f.writelines(libsvm_list)
+        csv_list = map(lambda line: line + '\n', csv_list)
+        f.writelines(csv_list)
 
 
 def build_big_dataset(json_file, hum_path, press_path, tmp_path, label):
     # List to store the results
-    libsvm_list = []
+    csv_list = []
 
     # Read gzipped temperature JSON
     with gzip.open(json_file, 'rt') as f:
@@ -500,8 +520,8 @@ def build_big_dataset(json_file, hum_path, press_path, tmp_path, label):
     # Construct temp, hum and press features
     for key in key_list:
 
-        # A row in a libsvm file
-        libsvm_row = ''
+        # A row in a csv file
+        csv_row = ''
 
         # Declare feature strings
         temp_feature = ''
@@ -510,44 +530,32 @@ def build_big_dataset(json_file, hum_path, press_path, tmp_path, label):
 
         # Check if temp_res contains key
         if key in temp_res:
-            temp_feature = ' ' + '1:' + str(temp_res[key])
-            '''
-            if float(temp_res[key]) == 0:
-                temp_feature = ' ' + '1:' + '0.000001'
-            else:
-                temp_feature = ' ' + '1:' + str(temp_res[key])
-            '''
+            temp_feature = str(temp_res[key]) + ','
+        else:
+            temp_feature = 'NA,'
 
         # Check if hum_res contains key
         if key in hum_res:
-            hum_feature = ' ' + '2:' + str(hum_res[key])
-            '''
-            if float(hum_res[key]) == 0:
-                hum_feature = ' ' + '2:' + '0.000001'
-            else:
-                hum_feature = ' ' + '2:' + str(hum_res[key])
-            '''
+            hum_feature = str(hum_res[key]) + ','
+        else:
+            hum_feature = 'NA,'
 
         # Check if press_res contains key
         if key in press_res:
-            press_feature = ' ' + '3:' + str(press_res[key])
-            '''
-            if float(press_res[key]) == 0:
-                press_feature = ' ' + '3:' + '0.000001'
-            else:
-                press_feature = ' ' + '3:' + str(press_res[key])
-            '''
+            press_feature = str(press_res[key]) + ','
+        else:
+            press_feature = 'NA,'
 
-        # Construct libsvm_row
-        libsvm_row = label + temp_feature + hum_feature + press_feature
+        # Construct csv_row
+        csv_row = temp_feature + hum_feature + press_feature + label
 
-        # Add libsvm_row to the list
-        libsvm_list.append(libsvm_row)
+        # Add csv_row to the list
+        csv_list.append(csv_row)
 
     # Save the results
     with open(tmp_path, 'w') as f:
-        libsvm_list = map(lambda line: line + '\n', libsvm_list)
-        f.writelines(libsvm_list)
+        csv_list = map(lambda line: line + '\n', csv_list)
+        f.writelines(csv_list)
 
 
 def update_res(res_dict):
@@ -640,14 +648,14 @@ def date_to_sec(date_str):
     return datetime.datetime.strptime(split_date[0], '%Y-%m-%d %H:%M:%S').timestamp()
 
 
-def add_features(feature, value, libsvm_row):
-
-    # we selected the approximation for 0 (e.g. 'sum_squared_ranks' in JSON) as 0.000001
-    # (libsvm format ignores features with zero values: 1:1 2:0 3:5 4:0 -> 1:1 3:5)
-
-    # we selected the approximation for None ('sum_squared_ranks' in JSON) as
-    # max(sum_squared_ranks) found over all sensors x10, we arrived at 10000
+def add_features(feature, value, csv_row):
+    # we selected the approximation for 'None' ('sum_squared_ranks' in JSON) as
+    # max(sum_squared_ranks) found over all sensors x10. We arrived at 10000
     # car scenario: max(sum_squared_ranks) = 912.0 x 10 = 9120 (round to 10000)
+    # we multiply the max(sum_squared_ranks) by 10 to get a very large number
+    # to weigh up the missing intersection between two sets of measurements:
+    # two sets of observed WiFi beacons do not have intersection
+    # in the office scenario we did not experience 'None' values
 
     # ToDo: add here more audio features, automatic indexing
     if feature == 'timeFreqDistance':
@@ -660,84 +668,51 @@ def add_features(feature, value, libsvm_row):
 
         # Check if xcorr values is not NaN (incident with Sensor-07)
         if not math.isnan(float(xcorr)):
-            xcorr_feature = ' ' + '1:' + str(xcorr)
-            '''
-            if float(xcorr) == 0:
-                xcorr_feature = ' ' + '1:' + '0.000001'
-            else:
-                xcorr_feature = ' ' + '1:' + str(xcorr)
-            '''
+            xcorr_feature = str(xcorr) + ','
         else:
-            xcorr_feature = ' ' + '1:NA'
+            xcorr_feature = 'NA,'
 
         # Get tfd value
         tfd = value['time_freq_dist']
 
         # Check if xcorr values is not NaN due (incident with Sensor-07)
         if not math.isnan(float(tfd)):
-            tfd_feature = ' ' + '2:' + str(tfd)
-            '''
-            if float(tfd) == 0:
-                tfd_feature = ' ' + '2:' + '0.000001'
-            else:
-                tfd_feature = ' ' + '2:' + str(tfd)
-            '''
+            tfd_feature = str(tfd) + ','
         else:
-            tfd_feature = ' ' + '2:NA'
+            tfd_feature = 'NA,'
 
-        # Construct libsvm_row
-        libsvm_row = libsvm_row + xcorr_feature + tfd_feature
+        # Construct csv_row
+        csv_row = csv_row + xcorr_feature + tfd_feature
 
     elif feature == 'ble':
         if value == 'NA':
-            libsvm_row = libsvm_row + ' ' + '3:NA 4:NA'
+            csv_row = csv_row + 'NA,NA,'
         else:
-            # Starting index of ble features in the libsvm file
-            idx = 3
-
             # Iterate over ble features: 'euclidean' and 'jaccard'
             for k, v in sorted(value.items()):
 
-                # Construct libsvm_row
-                libsvm_row = libsvm_row + ' ' + str(idx) + ':' + str(v)
-                '''
-                if float(v) == 0:
-                    libsvm_row = libsvm_row + ' ' + str(idx) + ':' + '0.000001'
-                else:
-                    libsvm_row = libsvm_row + ' ' + str(idx) + ':' + str(v)
-                '''
-
-                idx += 1
+                # Construct csv_row
+                csv_row = csv_row + str(v) + ','
 
     elif feature == 'wifi':
         # Check if wifi features have valid values or NA
         if value == 'NA':
-            libsvm_row = libsvm_row + ' ' + '5:NA 6:NA 7:NA 8:NA 9:NA'
+            csv_row = csv_row + 'NA,NA,NA,NA,NA,'
         else:
-            # Starting index of ble features in the libsvm file
-            idx = 5
-
             # Iterate over ble features:
             # 'euclidean', 'jaccard', 'mean_exp', 'mean_hamming', 'sum_squared_ranks'
             for k, v in sorted(value.items()):
-
+                # If 'sum_squared_ranks' has 'None' value we set it to a large number
                 if v == None:
                     v = '10000'
 
-                '''
-                if float(v) == 0:
-                    v = '0.000001'
-                '''
-
-                # Construct libsvm_row
-                libsvm_row = libsvm_row + ' ' + str(idx) + ':' + str(v)
-
-                idx += 1
+                # Construct csv_row
+                csv_row = csv_row + str(v) + ','
     else:
         print('add_features: unknown feature "%s", exiting...' % feature)
         sys.exit(0)
 
-    return libsvm_row
+    return csv_row
 
 
 # ToDo: merge get_dataset functions into one with input feature param
@@ -830,16 +805,22 @@ def get_small_dataset(scenario):
     # Wait for processes to terminate
     pool.close()
     pool.join()
-    #'''
+
     # Path of the resulting file
-    filename = RESULT_PATH + dataset + '_dataset' + '_' + scenario + '.txt'
+    filename = RESULT_PATH + dataset + '_dataset' + '_' + scenario + '.csv'
+
+    # A header of the resulting csv file
+    csv_header = 'audio_xcorr,audio_tfd,ble_eucl,ble_jacc,wifi_eucl,wifi_jacc,wifi_mean_exp,wifi_mean_ham,' \
+                 'wifi_sum_sqrd_ranks,label'
+
+    # Add a header to the resulting file
+    os.system('echo ' + csv_header + ' >> ' + filename)
 
     # Merge tmp files into a single resulting file
-    os.system('cat ' + tmp_path + '*.txt >> ' + filename)
+    os.system('cat ' + tmp_path + '*.csv >> ' + filename)
 
     # Delete tmp folder and its content
     shutil.rmtree(tmp_path)
-    #'''
 
 
 def get_big_dataset(scenario):
@@ -896,31 +877,22 @@ def get_big_dataset(scenario):
         reduce_str = '10th_'
 
     # Path of the resulting file
-    filename = RESULT_PATH + reduce_str + dataset + '_dataset' + '_' + scenario + '.txt'
+    filename = RESULT_PATH + reduce_str + dataset + '_dataset' + '_' + scenario + '.csv'
+
+    # A header of the resulting csv file
+    csv_header = 'tmp_diff,hum_diff,alt_diff,label'
+
+    # Add a header to the resulting file
+    os.system('echo ' + csv_header + ' >> ' + filename)
 
     # Merge tmp files into a single resulting file
-    os.system('cat ' + tmp_path + '*.txt >> ' + filename)
+    os.system('cat ' + tmp_path + '*.csv >> ' + filename)
 
     # Delete tmp folder and its content
     shutil.rmtree(tmp_path)
 
 
 if __name__ == '__main__':
-    '''
-    ROOT_PATH = 'D:/data/car/'
-    RESULT_PATH = 'C:/Users/mfomichev/Desktop/'
-    scenario = 'car'
-    NUM_WORKERS = 4
-
-    SENSORS.append(SENSORS_CAR1)
-    SENSORS.append(SENSORS_CAR2)
-
-    TIME_DELTA = 5
-
-    get_small_dataset(scenario)
-    '''
-
-    #'''
     # Check the number of input args
     if len(sys.argv) == 4:
         # Assign input args
@@ -1003,7 +975,7 @@ if __name__ == '__main__':
         print('%s: building the small dataset using %d workers...' % (scenario, NUM_WORKERS))
         get_small_dataset(scenario)
         print('--- %s seconds ---' % (time.time() - start_time))
-        
+
         start_time = time.time()
         print('%s: building the big dataset using %d workers...' % (scenario, NUM_WORKERS))
         get_big_dataset(scenario)
@@ -1012,4 +984,3 @@ if __name__ == '__main__':
     else:
         print('Error: <scenario> can only be "car" or "office"!')
         sys.exit(0)
-    #'''
