@@ -2,7 +2,6 @@ from json import dumps, loads
 from glob import glob
 import re
 import sys
-import numpy as np
 import os, shutil
 import itertools
 import datetime
@@ -12,6 +11,8 @@ from multiprocessing import Pool
 from functools import partial
 import gzip
 import math
+from dateutil import parser
+from datetime import datetime
 
 # Sensor mapping: car experiment
 SENSORS_CAR1 = ['01', '02', '03', '04', '05', '06']
@@ -40,6 +41,19 @@ TIME_DELTA = 0
 
 # Reduce flag
 REDUCE_FLAG = False
+
+# Intervals for subscenarios
+INCLUDE_INTERVALS = []
+
+
+def include_result(time, incl_intervals):
+    if incl_intervals == []:
+        return True
+    dt = parser.parse(time)
+    for int_start, int_end in incl_intervals:
+        if int_start <= dt <= int_end:
+            return True
+    return False
 
 
 # ToDo: move parse_folders into some helper.py (common for aggregate, format and plot)
@@ -90,15 +104,16 @@ def parse_folders(path, feature):
     return folder_list
 
 
-# ToDo: look into the older code (generate_zip_set()) to find max square rank in the office scenario
 def process_dataset(json_file, dataset='', feature='', time_interval='', root_path='', \
-                    tmp_path='', time_delta='', sensors=[]):
+                    tmp_path='', time_delta='', sensors=[], incl_intervals=[]):
+    # 'Try' clause is used for catching errors
     try:
-
         # Check the instance of json_file
         if isinstance(json_file, list):
+            # Corresponds to office setting
             check_json = json_file[0]
         elif isinstance(json_file, str):
+            # Corresponds to car setting
             check_json = json_file
         else:
             print('process_dataset: json_file must be only of instance list or str, exiting...')
@@ -165,16 +180,31 @@ def process_dataset(json_file, dataset='', feature='', time_interval='', root_pa
                         audio_json = loads(f.read())
                         audio_res.update(audio_json['results'])
 
-                # Update json_file
-                json_file = audio_res
+                # Here we do not need to check if json_file is empty
+                # for the subscenario, because we consider sensor values
+                # (e.g. Sensor-01) over the whole time, e.g. 1_0-24h/Sensor-01 ...
+                # 7_144-168h/Sensor-01, thus all subscenarios are covered
+                json_file = {}
+
+                if incl_intervals:
+                    # Update json_file (w.r.t. subscenario)
+                    for k, v in sorted(audio_res.items()):
+                        # Check the subscenario
+                        if not include_result(k, incl_intervals):
+                            continue
+                        # Add element to a dict
+                        json_file[k] = v
+                else:
+                    json_file = audio_res
 
                 # Update time_delta for the cases where time_interval != 10sec
+                # (applies only to the office scenario, does not need for the car)
                 if time_interval == '30sec':
                     time_delta = time_delta + 10
 
             # Build the small data set
-            build_small_dataset(json_file, ble_path, wifi_path, tmp_path, label, feature, time_delta)
-
+            build_small_dataset(json_file, ble_path, wifi_path, tmp_path, label, feature, time_delta,
+                                incl_intervals)
         elif dataset == 'big':
             # Construct hum and press paths
             hum_path = root_path + 'Sensor-' + target_sensor + '/hum/' + time_interval + \
@@ -184,7 +214,7 @@ def process_dataset(json_file, dataset='', feature='', time_interval='', root_pa
                         '/Sensor-' + sensor + '.json.gz'
 
             # Build the big data set
-            build_big_dataset(json_file, hum_path, press_path, tmp_path, label)
+            build_big_dataset(json_file, hum_path, press_path, tmp_path, label, incl_intervals)
 
         else:
             print('process_dataset: uknown dataset type = %s, exiting...', dataset)
@@ -194,8 +224,8 @@ def process_dataset(json_file, dataset='', feature='', time_interval='', root_pa
         print(e)
 
 
-def build_small_dataset(json_file, ble_path, wifi_path, tmp_path, label, feature, time_delta):
-
+def build_small_dataset(json_file, ble_path, wifi_path, tmp_path, label, feature, time_delta,
+                        incl_intervals):
     # List to store the results
     csv_list = []
     extra = 0
@@ -207,7 +237,24 @@ def build_small_dataset(json_file, ble_path, wifi_path, tmp_path, label, feature
         # Read gzipped audio JSON
         with gzip.open(json_file, 'rt') as f:
             audio_json = loads(f.read())
-            audio_res = audio_json['results']
+            audio_json = audio_json['results']
+
+        # Similarly to the office scenario we do not need to
+        # check if audio_res is empty, because sensor data, e.g.
+        # Sensor-01 contains data for the whole experiment, thus
+        # all subscenarios are automatically covered
+        audio_res = {}
+
+        if incl_intervals:
+            # Update audio_res (w.r.t. subscenario)
+            for k, v in sorted(audio_json.items()):
+                # Check the subscenario
+                if not include_result(k, incl_intervals):
+                    continue
+                # Add element to a dict
+                audio_res[k] = v
+        else:
+            audio_res = audio_json
     else:
         print('build_small_dataset: json_file must be only of instance dict or str, exiting...')
         sys.exit(0)
@@ -215,12 +262,36 @@ def build_small_dataset(json_file, ble_path, wifi_path, tmp_path, label, feature
     # Read gzipped ble JSON
     with gzip.open(ble_path, 'rt') as f:
         ble_json = loads(f.read())
-        ble_res = ble_json['results']
+        ble_json = ble_json['results']
+
+    # Update ble_res (w.r.t. subscenario)
+    ble_res = {}
+    if incl_intervals:
+        for k, v in sorted(ble_json.items()):
+            # Check the subscenario
+            if not include_result(k, incl_intervals):
+                continue
+            # Add element to a dict
+            ble_res[k] = v
+    else:
+        ble_res = ble_json
 
     # Read gzipped wifi JSON
     with gzip.open(wifi_path, 'rt') as f:
         wifi_json = loads(f.read())
-        wifi_res = wifi_json['results']
+        wifi_json = wifi_json['results']
+
+    # Update wifi_res (w.r.t. subscenario)
+    wifi_res = {}
+    if incl_intervals:
+        for k, v in sorted(wifi_json.items()):
+            # Check the subscenario
+            if not include_result(k, incl_intervals):
+                continue
+            # Add element to a dict
+            wifi_res[k] = v
+    else:
+        wifi_res = wifi_json
 
     # Get a timestamp of audio (started later)
     first_audio_ts = date_to_sec(next(iter(sorted(audio_res))))
@@ -334,7 +405,7 @@ def build_small_dataset(json_file, ble_path, wifi_path, tmp_path, label, feature
 
         # Get the check timestamp (yyyy-mm-dd HH:MM:SS) used for wifi and ble
         # Adjust here to 'audio_ts - time_delta' (car - from 30 to 20)
-        check_ts = datetime.datetime.fromtimestamp(audio_ts + time_delta).strftime('%Y-%m-%d %H:%M:%S')
+        check_ts = datetime.fromtimestamp(audio_ts + time_delta).strftime('%Y-%m-%d %H:%M:%S')
 
         # ToDo: add support for adding more audio features
         # Add audio features
@@ -475,24 +546,60 @@ def build_small_dataset(json_file, ble_path, wifi_path, tmp_path, label, feature
         f.writelines(csv_list)
 
 
-def build_big_dataset(json_file, hum_path, press_path, tmp_path, label):
+def build_big_dataset(json_file, hum_path, press_path, tmp_path, label, incl_intervals):
     # List to store the results
     csv_list = []
 
     # Read gzipped temperature JSON
     with gzip.open(json_file, 'rt') as f:
         temp_json = loads(f.read())
-        temp_res = temp_json['results']
+        temp_json = temp_json['results']
+
+    # Update temp_res (w.r.t. subscenario)
+    temp_res = {}
+    if incl_intervals:
+        for k, v in sorted(temp_json.items()):
+            # Check the subscenario
+            if not include_result(k, incl_intervals):
+                continue
+            # Add element to a dict
+            temp_res[k] = v
+    else:
+        temp_res = temp_json
 
     # Read gzipped humidity JSON
     with gzip.open(hum_path, 'rt') as f:
         hum_json = loads(f.read())
-        hum_res = hum_json['results']
+        hum_json = hum_json['results']
+
+    # Update temp_res (w.r.t. subscenario)
+    hum_res = {}
+    if incl_intervals:
+        for k, v in sorted(hum_json.items()):
+            # Check the subscenario
+            if not include_result(k, incl_intervals):
+                continue
+            # Add element to a dict
+            hum_res[k] = v
+    else:
+        hum_res = hum_json
 
     # Read gzipped pressure JSON
     with gzip.open(press_path, 'rt') as f:
         press_json = loads(f.read())
-        press_res = press_json['results']
+        press_json = press_json['results']
+
+    # Update temp_res (w.r.t. subscenario)
+    press_res = {}
+    if incl_intervals:
+        for k, v in sorted(press_json.items()):
+            # Check the subscenario
+            if not include_result(k, incl_intervals):
+                continue
+            # Add element to a dict
+            press_res[k] = v
+    else:
+        press_res = press_json
 
     # Update keys of temp_res, hum_res and press_res
     temp_res = update_res(temp_res)
@@ -645,7 +752,7 @@ def date_to_sec(date_str):
         sys.exit(0)
 
     # Return number of seconds
-    return datetime.datetime.strptime(split_date[0], '%Y-%m-%d %H:%M:%S').timestamp()
+    return datetime.strptime(split_date[0], '%Y-%m-%d %H:%M:%S').timestamp()
 
 
 def add_features(feature, value, csv_row):
@@ -796,8 +903,8 @@ def get_small_dataset(scenario):
     pool = Pool(processes=NUM_WORKERS, maxtasksperchild=1)
 
     # Use partial to pass static params: feature, ... sensors
-    func = partial(process_dataset, dataset=dataset, feature=feature, time_interval=time_interval, \
-                   root_path=ROOT_PATH, tmp_path=tmp_path, time_delta=TIME_DELTA, sensors=SENSORS)
+    func = partial(process_dataset, dataset=dataset, feature=feature, time_interval=time_interval, root_path=ROOT_PATH,
+                   tmp_path=tmp_path, time_delta=TIME_DELTA, sensors=SENSORS, incl_intervals=INCLUDE_INTERVALS)
 
     # Let workers do the job
     pool.imap(func, file_list)
@@ -806,8 +913,13 @@ def get_small_dataset(scenario):
     pool.close()
     pool.join()
 
+    # Add suffix to filename
+    suffix = ''
+    if SUFFIX:
+        suffix = SUFFIX + '-'
+
     # Path of the resulting file
-    filename = RESULT_PATH + dataset + '_dataset' + '_' + scenario + '.csv'
+    filename = RESULT_PATH + suffix + dataset + '_dataset' + '_' + scenario + '.csv'
 
     # A header of the resulting csv file
     csv_header = 'audio_xcorr,audio_tfd,ble_eucl,ble_jacc,wifi_eucl,wifi_jacc,wifi_mean_exp,wifi_mean_ham,' \
@@ -860,9 +972,9 @@ def get_big_dataset(scenario):
     # Initiate a pool of workers
     pool = Pool(processes=NUM_WORKERS, maxtasksperchild=1)
 
-    # Use partial to pass static params: feature, ... sensors
-    func = partial(process_dataset, dataset=dataset, feature=feature, time_interval=time_interval, \
-                   root_path=ROOT_PATH, tmp_path=tmp_path, time_delta=TIME_DELTA, sensors=SENSORS)
+    # Use partial to pass static params: dataset, ... sensors
+    func = partial(process_dataset, dataset=dataset, feature=feature, time_interval=time_interval, root_path=ROOT_PATH,
+                   tmp_path=tmp_path, time_delta=TIME_DELTA, sensors=SENSORS, incl_intervals=INCLUDE_INTERVALS)
 
     # Let workers do the job
     pool.imap(func, file_list)
@@ -876,8 +988,13 @@ def get_big_dataset(scenario):
     if REDUCE_FLAG:
         reduce_str = '10th_'
 
+    # Add suffix to filename
+    suffix = ''
+    if SUFFIX:
+        suffix = SUFFIX + '-'
+
     # Path of the resulting file
-    filename = RESULT_PATH + reduce_str + dataset + '_dataset' + '_' + scenario + '.csv'
+    filename = RESULT_PATH + reduce_str + suffix + dataset + '_dataset' + '_' + scenario + '.csv'
 
     # A header of the resulting csv file
     csv_header = 'tmp_diff,hum_diff,alt_diff,label'
@@ -894,18 +1011,22 @@ def get_big_dataset(scenario):
 
 if __name__ == '__main__':
     # Check the number of input args
-    if len(sys.argv) == 4:
+    if len(sys.argv) == 5:
         # Assign input args
         ROOT_PATH = sys.argv[1]
         RESULT_PATH = sys.argv[2]
         scenario = sys.argv[3]
+        sub_scenario = sys.argv[4]
+        SUFFIX = sub_scenario
 
-    elif len(sys.argv) == 5:
+    elif len(sys.argv) == 6:
         # Assign input args
         ROOT_PATH = sys.argv[1]
         RESULT_PATH = sys.argv[2]
         scenario = sys.argv[3]
-        NUM_WORKERS = sys.argv[4]
+        sub_scenario = sys.argv[4]
+        SUFFIX = sub_scenario
+        NUM_WORKERS = sys.argv[5]
 
         # Check if <num_workers> is an integer more than 2
         try:
@@ -917,7 +1038,8 @@ if __name__ == '__main__':
             print('Error: <num_workers> must be a positive number > 1!')
             sys.exit(0)
     else:
-        print('Usage: generate_datasets.py <root_path> <result_path> <scenario> (optional - <num_workers>)')
+        print('Usage: generate_datasets.py <root_path> <result_path> <scenario> <sub_scenario> '
+              '(optional - <num_workers>)')
         sys.exit(0)
 
     # Get the number of cores on the system
@@ -954,6 +1076,26 @@ if __name__ == '__main__':
         
         TIME_DELTA = 5
 
+        # Check <sub_scenario>
+        if sub_scenario == 'all':
+            SUFFIX = ''
+        elif sub_scenario == 'city':
+            INCLUDE_INTERVALS = [(datetime(2017, 11, 23, 14, 46, 0), datetime(2017, 11, 23, 15, 15, 0)),
+                                 (datetime(2017, 11, 23, 15, 55, 0), datetime(2017, 11, 23, 16, 25, 0)),
+                                 (datetime(2017, 11, 23, 17, 18, 0), datetime(2017, 11, 23, 17, 31, 0))]
+        elif sub_scenario == 'highway':
+            INCLUDE_INTERVALS = [(datetime(2017, 11, 23, 15, 18, 0), datetime(2017, 11, 23, 15, 55, 0)),
+                                 (datetime(2017, 11, 23, 16, 25, 0), datetime(2017, 11, 23, 16, 43, 0)),
+                                 (datetime(2017, 11, 23, 17, 5, 0), datetime(2017, 11, 23, 17, 18, 0))]
+        elif sub_scenario == 'static':
+            INCLUDE_INTERVALS = [(datetime(2017, 11, 23, 14, 40, 0), datetime(2017, 11, 23, 14, 46, 0)),
+                                 (datetime(2017, 11, 23, 15, 15, 0), datetime(2017, 11, 23, 15, 18, 0)),
+                                 (datetime(2017, 11, 23, 16, 43, 0), datetime(2017, 11, 23, 17, 5, 0)),
+                                 (datetime(2017, 11, 23, 17, 31, 0), datetime(2017, 11, 23, 17, 50, 0))]
+        else:
+            print('Error: <sub_scenario> (car) can only be "all", "city", "highway" or "static"!')
+            sys.exit(0)
+
         start_time = time.time()
         print('%s: building the small dataset using %d workers...' % (scenario, NUM_WORKERS))
         get_small_dataset(scenario)
@@ -971,6 +1113,30 @@ if __name__ == '__main__':
         
         TIME_DELTA = 6
 
+        if sub_scenario == 'all':
+            SUFFIX = ''
+        elif sub_scenario == 'night':
+            INCLUDE_INTERVALS = [(datetime(2017, 11, 27, 21, 0, 0), datetime(2017, 11, 28, 8, 0, 0)),
+                                 (datetime(2017, 11, 28, 21, 0, 0), datetime(2017, 11, 29, 8, 0, 0)),
+                                 (datetime(2017, 11, 29, 21, 0, 0), datetime(2017, 11, 30, 8, 0, 0)),
+                                 (datetime(2017, 11, 30, 21, 0, 0), datetime(2017, 12, 1, 8, 0, 0)),
+                                 (datetime(2017, 12, 1, 21, 0, 0), datetime(2017, 12, 2, 8, 0, 0)),
+                                 (datetime(2017, 12, 2, 21, 0, 0), datetime(2017, 12, 3, 8, 0, 0)),
+                                 (datetime(2017, 12, 3, 21, 0, 0), datetime(2017, 12, 4, 8, 0, 0))]
+        elif sub_scenario == 'weekday':
+            INCLUDE_INTERVALS = [(datetime(2017, 11, 27, 8, 0, 0), datetime(2017, 11, 27, 21, 0, 0)),
+                                 (datetime(2017, 11, 28, 8, 0, 0), datetime(2017, 11, 28, 21, 0, 0)),
+                                 (datetime(2017, 11, 29, 8, 0, 0), datetime(2017, 11, 29, 21, 0, 0)),
+                                 (datetime(2017, 11, 30, 8, 0, 0), datetime(2017, 11, 30, 21, 0, 0)),
+                                 (datetime(2017, 12, 1, 8, 0, 0), datetime(2017, 12, 1, 21, 0, 0)),
+                                 (datetime(2017, 12, 4, 8, 0, 0), datetime(2017, 12, 4, 21, 0, 0))]
+        elif sub_scenario == 'weekend':
+            INCLUDE_INTERVALS = [(datetime(2017, 12, 2, 8, 0, 0), datetime(2017, 12, 2, 21, 0, 0)),
+                                 (datetime(2017, 12, 3, 8, 0, 0), datetime(2017, 12, 3, 21, 0, 0))]
+        else:
+            print('Error: <sub_scenario> (office) can only be "all", "night", "weekday" or "weekend"!')
+            sys.exit(0)
+
         start_time = time.time()
         print('%s: building the small dataset using %d workers...' % (scenario, NUM_WORKERS))
         get_small_dataset(scenario)
@@ -980,7 +1146,7 @@ if __name__ == '__main__':
         print('%s: building the big dataset using %d workers...' % (scenario, NUM_WORKERS))
         get_big_dataset(scenario)
         print('--- %s seconds ---' % (time.time() - start_time))
-
+        
     else:
         print('Error: <scenario> can only be "car" or "office"!')
         sys.exit(0)
