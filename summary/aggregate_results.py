@@ -35,7 +35,7 @@ SUMMARY_FILE = 'Summary.json'
 # /Sensor-xx/audio/<audio_features>/<time_intervals>
 ROOT_PATH = ''
 
-
+# Intervals for subscenarios
 INCLUDE_INTERVALS = []
 
 USE_AUDIO = True
@@ -205,7 +205,7 @@ def process_folder(file_list, feature='', feature_class=''):
 
         # Save the summary JSON file
         if SUFFIX:
-            filename = log_path + "Summary-{}.json".format(SUFFIX)
+            filename = log_path + 'Summary-{}.json'.format(SUFFIX)
         else:
             filename = log_path + SUMMARY_FILE
         #print('Saving a file: %s' % filename)
@@ -797,9 +797,9 @@ if __name__ == '__main__':
         # Assign input args
         ROOT_PATH = sys.argv[1]
         scenario = sys.argv[2]
-        NUM_WORKERS = sys.argv[3]
-        sub_scenario = sys.argv[4]
+        sub_scenario = sys.argv[3]
         SUFFIX = sub_scenario
+        NUM_WORKERS = sys.argv[4]
 
         # Check if <num_workers> is an integer more than 2
         try:
@@ -828,7 +828,7 @@ if __name__ == '__main__':
                                      (datetime(2017, 11, 23, 16, 43, 0), datetime(2017, 11, 23, 17, 5, 0)),
                                      (datetime(2017, 11, 23, 17, 31, 0), datetime(2017, 11, 23, 17, 50, 0))]
             else:
-                print('Error: <sub_scenario> for the car scenario can only be "all", "city", "highway" or "static"!')
+                print('Error: <sub_scenario> (car) can only be "all", "city", "highway" or "static"!')
                 sys.exit(0)
 
         if scenario == 'office':
@@ -853,10 +853,11 @@ if __name__ == '__main__':
                 INCLUDE_INTERVALS = [(datetime(2017, 12, 2, 8, 0, 0), datetime(2017, 12, 2, 21, 0, 0)),
                                      (datetime(2017, 12, 3, 8, 0, 0), datetime(2017, 12, 3, 21, 0, 0))]
             else:
-                print('Error: <sub_scenario> for the office scenario can only be "all", "night", "weekday" or "weekend"!')
+                print('Error: <sub_scenario> (office) can only be "all", "night", "weekday" or "weekend"!')
                 sys.exit(0)
     else:
-        print('Usage: aggregate_results.py <root_path> <scenario> (optional - <num_workers>) (optional - <sub_scenario>) (optional - <feature set (audio|sensor)>')
+        print('Usage: aggregate_results.py <root_path> <scenario> <sub_scenario>'
+              '(optional - <num_workers>) (optional - <feature set (audio|sensor)>')
         sys.exit(0)
 
     if len(sys.argv) == 6:
