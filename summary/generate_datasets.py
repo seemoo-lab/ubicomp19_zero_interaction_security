@@ -756,8 +756,8 @@ def date_to_sec(date_str):
 
 
 def add_features(feature, value, csv_row):
-    # we selected the approximation for 'None' ('sum_squared_ranks' in JSON) as
-    # max(sum_squared_ranks) found over all sensors x10. We arrived at 10000
+    # we selected the approximation for 'None' ('sum_squared_ranks'=null in JSON)
+    # as max(sum_squared_ranks) found over all sensors x10. We arrived at 10000
     # car scenario: max(sum_squared_ranks) = 912.0 x 10 = 9120 (round to 10000)
     # we multiply the max(sum_squared_ranks) by 10 to get a very large number
     # to weigh up the missing intersection between two sets of measurements:
@@ -1010,6 +1010,37 @@ def get_big_dataset(scenario):
 
 
 if __name__ == '__main__':
+    '''
+    ROOT_PATH = 'D:/data/car/'
+    RESULT_PATH = 'C:/Users/mfomichev/Desktop/'
+    scenario = 'car'
+
+    # ROOT_PATH = 'E:/OfficeExp/audio_results/'
+    # RESULT_PATH = 'C:/Users/mfomichev/Desktop/'
+    # scenario = 'office'
+
+    NUM_WORKERS = 3
+
+    SENSORS.append(SENSORS_CAR1)
+    SENSORS.append(SENSORS_CAR2)
+
+    TIME_DELTA = 5
+
+    # SENSORS.append(SENSORS_OFFICE1)
+    # SENSORS.append(SENSORS_OFFICE2)
+    # SENSORS.append(SENSORS_OFFICE3)
+
+    # TIME_DELTA = 6
+
+    SUFFIX = ''
+
+    # City
+    INCLUDE_INTERVALS = [(datetime(2017, 11, 23, 14, 46, 0), datetime(2017, 11, 23, 15, 15, 0)),
+                         (datetime(2017, 11, 23, 15, 55, 0), datetime(2017, 11, 23, 16, 25, 0)),
+                         (datetime(2017, 11, 23, 17, 18, 0), datetime(2017, 11, 23, 17, 31, 0))]
+
+    get_big_dataset(scenario)
+    '''
     # Check the number of input args
     if len(sys.argv) == 5:
         # Assign input args
@@ -1137,10 +1168,10 @@ if __name__ == '__main__':
             print('Error: <sub_scenario> (office) can only be "all", "night", "weekday" or "weekend"!')
             sys.exit(0)
 
-        start_time = time.time()
-        print('%s: building the small dataset using %d workers...' % (scenario, NUM_WORKERS))
-        get_small_dataset(scenario)
-        print('--- %s seconds ---' % (time.time() - start_time))
+        # start_time = time.time()
+        # print('%s: building the small dataset using %d workers...' % (scenario, NUM_WORKERS))
+        # get_small_dataset(scenario)
+        # print('--- %s seconds ---' % (time.time() - start_time))
 
         start_time = time.time()
         print('%s: building the big dataset using %d workers...' % (scenario, NUM_WORKERS))
