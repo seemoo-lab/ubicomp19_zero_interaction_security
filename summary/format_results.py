@@ -243,7 +243,7 @@ def add_last_summary(path, feature, feature_class, summary_file):
             f.write(dumps(rv, indent=4, sort_keys=True))
 
 
-# ToDo: switch to gz json files
+# ToDo: switch to gz json files (obsolete - delete in later versions)
 def process_power(file_list, feature=''):
 
     # Get the current folder, e.g. 10sec, 1min, etc.
@@ -525,7 +525,7 @@ def compute_metrics(feature_np_array):
     return feature_dict
 
 
-# ToDo: switch to gz json files
+# ToDo: switch to gz json files (obsolete - delete in later versions)
 def format_power():
 
     # Audio feature
@@ -739,7 +739,7 @@ if __name__ == '__main__':
             # Format features
             format_features('Summary-static.json')
         else:
-            print('Error: <sub_scenario> for the car scenario can only be "all", "city", "highway" or "static"!')
+            print('Error: <sub_scenario> (car) can only be "all", "city", "highway" or "static"!')
             sys.exit(0)
 
     elif scenario == 'office':
@@ -762,7 +762,7 @@ if __name__ == '__main__':
             # Format features
             format_features('Summary-weekend.json')
         else:
-            print('Error: <sub_scenario> for the office scenario can only be "all", "night", "weekday" or "weekend"!')
+            print('Error: <sub_scenario> (office) can only be "all", "night", "weekday" or "weekend"!')
             sys.exit(0)
     else:
         print('Error: <scenario> can only be "power", "car" or "office"!')
