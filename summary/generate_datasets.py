@@ -6,6 +6,8 @@ import os, shutil
 import itertools
 import datetime
 import time
+import numpy as np
+import pandas as pd
 import multiprocessing
 from multiprocessing import Pool
 from functools import partial
@@ -13,15 +15,25 @@ import gzip
 import math
 from dateutil import parser
 from datetime import datetime
+from collections import Counter
 
-# Sensor mapping: car experiment
+# Sensor mapping: car experiment (12 sensors)
 SENSORS_CAR1 = ['01', '02', '03', '04', '05', '06']
 SENSORS_CAR2 = ['07', '08', '09', '10', '11', '12']
 
-# Sensor mapping: office experiment
+# Sensors to exclude from Car 1 and 2 ('hidden' devices)
+EXCL_SENSORS_CAR = ['02', '06', '08', '12']
+
+# Sensor mapping: office experiment (24 sensors)
 SENSORS_OFFICE1 = ['01', '02', '03', '04', '05', '06', '07', '08']
 SENSORS_OFFICE2 = ['09', '10', '11', '12', '13', '14', '15', '16']
 SENSORS_OFFICE3 = ['17', '18', '19', '20', '21', '22', '23', '24']
+
+# Sensors to exclude from Office 1, 2 and 3 ('hidden' devices)
+EXCL_SENSORS_OFFICE = ['07', '15', '24']
+
+# List of sensors to be excluded
+EXCL_SENSORS = []
 
 # List of sensor mappings
 SENSORS = []
@@ -36,9 +48,11 @@ RESULT_PATH = ''
 # Number of workers to be used in parallel
 NUM_WORKERS = 0
 
+# ToDO: this has to be implemented with automatic inference, not as constant
 # Time used to sync audio with wifi and ble features
 TIME_DELTA = 0
 
+# ToDO: this can be discontinued
 # Reduce flag
 REDUCE_FLAG = False
 
@@ -121,9 +135,9 @@ def process_dataset(json_file, dataset='', feature='', time_interval='', root_pa
 
         # Get target sensor number - Sensor-xx/audio/<feature>/<time_interval>
         # or Sensor-xx/temp/temp_hum_press_shrestha/
-        if dataset == 'small':
+        if dataset == 'truong':
             match = re.search(r'Sensor-(.*)(?:/|\\)audio(?:/|\\)', check_json)
-        elif dataset == 'big':
+        elif dataset == 'shrestha':
             match = re.search(r'Sensor-(.*)(?:/|\\)temp(?:/|\\)', check_json)
         else:
             print('process_dataset: unknown dataset type = %s, exiting...', dataset)
@@ -162,7 +176,7 @@ def process_dataset(json_file, dataset='', feature='', time_interval='', root_pa
         # Temporary path to store intermediate results
         tmp_path = tmp_path + target_sensor + '_' + sensor + '.csv'
 
-        if dataset == 'small':
+        if dataset == 'truong':
             # Construct Wi-Fi and BLE paths
             ble_path = root_path + 'Sensor-' + target_sensor + '/ble/ble_wifi_truong/' + time_interval + \
                        '/Sensor-' + sensor + '.json.gz'
@@ -197,15 +211,16 @@ def process_dataset(json_file, dataset='', feature='', time_interval='', root_pa
                 else:
                     json_file = audio_res
 
+                # ToDO: time_delta - infer form the data, no magic numbers: '10' here
                 # Update time_delta for the cases where time_interval != 10sec
                 # (applies only to the office scenario, does not need for the car)
                 if time_interval == '30sec':
                     time_delta = time_delta + 10
 
-            # Build the small data set
-            build_small_dataset(json_file, ble_path, wifi_path, tmp_path, label, feature, time_delta,
+            # Build the truong's data set
+            build_truong_dataset(json_file, ble_path, wifi_path, tmp_path, label, feature, time_delta,
                                 incl_intervals)
-        elif dataset == 'big':
+        elif dataset == 'shrestha':
             # Construct hum and press paths
             hum_path = root_path + 'Sensor-' + target_sensor + '/hum/' + time_interval + \
                        '/Sensor-' + sensor + '.json.gz'
@@ -213,9 +228,8 @@ def process_dataset(json_file, dataset='', feature='', time_interval='', root_pa
             press_path = root_path + 'Sensor-' + target_sensor + '/press/' + time_interval + \
                         '/Sensor-' + sensor + '.json.gz'
 
-            # Build the big data set
-            build_big_dataset(json_file, hum_path, press_path, tmp_path, label, incl_intervals)
-
+            # Build the shrestha data set
+            build_shrestha_dataset(json_file, hum_path, press_path, tmp_path, label, incl_intervals)
         else:
             print('process_dataset: uknown dataset type = %s, exiting...', dataset)
             sys.exit(0)
@@ -224,7 +238,7 @@ def process_dataset(json_file, dataset='', feature='', time_interval='', root_pa
         print(e)
 
 
-def build_small_dataset(json_file, ble_path, wifi_path, tmp_path, label, feature, time_delta,
+def build_truong_dataset(json_file, ble_path, wifi_path, tmp_path, label, feature, time_delta,
                         incl_intervals):
     # List to store the results
     csv_list = []
@@ -232,6 +246,7 @@ def build_small_dataset(json_file, ble_path, wifi_path, tmp_path, label, feature
 
     if isinstance(json_file, dict):
         audio_res = json_file
+        # ToDO: extra should be inferred form the data
         extra = 2
     elif isinstance(json_file, str):
         # Read gzipped audio JSON
@@ -256,7 +271,7 @@ def build_small_dataset(json_file, ble_path, wifi_path, tmp_path, label, feature
         else:
             audio_res = audio_json
     else:
-        print('build_small_dataset: json_file must be only of instance dict or str, exiting...')
+        print('build_truong_dataset: json_file must be only of instance dict or str, exiting...')
         sys.exit(0)
 
     # Read gzipped ble JSON
@@ -540,13 +555,16 @@ def build_small_dataset(json_file, ble_path, wifi_path, tmp_path, label, feature
                 csv_row = 'NA,NA,' + csv_row + label
                 csv_list.append(csv_row)
 
+    # Remove duplicates, add count (default behavior)
+    csv_list = remove_duplicates_add_count(csv_list)
+
     # Save the results
     with open(tmp_path, 'w') as f:
         csv_list = map(lambda line: line + '\n', csv_list)
         f.writelines(csv_list)
 
 
-def build_big_dataset(json_file, hum_path, press_path, tmp_path, label, incl_intervals):
+def build_shrestha_dataset(json_file, hum_path, press_path, tmp_path, label, incl_intervals):
     # List to store the results
     csv_list = []
 
@@ -659,10 +677,28 @@ def build_big_dataset(json_file, hum_path, press_path, tmp_path, label, incl_int
         # Add csv_row to the list
         csv_list.append(csv_row)
 
+    # Remove duplicates, add count (default behavior)
+    csv_list = remove_duplicates_add_count(csv_list)
+
     # Save the results
     with open(tmp_path, 'w') as f:
         csv_list = map(lambda line: line + '\n', csv_list)
         f.writelines(csv_list)
+
+
+def remove_duplicates_add_count(csv_list):
+    # Get counter of elements in the csv_list, remove duplicates
+    condensed_csv = Counter(csv_list)
+
+    # Construct new csv_list without duplicates with the following
+    # structure: count,features,label
+    cond_csv_list = []
+    for k, v in sorted(condensed_csv.items()):
+        cond_csv_list.append(str(v) + ',' + k)
+
+    # ToDO:think if we need to 'cond_csv_list.sort()' here
+
+    return cond_csv_list
 
 
 def update_res(res_dict):
@@ -823,7 +859,7 @@ def add_features(feature, value, csv_row):
 
 
 # ToDo: merge get_dataset functions into one with input feature param
-def get_small_dataset(scenario):
+def get_truong_dataset(scenario):
 
     # Audio feature
     feature = 'timeFreqDistance'
@@ -832,10 +868,17 @@ def get_small_dataset(scenario):
     time_interval = '10sec'
 
     # Type of the dataset
-    dataset = 'small'
+    dataset = 'truong'
+
+    # Feature data types
+    feature_dtypes = [np.uint32, np.float64, np.float64, np.float64, np.float64, np.float64, np.float64,
+                  np.float64, np.float64, np.float64, np.uint8]
+
+    # Result folder
+    res_folder = dataset + '/' + scenario + '/' + SUFFIX + '/'
 
     # Path to a temporary folder to store intermediate results
-    tmp_path = RESULT_PATH + 'tmp_dataset/'
+    tmp_path = RESULT_PATH + res_folder + 'tmp_dataset/'
 
     # Create a temporary folder to store intermediate results
     if not os.path.exists(tmp_path):
@@ -896,8 +939,34 @@ def get_small_dataset(scenario):
 
     # Check if the file list was successfully created
     if not file_list:
-        print('get_small_dataset: File list is empty, exiting...')
+        print('get_truong_dataset: File list is empty, exiting...')
         sys.exit(0)
+
+    # Case where some sensors have to be excluded
+    if EXCL_SENSORS:
+        print('Exclude stuff')
+        # Make a copy of file list
+        tmp_file_list = list(file_list)
+
+        # Iterate over files in the file list
+        for file in file_list:
+            # Check if 'file' is a sting or a list
+            if isinstance(file, list):
+                # Corresponds to office setting
+                check_file = file[0]
+            elif isinstance(file, str):
+                # Corresponds to car setting
+                check_file = file
+            else:
+                print('get_truong_dataset: file must be only of instance list or str, exiting...')
+                sys.exit(0)
+
+            # Exclude sensors
+            if check_excl_matching(check_file, scenario):
+                tmp_file_list.remove(file)
+
+        # Update file_list
+        file_list = tmp_file_list
 
     # Initiate a pool of workers
     pool = Pool(processes=NUM_WORKERS, maxtasksperchild=1)
@@ -913,29 +982,24 @@ def get_small_dataset(scenario):
     pool.close()
     pool.join()
 
-    # Add suffix to filename
-    suffix = ''
-    if SUFFIX:
-        suffix = SUFFIX + '-'
+    # Name of the resulting file
+    filename = dataset + '_' + scenario + '_' + SUFFIX + EXCL_STR + '.csv'
 
     # Path of the resulting file
-    filename = RESULT_PATH + suffix + dataset + '_dataset' + '_' + scenario + '.csv'
+    file_path = RESULT_PATH + res_folder + filename
 
     # A header of the resulting csv file
-    csv_header = 'audio_xcorr,audio_tfd,ble_eucl,ble_jacc,wifi_eucl,wifi_jacc,wifi_mean_exp,wifi_mean_ham,' \
-                 'wifi_sum_sqrd_ranks,label'
+    csv_header = 'count,audio_xcorr,audio_tfd,ble_eucl,ble_jacc,wifi_eucl,wifi_jacc,wifi_mean_exp,' \
+                 'wifi_mean_ham,wifi_sum_sqrd_ranks,label'
 
-    # Add a header to the resulting file
-    os.system('echo ' + csv_header + ' >> ' + filename)
+    # Merge generated files into one resulting file
+    merge_and_clean(file_path, tmp_path, csv_header)
 
-    # Merge tmp files into a single resulting file
-    os.system('cat ' + tmp_path + '*.csv >> ' + filename)
-
-    # Delete tmp folder and its content
-    shutil.rmtree(tmp_path)
+    # Remove duplicates and add counts in the merged file
+    remove_duplicates_merged(file_path, csv_header, feature_dtypes)
 
 
-def get_big_dataset(scenario):
+def get_shrestha_dataset(scenario):
 
     # Physical feature
     feature = 'temp'
@@ -944,10 +1008,16 @@ def get_big_dataset(scenario):
     time_interval = 'temp_hum_press_shrestha'
 
     # Type of the dataset
-    dataset = 'big'
+    dataset = 'shrestha'
+
+    # Feature data types
+    feature_dtypes = [np.uint32, np.float64, np.float64, np.float64, np.uint8]
+
+    # Result folder
+    res_folder = dataset + '/' + scenario + '/' + SUFFIX + '/'
 
     # Path to a temporary folder to store intermediate results
-    tmp_path = RESULT_PATH + 'tmp_dataset/'
+    tmp_path = RESULT_PATH + res_folder + 'tmp_dataset/'
 
     # Create a temporary folder to store intermediate results
     if not os.path.exists(tmp_path):
@@ -966,8 +1036,23 @@ def get_big_dataset(scenario):
 
     # Check if the file list was successfully created
     if not file_list:
-        print('get_big_dataset: File list is empty, exiting...')
+        print('get_shrestha_dataset: File list is empty, exiting...')
         sys.exit(0)
+
+    # Case where some sensors have to be excluded
+    if EXCL_SENSORS:
+        print('Exclude stuff')
+        # Make a copy of file list
+        tmp_file_list = list(file_list)
+
+        # Iterate over files in the file list
+        for file in file_list:
+            # Exclude sensors
+            if check_excl_matching(file, scenario):
+                tmp_file_list.remove(file)
+
+        # Update file_list
+        file_list = tmp_file_list
 
     # Initiate a pool of workers
     pool = Pool(processes=NUM_WORKERS, maxtasksperchild=1)
@@ -982,82 +1067,114 @@ def get_big_dataset(scenario):
     # Wait for processes to terminate
     pool.close()
     pool.join()
-
+    
     # Check reduce flag and reflect in the file name
     reduce_str = ''
     if REDUCE_FLAG:
         reduce_str = '10th_'
-
-    # Add suffix to filename
-    suffix = ''
-    if SUFFIX:
-        suffix = SUFFIX + '-'
+    
+    # Name of the resulting file
+    filename = reduce_str + dataset + '_' + scenario + '_' + SUFFIX + EXCL_STR + '.csv'
 
     # Path of the resulting file
-    filename = RESULT_PATH + reduce_str + suffix + dataset + '_dataset' + '_' + scenario + '.csv'
+    file_path = RESULT_PATH + res_folder + filename
 
     # A header of the resulting csv file
-    csv_header = 'tmp_diff,hum_diff,alt_diff,label'
+    csv_header = 'count,tmp_diff,hum_diff,alt_diff,label'
 
+    # Merge generated files into one resulting file
+    merge_and_clean(file_path, tmp_path, csv_header)
+
+    # Remove duplicates and add counts in the merged file
+    remove_duplicates_merged(file_path, csv_header, feature_dtypes)
+
+
+def check_excl_matching(filename, scenario):
+    # Number of excluded sensors based on the scenario
+    if scenario == 'car':
+        excl_sensors = list(EXCL_SENSORS_CAR)
+    elif scenario == 'office':
+        excl_sensors = list(EXCL_SENSORS_OFFICE)
+    else:
+        print('check_excl_matching: Scenario can only be "car" or "office"!')
+        sys.exit(0)
+
+    # Iterate over excluded sensors
+    for sensor in excl_sensors:
+        # String to match against the filename
+        regex = 'Sensor-' + sensor
+
+        # Check if the filename contains regex
+        match = re.search(regex, filename)
+
+        # If there is match return True
+        if match:
+            return True
+
+    return False
+
+
+def merge_and_clean(file_path, tmp_path, csv_header):
     # Add a header to the resulting file
-    os.system('echo ' + csv_header + ' >> ' + filename)
+    os.system('echo ' + csv_header + ' >> ' + file_path)
 
     # Merge tmp files into a single resulting file
-    os.system('cat ' + tmp_path + '*.csv >> ' + filename)
+    os.system('cat ' + tmp_path + '*.csv >> ' + file_path)
 
     # Delete tmp folder and its content
     shutil.rmtree(tmp_path)
 
 
+def remove_duplicates_merged(file_path, csv_header, feature_dtypes):
+    # Get a list of columns in a CSV file
+    header_list = csv_header.split(',')
+
+    # Construct column_types dict for explicit data types when loading data
+    column_types = dict(zip(header_list, feature_dtypes))
+
+    # Load a CSV file into pandas frame
+    df = pd.read_csv(file_path, dtype=column_types)
+
+    # Replace NaN values with -1, otherwise they will be removed by 'df.groupby'
+    df.fillna(-1, inplace=True)
+
+    # Remove duplicates and increment counter: we consider all columns apart
+    # from 'count' in comparison. The count column is incremented and the columns
+    # are rearranged: 'count' becomes the first column again.
+    # df.fillna(...) and df.replace(...) is just a hack, because 'groupby'
+    # does not yet have 'dropna' param
+    df = df.groupby(header_list[1:], as_index=False)[header_list[0]].sum()[header_list]
+
+    # Replace -1 by NaN values back
+    df.replace(-1, np.nan, inplace=True)
+
+    # Save filtered (duplicates aggregated) 'df' without index back to CSV file;
+    # the NaN values are replaced by NA as in the original file
+    df.to_csv(file_path, index=False, na_rep='NA')
+
+
 if __name__ == '__main__':
-    '''
-    ROOT_PATH = 'D:/data/car/'
-    RESULT_PATH = 'C:/Users/mfomichev/Desktop/'
-    scenario = 'car'
+    # ToDo: do it pretty with CL arguments
+    TRAIN = True
+    EXCL_STR = ''
 
-    # ROOT_PATH = 'E:/OfficeExp/audio_results/'
-    # RESULT_PATH = 'C:/Users/mfomichev/Desktop/'
-    # scenario = 'office'
-
-    NUM_WORKERS = 3
-
-    SENSORS.append(SENSORS_CAR1)
-    SENSORS.append(SENSORS_CAR2)
-
-    TIME_DELTA = 5
-
-    # SENSORS.append(SENSORS_OFFICE1)
-    # SENSORS.append(SENSORS_OFFICE2)
-    # SENSORS.append(SENSORS_OFFICE3)
-
-    # TIME_DELTA = 6
-
-    SUFFIX = ''
-
-    # City
-    INCLUDE_INTERVALS = [(datetime(2017, 11, 23, 14, 46, 0), datetime(2017, 11, 23, 15, 15, 0)),
-                         (datetime(2017, 11, 23, 15, 55, 0), datetime(2017, 11, 23, 16, 25, 0)),
-                         (datetime(2017, 11, 23, 17, 18, 0), datetime(2017, 11, 23, 17, 31, 0))]
-
-    get_big_dataset(scenario)
-    '''
     # Check the number of input args
-    if len(sys.argv) == 5:
+    if len(sys.argv) == 6:
         # Assign input args
         ROOT_PATH = sys.argv[1]
         RESULT_PATH = sys.argv[2]
-        scenario = sys.argv[3]
-        sub_scenario = sys.argv[4]
-        SUFFIX = sub_scenario
+        dataset = sys.argv[3]
+        scenario = sys.argv[4]
+        subscenario = sys.argv[5]
 
-    elif len(sys.argv) == 6:
+    elif len(sys.argv) == 7:
         # Assign input args
         ROOT_PATH = sys.argv[1]
         RESULT_PATH = sys.argv[2]
-        scenario = sys.argv[3]
-        sub_scenario = sys.argv[4]
-        SUFFIX = sub_scenario
-        NUM_WORKERS = sys.argv[5]
+        dataset = sys.argv[3]
+        scenario = sys.argv[4]
+        subscenario = sys.argv[5]
+        NUM_WORKERS = sys.argv[6]
 
         # Check if <num_workers> is an integer more than 2
         try:
@@ -1069,9 +1186,12 @@ if __name__ == '__main__':
             print('Error: <num_workers> must be a positive number > 1!')
             sys.exit(0)
     else:
-        print('Usage: generate_datasets.py <root_path> <result_path> <scenario> <sub_scenario> '
-              '(optional - <num_workers>)')
+        print('Usage: generate_datasets.py <root_path> <result_path> <dataset> '
+              '<scenario> <subscenario> (optional - <num_workers>)')
         sys.exit(0)
+
+    # Suffix contains subscenario name
+    SUFFIX = subscenario
 
     # Get the number of cores on the system
     num_cores = multiprocessing.cpu_count()
@@ -1107,35 +1227,45 @@ if __name__ == '__main__':
         
         TIME_DELTA = 5
 
-        # Check <sub_scenario>
-        if sub_scenario == 'all':
+        # Check <subscenario>
+        if subscenario == 'all':
             SUFFIX = ''
-        elif sub_scenario == 'city':
+        elif subscenario == 'city':
             INCLUDE_INTERVALS = [(datetime(2017, 11, 23, 14, 46, 0), datetime(2017, 11, 23, 15, 15, 0)),
                                  (datetime(2017, 11, 23, 15, 55, 0), datetime(2017, 11, 23, 16, 25, 0)),
                                  (datetime(2017, 11, 23, 17, 18, 0), datetime(2017, 11, 23, 17, 31, 0))]
-        elif sub_scenario == 'highway':
+        elif subscenario == 'highway':
             INCLUDE_INTERVALS = [(datetime(2017, 11, 23, 15, 18, 0), datetime(2017, 11, 23, 15, 55, 0)),
                                  (datetime(2017, 11, 23, 16, 25, 0), datetime(2017, 11, 23, 16, 43, 0)),
                                  (datetime(2017, 11, 23, 17, 5, 0), datetime(2017, 11, 23, 17, 18, 0))]
-        elif sub_scenario == 'static':
+        elif subscenario == 'static':
             INCLUDE_INTERVALS = [(datetime(2017, 11, 23, 14, 40, 0), datetime(2017, 11, 23, 14, 46, 0)),
                                  (datetime(2017, 11, 23, 15, 15, 0), datetime(2017, 11, 23, 15, 18, 0)),
                                  (datetime(2017, 11, 23, 16, 43, 0), datetime(2017, 11, 23, 17, 5, 0)),
                                  (datetime(2017, 11, 23, 17, 31, 0), datetime(2017, 11, 23, 17, 50, 0))]
         else:
-            print('Error: <sub_scenario> (car) can only be "all", "city", "highway" or "static"!')
+            print('Error: <subscenario> (car) can only be "all", "city", "highway" or "static"!')
             sys.exit(0)
 
-        start_time = time.time()
-        print('%s: building the small dataset using %d workers...' % (scenario, NUM_WORKERS))
-        get_small_dataset(scenario)
-        print('--- %s seconds ---' % (time.time() - start_time))
+        if TRAIN:
+            EXCL_SENSORS.append(EXCL_SENSORS_CAR)
+            str1 = ''.join(EXCL_SENSORS_CAR)
+            EXCL_STR = '_' + 'train-excl' + str1
 
-        start_time = time.time()
-        print('%s: building the big dataset using %d workers...' % (scenario, NUM_WORKERS))
-        get_big_dataset(scenario)
-        print('--- %s seconds ---' % (time.time() - start_time))
+        # Check the <dataset> parameter
+        if dataset == 'truong':
+            start_time = time.time()
+            print('%s: building the truong dataset using %d workers...' % (scenario, NUM_WORKERS))
+            get_truong_dataset(scenario)
+            print('--- %s seconds ---' % (time.time() - start_time))
+        elif dataset == 'shrestha':
+            start_time = time.time()
+            print('%s: building the shrestha dataset using %d workers...' % (scenario, NUM_WORKERS))
+            get_shrestha_dataset(scenario)
+            print('--- %s seconds ---' % (time.time() - start_time))
+        else:
+            print('Error: <dataset> can only be "truong" or "shrestha"!')
+            sys.exit(0)
 
     elif scenario == 'office':
         SENSORS.append(SENSORS_OFFICE1)
@@ -1144,9 +1274,9 @@ if __name__ == '__main__':
         
         TIME_DELTA = 6
 
-        if sub_scenario == 'all':
+        if subscenario == 'all':
             SUFFIX = ''
-        elif sub_scenario == 'night':
+        elif subscenario == 'night':
             INCLUDE_INTERVALS = [(datetime(2017, 11, 27, 21, 0, 0), datetime(2017, 11, 28, 8, 0, 0)),
                                  (datetime(2017, 11, 28, 21, 0, 0), datetime(2017, 11, 29, 8, 0, 0)),
                                  (datetime(2017, 11, 29, 21, 0, 0), datetime(2017, 11, 30, 8, 0, 0)),
@@ -1154,29 +1284,39 @@ if __name__ == '__main__':
                                  (datetime(2017, 12, 1, 21, 0, 0), datetime(2017, 12, 2, 8, 0, 0)),
                                  (datetime(2017, 12, 2, 21, 0, 0), datetime(2017, 12, 3, 8, 0, 0)),
                                  (datetime(2017, 12, 3, 21, 0, 0), datetime(2017, 12, 4, 8, 0, 0))]
-        elif sub_scenario == 'weekday':
+        elif subscenario == 'weekday':
             INCLUDE_INTERVALS = [(datetime(2017, 11, 27, 8, 0, 0), datetime(2017, 11, 27, 21, 0, 0)),
                                  (datetime(2017, 11, 28, 8, 0, 0), datetime(2017, 11, 28, 21, 0, 0)),
                                  (datetime(2017, 11, 29, 8, 0, 0), datetime(2017, 11, 29, 21, 0, 0)),
                                  (datetime(2017, 11, 30, 8, 0, 0), datetime(2017, 11, 30, 21, 0, 0)),
                                  (datetime(2017, 12, 1, 8, 0, 0), datetime(2017, 12, 1, 21, 0, 0)),
                                  (datetime(2017, 12, 4, 8, 0, 0), datetime(2017, 12, 4, 21, 0, 0))]
-        elif sub_scenario == 'weekend':
+        elif subscenario == 'weekend':
             INCLUDE_INTERVALS = [(datetime(2017, 12, 2, 8, 0, 0), datetime(2017, 12, 2, 21, 0, 0)),
                                  (datetime(2017, 12, 3, 8, 0, 0), datetime(2017, 12, 3, 21, 0, 0))]
         else:
-            print('Error: <sub_scenario> (office) can only be "all", "night", "weekday" or "weekend"!')
+            print('Error: <subscenario> (office) can only be "all", "night", "weekday" or "weekend"!')
             sys.exit(0)
 
-        # start_time = time.time()
-        # print('%s: building the small dataset using %d workers...' % (scenario, NUM_WORKERS))
-        # get_small_dataset(scenario)
-        # print('--- %s seconds ---' % (time.time() - start_time))
+        if TRAIN:
+            EXCL_SENSORS.append(EXCL_SENSORS_OFFICE)
+            str1 = ''.join(EXCL_SENSORS_OFFICE)
+            EXCL_STR = '_' + 'train-excl' + str1
 
-        start_time = time.time()
-        print('%s: building the big dataset using %d workers...' % (scenario, NUM_WORKERS))
-        get_big_dataset(scenario)
-        print('--- %s seconds ---' % (time.time() - start_time))
+        # Check the <dataset> parameter
+        if dataset == 'truong':
+            start_time = time.time()
+            print('%s: building the truong dataset using %d workers...' % (scenario, NUM_WORKERS))
+            get_truong_dataset(scenario)
+            print('--- %s seconds ---' % (time.time() - start_time))
+        elif dataset == 'shrestha':
+            start_time = time.time()
+            print('%s: building the shrestha dataset using %d workers...' % (scenario, NUM_WORKERS))
+            get_shrestha_dataset(scenario)
+            print('--- %s seconds ---' % (time.time() - start_time))
+        else:
+            print('Error: <dataset> can only be "truong" or "shrestha"!')
+            sys.exit(0)
         
     else:
         print('Error: <scenario> can only be "car" or "office"!')
