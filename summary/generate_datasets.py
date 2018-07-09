@@ -875,7 +875,10 @@ def get_truong_dataset(scenario):
                   np.float64, np.float64, np.float64, np.uint8]
 
     # Result folder
-    res_folder = dataset + '/' + scenario + '/' + SUFFIX + '/'
+    if SUFFIX:
+        res_folder = dataset + '/' + scenario + '/' + SUFFIX + '/'
+    else:
+        res_folder = dataset + '/' + scenario + '/'
 
     # Path to a temporary folder to store intermediate results
     tmp_path = RESULT_PATH + res_folder + 'tmp_dataset/'
@@ -983,7 +986,10 @@ def get_truong_dataset(scenario):
     pool.join()
 
     # Name of the resulting file
-    filename = dataset + '_' + scenario + '_' + SUFFIX + EXCL_STR + '.csv'
+    if SUFFIX:
+        filename = dataset + '_' + scenario + '_' + SUFFIX + EXCL_STR + '.csv'
+    else:
+        filename = dataset + '_' + scenario + EXCL_STR + '.csv'
 
     # Path of the resulting file
     file_path = RESULT_PATH + res_folder + filename
@@ -1014,7 +1020,10 @@ def get_shrestha_dataset(scenario):
     feature_dtypes = [np.uint32, np.float64, np.float64, np.float64, np.uint8]
 
     # Result folder
-    res_folder = dataset + '/' + scenario + '/' + SUFFIX + '/'
+    if SUFFIX:
+        res_folder = dataset + '/' + scenario + '/' + SUFFIX + '/'
+    else:
+        res_folder = dataset + '/' + scenario + '/'
 
     # Path to a temporary folder to store intermediate results
     tmp_path = RESULT_PATH + res_folder + 'tmp_dataset/'
@@ -1074,7 +1083,10 @@ def get_shrestha_dataset(scenario):
         reduce_str = '10th_'
     
     # Name of the resulting file
-    filename = reduce_str + dataset + '_' + scenario + '_' + SUFFIX + EXCL_STR + '.csv'
+    if SUFFIX:
+        filename = reduce_str + dataset + '_' + scenario + '_' + SUFFIX + EXCL_STR + '.csv'
+    else:
+        filename = reduce_str + dataset + '_' + scenario + EXCL_STR + '.csv'
 
     # Path of the resulting file
     file_path = RESULT_PATH + res_folder + filename
@@ -1154,6 +1166,47 @@ def remove_duplicates_merged(file_path, csv_header, feature_dtypes):
 
 
 if __name__ == '__main__':
+    '''
+    ROOT_PATH = 'D:/data1/car/'
+    RESULT_PATH = 'C:/Users/mfomichev/Desktop/'
+    scenario = 'car'
+
+    # ROOT_PATH = '/root/data/car/'
+    # RESULT_PATH = '/root/'
+    # scenario = 'car'
+
+    # ROOT_PATH = 'E:/OfficeExp/audio_results/'
+    # RESULT_PATH = 'C:/Users/mfomichev/Desktop/'
+    # scenario = 'office'
+
+    # ROOT_PATH = '/root/data/office/'
+    # RESULT_PATH = '/root/'
+    # scenario = 'office'
+
+    NUM_WORKERS = 1
+
+    SENSORS.append(SENSORS_CAR1)
+    SENSORS.append(SENSORS_CAR2)
+    TIME_DELTA = 5
+    EXCL_SENSORS.append(EXCL_SENSORS_CAR)
+
+    # SENSORS.append(SENSORS_OFFICE1)
+    # SENSORS.append(SENSORS_OFFICE2)
+    # SENSORS.append(SENSORS_OFFICE3)
+    # TIME_DELTA = 6
+    # EXCL_SENSORS.append(EXCL_SENSORS_OFFICE)
+
+    SUFFIX = ''
+
+    # City
+    INCLUDE_INTERVALS = [(datetime(2017, 11, 23, 14, 46, 0), datetime(2017, 11, 23, 15, 15, 0)),
+                         (datetime(2017, 11, 23, 15, 55, 0), datetime(2017, 11, 23, 16, 25, 0)),
+                         (datetime(2017, 11, 23, 17, 18, 0), datetime(2017, 11, 23, 17, 31, 0))]
+
+    get_truong_dataset(scenario)
+    # get_shrestha_dataset(scenario)
+    '''
+
     # ToDo: do it pretty with CL arguments
     TRAIN = True
     EXCL_STR = ''
@@ -1192,6 +1245,8 @@ if __name__ == '__main__':
 
     # Suffix contains subscenario name
     SUFFIX = subscenario
+
+    # print(ROOT_PATH, RESULT_PATH, dataset, scenario, subscenario, NUM_WORKERS)
 
     # Get the number of cores on the system
     num_cores = multiprocessing.cpu_count()
