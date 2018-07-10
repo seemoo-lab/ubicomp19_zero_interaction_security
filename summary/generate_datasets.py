@@ -59,6 +59,15 @@ REDUCE_FLAG = False
 # Intervals for subscenarios
 INCLUDE_INTERVALS = []
 
+# Train flag
+TRAIN_FLAG = False
+
+# Test flag
+TEST_FLAG = False
+
+# Exclude string
+EXCL_STR = ''
+
 
 def include_result(time, incl_intervals):
     if incl_intervals == []:
@@ -946,8 +955,8 @@ def get_truong_dataset(scenario):
         sys.exit(0)
 
     # Case where some sensors have to be excluded
-    if EXCL_SENSORS:
-        print('Exclude stuff')
+    if TRAIN_FLAG:
+        print('Train flag set')
         # Make a copy of file list
         tmp_file_list = list(file_list)
 
@@ -965,7 +974,7 @@ def get_truong_dataset(scenario):
                 sys.exit(0)
 
             # Exclude sensors
-            if check_excl_matching(check_file, scenario):
+            if check_excl_matching(check_file, EXCL_SENSORS):
                 tmp_file_list.remove(file)
 
         # Update file_list
@@ -1003,6 +1012,170 @@ def get_truong_dataset(scenario):
 
     # Remove duplicates and add counts in the merged file
     remove_duplicates_merged(file_path, csv_header, feature_dtypes)
+
+
+# ToDo: separate bullshit for test sets
+def get_truong_test(scenario):
+    # Audio feature
+    feature = 'timeFreqDistance'
+
+    # Time interval of the feature
+    time_interval = '10sec'
+
+    # Type of the dataset
+    dataset = 'truong'
+
+    # Feature data types
+    feature_dtypes = [np.uint32, np.float64, np.float64, np.float64, np.float64, np.float64, np.float64,
+                      np.float64, np.float64, np.float64, np.uint8]
+
+    # Result folder
+    if SUFFIX:
+        res_folder = dataset + '/' + scenario + '/' + SUFFIX + '/'
+    else:
+        res_folder = dataset + '/' + scenario + '/'
+
+    # Generate file list depending on the scenario
+    if scenario == 'car':
+        # Path to result data files
+        feature_path = ROOT_PATH + 'Sensor-*/audio/' + feature + '/' + time_interval + '/Sensor-*.json.gz'
+
+        # Get the list of JSON files for the specified interval folder
+        # we need to flatten the result from parse_folders, because
+        # we consider only a single time interval at time
+        file_list = list(itertools.chain.from_iterable(parse_folders(feature_path, feature)))
+
+        # Sort the file_list
+        file_list.sort()
+
+    elif scenario == 'office':
+
+        # Get the overall number of sensors in the experiment
+        n_sensors = len(list(itertools.chain.from_iterable(SENSORS)))
+
+        # Files list to store the results
+        file_list = []
+
+        # Iterate over all target sensors, e.g. folders /Sensor-01, /Sensor-02, etc.
+        for idx1 in range(1, n_sensors):
+            # Iterate over all sensors inside folders, e.g. /Sensor-01/Sensor-02.json.gz, etc.
+            for idx2 in range(idx1 + 1, n_sensors + 1):
+
+                # 01, 02, ... vs. 10, 11
+                if idx1 < 10:
+                    target_sensor = '0' + str(idx1)
+                else:
+                    target_sensor = str(idx1)
+                if idx2 < 10:
+                    sensor = '0' + str(idx2)
+                else:
+                    sensor = str(idx2)
+
+                # Construct feature path
+                feature_path = ROOT_PATH + '*h/' + 'Sensor-' + target_sensor + '/audio/' + feature + '/' \
+                               + time_interval + '/Sensor-' + sensor + '.json.gz'
+
+                # List to store sensor values from each of *h folders
+                sensor_list = []
+
+                # Get sensor list
+                for json_file in glob(feature_path, recursive=True):
+                    sensor_list.append(json_file)
+
+                if sensor_list:
+                    # Sort sensor list
+                    sensor_list.sort()
+                    # Append sensor list to file list
+                    file_list.append(sensor_list)
+
+    # Check if the file list was successfully created
+    if not file_list:
+        print('get_test_truong: File list is empty, exiting...')
+        sys.exit(0)
+
+    # Iterate over all excluded sensors
+    for excl_sen in EXCL_SENSORS:
+        # Iterate over sensors in each car or office
+        for sen_list in SENSORS:
+
+            # Path to a temporary folder to store intermediate results
+            tmp_path = RESULT_PATH + res_folder + 'tmp_dataset/'
+
+            # Create a temporary folder to store intermediate results
+            if not os.path.exists(tmp_path):
+                os.makedirs(tmp_path)
+
+            # Remove hidden devices from individual's car or office sensors
+            test_list = [sensor for sensor in sen_list if sensor not in EXCL_SENSORS]
+
+            # List to store resulting files, e.g. 02->01030405 (car)
+            test_file_list = []
+
+            # Iterate over all files read into file_list
+            for file in file_list:
+                # Iterate over all sensors in test_list
+                for sensor in test_list:
+                    # Check if 'file' is a sting or a list
+                    if isinstance(file, list):
+                        # Corresponds to office setting
+                        check_file = file[0]
+                    elif isinstance(file, str):
+                        # Corresponds to car setting
+                        check_file = file
+                    else:
+                        print('get_truong_test: file must be only of instance list or str, exiting...')
+                        sys.exit(0)
+
+                    # Check if file contains both exlc_sen and sensor in its full name
+                    if check_excl_matching(check_file, [excl_sen]) and check_excl_matching(check_file, [sensor]):
+                        # Add file to the test_file_list
+                        test_file_list.append(file)
+
+            # for test_file in test_file_list:
+            #     if isinstance(test_file, list):
+            #         print(test_file[0])
+            #     elif isinstance(test_file, str):
+            #         print(test_file)
+
+            # Initiate a pool of workers
+            pool = Pool(processes=NUM_WORKERS, maxtasksperchild=1)
+
+            # Use partial to pass static params: feature, ... sensors
+            func = partial(process_dataset, dataset=dataset, feature=feature, time_interval=time_interval,
+                           root_path=ROOT_PATH, tmp_path=tmp_path, time_delta=TIME_DELTA, sensors=SENSORS,
+                           incl_intervals=INCLUDE_INTERVALS)
+
+            # Let workers do the job
+            pool.imap(func, test_file_list)
+
+            # Wait for processes to terminate
+            pool.close()
+            pool.join()
+
+            # Add part to EXCL_STR, e.g. _train02-01030405.csv
+            excl_str = EXCL_STR + excl_sen + '-' + ''.join(test_list)
+
+            # Name of the resulting file
+            if SUFFIX:
+                filename = dataset + '_' + scenario + '_' + SUFFIX + excl_str + '.csv'
+            else:
+                filename = dataset + '_' + scenario + excl_str + '.csv'
+
+            # print(filename)
+            # print()
+
+            # Path of the resulting file
+            file_path = RESULT_PATH + res_folder + filename
+
+            # A header of the resulting csv file
+            csv_header = 'count,audio_xcorr,audio_tfd,ble_eucl,ble_jacc,wifi_eucl,wifi_jacc,wifi_mean_exp,' \
+                         'wifi_mean_ham,wifi_sum_sqrd_ranks,label'
+
+            # Merge generated files into one resulting file
+            merge_and_clean(file_path, tmp_path, csv_header)
+
+            # Remove duplicates and add counts in the merged file
+            remove_duplicates_merged(file_path, csv_header, feature_dtypes)
 
 
 def get_shrestha_dataset(scenario):
@@ -1049,15 +1222,15 @@ def get_shrestha_dataset(scenario):
         sys.exit(0)
 
     # Case where some sensors have to be excluded
-    if EXCL_SENSORS:
-        print('Exclude stuff')
+    if TRAIN_FLAG:
+        print('Train flag set')
         # Make a copy of file list
         tmp_file_list = list(file_list)
 
         # Iterate over files in the file list
         for file in file_list:
             # Exclude sensors
-            if check_excl_matching(file, scenario):
+            if check_excl_matching(file, EXCL_SENSORS):
                 tmp_file_list.remove(file)
 
         # Update file_list
@@ -1101,16 +1274,125 @@ def get_shrestha_dataset(scenario):
     remove_duplicates_merged(file_path, csv_header, feature_dtypes)
 
 
-def check_excl_matching(filename, scenario):
-    # Number of excluded sensors based on the scenario
-    if scenario == 'car':
-        excl_sensors = list(EXCL_SENSORS_CAR)
-    elif scenario == 'office':
-        excl_sensors = list(EXCL_SENSORS_OFFICE)
+# ToDo: separate bullshit for test sets
+def get_shrestha_test(scenario):
+
+    # Physical feature
+    feature = 'temp'
+
+    # Time interval of the feature
+    time_interval = 'temp_hum_press_shrestha'
+
+    # Type of the dataset
+    dataset = 'shrestha'
+
+    # Feature data types
+    feature_dtypes = [np.uint32, np.float64, np.float64, np.float64, np.uint8]
+
+    # Result folder
+    if SUFFIX:
+        res_folder = dataset + '/' + scenario + '/' + SUFFIX + '/'
     else:
-        print('check_excl_matching: Scenario can only be "car" or "office"!')
+        res_folder = dataset + '/' + scenario + '/'
+
+    # Path to a temporary folder to store intermediate results
+    tmp_path = RESULT_PATH + res_folder + 'tmp_dataset/'
+
+    # Create a temporary folder to store intermediate results
+    if not os.path.exists(tmp_path):
+        os.makedirs(tmp_path)
+
+    # Path to result data files
+    feature_path = ROOT_PATH + 'Sensor-*/' + feature + '/' + time_interval + '/Sensor-*.json.gz'
+
+    # Get the list of JSON files for the specified interval folder
+    # we need to flatten the result from parse_folders, because
+    # we consider only a single time interval at time
+    file_list = list(itertools.chain.from_iterable(parse_folders(feature_path, feature)))
+
+    # Sort the file_list
+    file_list.sort()
+
+    # Check if the file list was successfully created
+    if not file_list:
+        print('get_shrestha_test: File list is empty, exiting...')
         sys.exit(0)
 
+    # Iterate over all excluded sensors
+    for excl_sen in EXCL_SENSORS:
+        # Iterate over sensors in each car or office
+        for sen_list in SENSORS:
+
+            # Path to a temporary folder to store intermediate results
+            tmp_path = RESULT_PATH + res_folder + 'tmp_dataset/'
+
+            # Create a temporary folder to store intermediate results
+            if not os.path.exists(tmp_path):
+                os.makedirs(tmp_path)
+
+            # Remove hidden devices from individual's car or office sensors
+            test_list = [sensor for sensor in sen_list if sensor not in EXCL_SENSORS]
+
+            # List to store resulting files, e.g. 02->01030405 (car)
+            test_file_list = []
+
+            # Iterate over all files read into file_list
+            for file in file_list:
+                # Iterate over all sensors in test_list
+                for sensor in test_list:
+
+                    # Check if file contains both exlc_sen and sensor in its full name
+                    if check_excl_matching(file, [excl_sen]) and check_excl_matching(file, [sensor]):
+                        # Add file to the test_file_list
+                        test_file_list.append(file)
+
+            # for test_file in test_file_list:
+            #     if isinstance(test_file, list):
+            #         print(test_file[0])
+            #     elif isinstance(test_file, str):
+            #         print(test_file)
+
+            # Initiate a pool of workers
+            pool = Pool(processes=NUM_WORKERS, maxtasksperchild=1)
+
+            # Use partial to pass static params: dataset, ... sensors
+            func = partial(process_dataset, dataset=dataset, feature=feature, time_interval=time_interval,
+                           root_path=ROOT_PATH, tmp_path=tmp_path, time_delta=TIME_DELTA, sensors=SENSORS,
+                           incl_intervals=INCLUDE_INTERVALS)
+
+            # Let workers do the job
+            pool.imap(func, test_file_list)
+
+            # Wait for processes to terminate
+            pool.close()
+            pool.join()
+
+            # Add part to EXCL_STR, e.g. _train02-01030405.csv
+            excl_str = EXCL_STR + excl_sen + '-' + ''.join(test_list)
+
+            # Name of the resulting file
+            if SUFFIX:
+                filename = dataset + '_' + scenario + '_' + SUFFIX + excl_str + '.csv'
+            else:
+                filename = dataset + '_' + scenario + excl_str + '.csv'
+
+            # print(filename)
+            # print()
+
+            # Path of the resulting file
+            file_path = RESULT_PATH + res_folder + filename
+
+            # A header of the resulting csv file
+            csv_header = 'count,tmp_diff,hum_diff,alt_diff,label'
+
+            # Merge generated files into one resulting file
+            merge_and_clean(file_path, tmp_path, csv_header)
+
+            # Remove duplicates and add counts in the merged file
+            remove_duplicates_merged(file_path, csv_header, feature_dtypes)
+
+
+def check_excl_matching(filename, excl_sensors):
     # Iterate over excluded sensors
     for sensor in excl_sensors:
         # String to match against the filename
@@ -1167,17 +1449,17 @@ def remove_duplicates_merged(file_path, csv_header, feature_dtypes):
 
 if __name__ == '__main__':
     '''
-    ROOT_PATH = 'D:/data1/car/'
-    RESULT_PATH = 'C:/Users/mfomichev/Desktop/'
-    scenario = 'car'
-
+    # ROOT_PATH = 'D:/data1/car/'
+    # RESULT_PATH = 'C:/Users/mfomichev/Desktop/'
+    # scenario = 'car'
+    
     # ROOT_PATH = '/root/data/car/'
     # RESULT_PATH = '/root/'
     # scenario = 'car'
 
-    # ROOT_PATH = 'E:/OfficeExp/audio_results/'
-    # RESULT_PATH = 'C:/Users/mfomichev/Desktop/'
-    # scenario = 'office'
+    ROOT_PATH = 'E:/OfficeExp/audio_results/'
+    RESULT_PATH = 'C:/Users/mfomichev/Desktop/'
+    scenario = 'office'
 
     # ROOT_PATH = '/root/data/office/'
     # RESULT_PATH = '/root/'
@@ -1185,16 +1467,24 @@ if __name__ == '__main__':
 
     NUM_WORKERS = 1
 
-    SENSORS.append(SENSORS_CAR1)
-    SENSORS.append(SENSORS_CAR2)
-    TIME_DELTA = 5
-    EXCL_SENSORS.append(EXCL_SENSORS_CAR)
+    # SENSORS.append(SENSORS_CAR1)
+    # SENSORS.append(SENSORS_CAR2)
+    # TIME_DELTA = 5
+    # TEST_FLAG = True
+    # TRAIN_FLAG = True
+    # if TEST_FLAG:
+    #     EXCL_STR = '_' + 'test'
+    # EXCL_SENSORS = list(EXCL_SENSORS_CAR)
 
-    # SENSORS.append(SENSORS_OFFICE1)
-    # SENSORS.append(SENSORS_OFFICE2)
-    # SENSORS.append(SENSORS_OFFICE3)
-    # TIME_DELTA = 6
-    # EXCL_SENSORS.append(EXCL_SENSORS_OFFICE)
+    SENSORS.append(SENSORS_OFFICE1)
+    SENSORS.append(SENSORS_OFFICE2)
+    SENSORS.append(SENSORS_OFFICE3)
+    TIME_DELTA = 6
+    TEST_FLAG = True
+    TRAIN_FLAG = True
+    if TEST_FLAG:
+        EXCL_STR = '_' + 'test'
+    EXCL_SENSORS = list(EXCL_SENSORS_OFFICE)
 
     SUFFIX = ''
 
@@ -1203,13 +1493,12 @@ if __name__ == '__main__':
                          (datetime(2017, 11, 23, 15, 55, 0), datetime(2017, 11, 23, 16, 25, 0)),
                          (datetime(2017, 11, 23, 17, 18, 0), datetime(2017, 11, 23, 17, 31, 0))]
 
-    get_truong_dataset(scenario)
+    get_truong_test(scenario)
+    # get_truong_dataset(scenario)
+
+    # get_shrestha_test(scenario)
     # get_shrestha_dataset(scenario)
     '''
-
-    # ToDo: do it pretty with CL arguments
-    TRAIN = True
-    EXCL_STR = ''
 
     # Check the number of input args
     if len(sys.argv) == 6:
@@ -1220,7 +1509,7 @@ if __name__ == '__main__':
         scenario = sys.argv[4]
         subscenario = sys.argv[5]
 
-    elif len(sys.argv) == 7:
+    elif len(sys.argv) >= 7:
         # Assign input args
         ROOT_PATH = sys.argv[1]
         RESULT_PATH = sys.argv[2]
@@ -1239,14 +1528,24 @@ if __name__ == '__main__':
             print('Error: <num_workers> must be a positive number > 1!')
             sys.exit(0)
     else:
-        print('Usage: generate_datasets.py <root_path> <result_path> <dataset> '
-              '<scenario> <subscenario> (optional - <num_workers>)')
+        print('Usage: generate_datasets.py <root_path> <result_path> <dataset> <scenario> '
+              '<subscenario> (optional - <num_workers>) (optional - <train/test>)')
         sys.exit(0)
+
+    # If we have an extra <train/test> param
+    if len(sys.argv) == 8:
+        if sys.argv[7] == 'train':
+            TRAIN_FLAG = True
+        elif sys.argv[7] == 'test':
+            TEST_FLAG = True
+        else:
+            print('Error: <train/test> must be either "train" or "test"!')
+            sys.exit(0)
 
     # Suffix contains subscenario name
     SUFFIX = subscenario
 
-    # print(ROOT_PATH, RESULT_PATH, dataset, scenario, subscenario, NUM_WORKERS)
+    # print(ROOT_PATH, RESULT_PATH, dataset, scenario, subscenario, NUM_WORKERS, TRAIN_FLAG, TEST_FLAG)
 
     # Get the number of cores on the system
     num_cores = multiprocessing.cpu_count()
@@ -1302,22 +1601,39 @@ if __name__ == '__main__':
             print('Error: <subscenario> (car) can only be "all", "city", "highway" or "static"!')
             sys.exit(0)
 
-        if TRAIN:
-            EXCL_SENSORS.append(EXCL_SENSORS_CAR)
-            str1 = ''.join(EXCL_SENSORS_CAR)
-            EXCL_STR = '_' + 'train-excl' + str1
+        # Params for TRAIN_FLAG
+        if TRAIN_FLAG:
+            EXCL_SENSORS = list(EXCL_SENSORS_CAR)
+            EXCL_STR = '_' + 'train-excl' + ''.join(EXCL_SENSORS_CAR)
+
+        # Params for TEST_FLAG
+        if TEST_FLAG:
+            EXCL_SENSORS = list(EXCL_SENSORS_CAR)
+            EXCL_STR = '_' + 'test'
 
         # Check the <dataset> parameter
         if dataset == 'truong':
-            start_time = time.time()
-            print('%s: building the truong dataset using %d workers...' % (scenario, NUM_WORKERS))
-            get_truong_dataset(scenario)
-            print('--- %s seconds ---' % (time.time() - start_time))
+            if TEST_FLAG:
+                start_time = time.time()
+                print('%s: building truong-test "%s" dataset using %d workers...' % (scenario, subscenario, NUM_WORKERS))
+                get_truong_test(scenario)
+                print('--- %s seconds ---' % (time.time() - start_time))
+            else:
+                start_time = time.time()
+                print('%s: building truong "%s" dataset using %d workers...' % (scenario, subscenario, NUM_WORKERS))
+                get_truong_dataset(scenario)
+                print('--- %s seconds ---' % (time.time() - start_time))
         elif dataset == 'shrestha':
-            start_time = time.time()
-            print('%s: building the shrestha dataset using %d workers...' % (scenario, NUM_WORKERS))
-            get_shrestha_dataset(scenario)
-            print('--- %s seconds ---' % (time.time() - start_time))
+            if TEST_FLAG:
+                start_time = time.time()
+                print('%s: building shrestha-test "%s" dataset using %d workers...' % (scenario, subscenario, NUM_WORKERS))
+                get_shrestha_test(scenario)
+                print('--- %s seconds ---' % (time.time() - start_time))
+            else:
+                start_time = time.time()
+                print('%s: building shrestha "%s" dataset using %d workers...' % (scenario, subscenario, NUM_WORKERS))
+                get_shrestha_dataset(scenario)
+                print('--- %s seconds ---' % (time.time() - start_time))
         else:
             print('Error: <dataset> can only be "truong" or "shrestha"!')
             sys.exit(0)
@@ -1353,26 +1669,43 @@ if __name__ == '__main__':
             print('Error: <subscenario> (office) can only be "all", "night", "weekday" or "weekend"!')
             sys.exit(0)
 
-        if TRAIN:
-            EXCL_SENSORS.append(EXCL_SENSORS_OFFICE)
-            str1 = ''.join(EXCL_SENSORS_OFFICE)
-            EXCL_STR = '_' + 'train-excl' + str1
+        # Params for TRAIN_FLAG
+        if TRAIN_FLAG:
+            EXCL_SENSORS = list(EXCL_SENSORS_OFFICE)
+            EXCL_STR = '_' + 'train-excl' + ''.join(EXCL_SENSORS_OFFICE)
+
+        # Params for TEST_FLAG
+        if TEST_FLAG:
+            EXCL_SENSORS = list(EXCL_SENSORS_OFFICE)
+            EXCL_STR = '_' + 'test'
 
         # Check the <dataset> parameter
         if dataset == 'truong':
-            start_time = time.time()
-            print('%s: building the truong dataset using %d workers...' % (scenario, NUM_WORKERS))
-            get_truong_dataset(scenario)
-            print('--- %s seconds ---' % (time.time() - start_time))
+            if TEST_FLAG:
+                start_time = time.time()
+                print('%s: building truong-test "%s" dataset using %d workers...' % (scenario, subscenario, NUM_WORKERS))
+                get_truong_test(scenario)
+                print('--- %s seconds ---' % (time.time() - start_time))
+            else:
+                start_time = time.time()
+                print('%s: building truong "%s" dataset using %d workers...' % (scenario, subscenario, NUM_WORKERS))
+                get_truong_dataset(scenario)
+                print('--- %s seconds ---' % (time.time() - start_time))
         elif dataset == 'shrestha':
-            start_time = time.time()
-            print('%s: building the shrestha dataset using %d workers...' % (scenario, NUM_WORKERS))
-            get_shrestha_dataset(scenario)
-            print('--- %s seconds ---' % (time.time() - start_time))
+            if TEST_FLAG:
+                start_time = time.time()
+                print('%s: building shrestha-test "%s" dataset using %d workers...' % (scenario, subscenario, NUM_WORKERS))
+                get_shrestha_test(scenario)
+                print('--- %s seconds ---' % (time.time() - start_time))
+            else:
+                start_time = time.time()
+                print('%s: building shrestha "%s" dataset using %d workers...' % (scenario, subscenario, NUM_WORKERS))
+                get_shrestha_dataset(scenario)
+                print('--- %s seconds ---' % (time.time() - start_time))
         else:
             print('Error: <dataset> can only be "truong" or "shrestha"!')
             sys.exit(0)
-        
     else:
         print('Error: <scenario> can only be "car" or "office"!')
         sys.exit(0)
+
