@@ -994,11 +994,15 @@ def get_truong_dataset(scenario):
     pool.close()
     pool.join()
 
+    tint_str = ''
+    if time_interval != '10sec':
+        tint_str = '_' + time_interval
+
     # Name of the resulting file
     if SUFFIX:
-        filename = dataset + '_' + scenario + '_' + SUFFIX + EXCL_STR + '.csv'
+        filename = dataset + '_' + scenario + '_' + SUFFIX + EXCL_STR + tint_str + '.csv'
     else:
-        filename = dataset + '_' + scenario + EXCL_STR + '.csv'
+        filename = dataset + '_' + scenario + EXCL_STR + tint_str + '.csv'
 
     # Path of the resulting file
     file_path = RESULT_PATH + res_folder + filename
@@ -1254,7 +1258,7 @@ def get_shrestha_dataset(scenario):
     reduce_str = ''
     if REDUCE_FLAG:
         reduce_str = '10th_'
-    
+
     # Name of the resulting file
     if SUFFIX:
         filename = reduce_str + dataset + '_' + scenario + '_' + SUFFIX + EXCL_STR + '.csv'
