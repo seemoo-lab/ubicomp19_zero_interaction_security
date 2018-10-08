@@ -37,19 +37,25 @@ if isempty(expFolder)
     return; 
 end
 
-% Load a timestamp from a file 
+% File name to read a timestamp from
 fileName = char(strcat(expPath, '/', expFolder.name));
-    
+
+% Open a file for reading
 fileID = fopen(fileName);
     
-% File should contain only one line with a timestamp of dateFormat
-tline = fgets(fileID);
-    
+% Read the first line from the file, removing new line characters
+startTime = fgetl(fileID);
+
+% Verify that startTime has required dateFormat (# of milliseconds is ignored)
+try
+    startTimeNum = datenum(startTime, dateFormat);
+catch
+	fprintf('File "%s" contains incorrect date format, must be "%s"\n', fileName, dateFormat);
+    return;
+end
+   
 % Close *.time file
 fclose(fileID);
-    
-% Remove new line character
-startTime = tline(1:end-1);
 
 % Precompute SPF filter bank
 spfFilterBankFile = strcat(expPath, '/', 'spfFilterBank.mat');
