@@ -68,8 +68,8 @@ fileInfo.file = strcat(pathNl2, ' (', noiseData.nL2Hash, ')');
 metadata.source_file = fileInfo;
 
 % Update feature struct: snapshot_len, noiseLevel array
-feature.n_noise_samples = length(nL2);
-feature.noise_samples = nL2;
+feature.n_noise_lev_samples = length(nL2);
+feature.noise_lev_samples = nL2;
 
 % Update output struct: contains both metadata and results
 output.metadata = metadata; 
