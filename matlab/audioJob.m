@@ -46,6 +46,9 @@ fileID = fopen(fileName);
 % Read the first line from the file, removing new line characters
 startTime = fgetl(fileID);
 
+% Close *.time file
+fclose(fileID);
+
 % Verify that startTime has required dateFormat (# of milliseconds is ignored)
 try
     startTimeNum = datenum(startTime, dateFormat);
@@ -53,10 +56,7 @@ catch
 	fprintf('File "%s" contains incorrect date format, must be "%s"\n', fileName, dateFormat);
     return;
 end
-   
-% Close *.time file
-fclose(fileID);
-
+ 
 % Precompute SPF filter bank
 spfFilterBankFile = strcat(expPath, '/', 'spfFilterBank.mat');
 if exist(spfFilterBankFile, 'file') == 2
