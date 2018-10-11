@@ -23,8 +23,11 @@ end
 % Initialize array of root sub-folder names (e.g. Sensor-1, ...)
 subFolderArr = strings(1, nSubfolders);
 
+% Make file format lowercase
+fileFormat = lower(fileFormat);
+
 % Check file format (we only support .wav or .flac formats)
-if ~strcmpi(fileFormat, 'wav') & ~strcmpi(fileFormat, 'flac')
+if ~strcmp(fileFormat, 'wav') & ~strcmp(fileFormat, 'flac')
     fprintf('Only "wav" or "flac" file formats are supported!\n');
     return;
 end
