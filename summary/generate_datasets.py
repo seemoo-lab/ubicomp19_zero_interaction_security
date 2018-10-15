@@ -1452,58 +1452,6 @@ def remove_duplicates_merged(file_path, csv_header, feature_dtypes):
 
 
 if __name__ == '__main__':
-    '''
-    # ROOT_PATH = 'D:/data1/car/'
-    # RESULT_PATH = 'C:/Users/mfomichev/Desktop/'
-    # scenario = 'car'
-    
-    # ROOT_PATH = '/root/data/car/'
-    # RESULT_PATH = '/root/'
-    # scenario = 'car'
-
-    ROOT_PATH = 'E:/OfficeExp/audio_results/'
-    RESULT_PATH = 'C:/Users/mfomichev/Desktop/'
-    scenario = 'office'
-
-    # ROOT_PATH = '/root/data/office/'
-    # RESULT_PATH = '/root/'
-    # scenario = 'office'
-
-    NUM_WORKERS = 1
-
-    # SENSORS.append(SENSORS_CAR1)
-    # SENSORS.append(SENSORS_CAR2)
-    # TIME_DELTA = 5
-    # TEST_FLAG = True
-    # TRAIN_FLAG = True
-    # if TEST_FLAG:
-    #     EXCL_STR = '_' + 'test'
-    # EXCL_SENSORS = list(EXCL_SENSORS_CAR)
-
-    SENSORS.append(SENSORS_OFFICE1)
-    SENSORS.append(SENSORS_OFFICE2)
-    SENSORS.append(SENSORS_OFFICE3)
-    TIME_DELTA = 6
-    TEST_FLAG = True
-    TRAIN_FLAG = True
-    if TEST_FLAG:
-        EXCL_STR = '_' + 'test'
-    EXCL_SENSORS = list(EXCL_SENSORS_OFFICE)
-
-    SUFFIX = ''
-
-    # City
-    INCLUDE_INTERVALS = [(datetime(2017, 11, 23, 14, 46, 0), datetime(2017, 11, 23, 15, 15, 0)),
-                         (datetime(2017, 11, 23, 15, 55, 0), datetime(2017, 11, 23, 16, 25, 0)),
-                         (datetime(2017, 11, 23, 17, 18, 0), datetime(2017, 11, 23, 17, 31, 0))]
-
-    get_truong_test(scenario)
-    # get_truong_dataset(scenario)
-
-    # get_shrestha_test(scenario)
-    # get_shrestha_dataset(scenario)
-    '''
-
     # Check the number of input args
     if len(sys.argv) == 6:
         # Assign input args
@@ -1532,7 +1480,7 @@ if __name__ == '__main__':
             print('Error: <num_workers> must be a positive number > 1!')
             sys.exit(0)
     else:
-        print('Usage: generate_datasets.py <root_path> <result_path> <dataset> <scenario> '
+        print('Usage: python3 generate_datasets.py <root_path> <result_path> <dataset> <scenario> '
               '<subscenario> (optional - <num_workers>) (optional - <train/test>)')
         sys.exit(0)
 
