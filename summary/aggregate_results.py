@@ -38,6 +38,7 @@ ROOT_PATH = ''
 # Intervals for subscenarios
 INCLUDE_INTERVALS = []
 
+# Flags for separate audio and sensor aggregation
 USE_AUDIO = True
 USE_SENSOR = True 
 
@@ -797,8 +798,8 @@ if __name__ == '__main__':
         # Assign input args
         ROOT_PATH = sys.argv[1]
         scenario = sys.argv[2]
-        sub_scenario = sys.argv[3]
-        SUFFIX = sub_scenario
+        subscenario = sys.argv[3]
+        SUFFIX = subscenario
         NUM_WORKERS = sys.argv[4]
 
         # Check if <num_workers> is an integer more than 2
@@ -812,29 +813,29 @@ if __name__ == '__main__':
             sys.exit(0)
 
         if scenario == 'car':
-            if sub_scenario == 'all':
+            if subscenario == 'all':
                 SUFFIX = ''
-            elif sub_scenario == 'city':
+            elif subscenario == 'city':
                 INCLUDE_INTERVALS = [(datetime(2017, 11, 23, 14, 46, 0), datetime(2017, 11, 23, 15, 15, 0)),
                                      (datetime(2017, 11, 23, 15, 55, 0), datetime(2017, 11, 23, 16, 25, 0)),
                                      (datetime(2017, 11, 23, 17, 18, 0), datetime(2017, 11, 23, 17, 31, 0))]
-            elif sub_scenario == 'highway':
+            elif subscenario == 'highway':
                 INCLUDE_INTERVALS = [(datetime(2017, 11, 23, 15, 18, 0), datetime(2017, 11, 23, 15, 55, 0)),
                                      (datetime(2017, 11, 23, 16, 25, 0), datetime(2017, 11, 23, 16, 43, 0)),
                                      (datetime(2017, 11, 23, 17, 5, 0), datetime(2017, 11, 23, 17, 18, 0))]
-            elif sub_scenario == 'static':
+            elif subscenario == 'static':
                 INCLUDE_INTERVALS = [(datetime(2017, 11, 23, 14, 40, 0), datetime(2017, 11, 23, 14, 46, 0)),
                                      (datetime(2017, 11, 23, 15, 15, 0), datetime(2017, 11, 23, 15, 18, 0)),
                                      (datetime(2017, 11, 23, 16, 43, 0), datetime(2017, 11, 23, 17, 5, 0)),
                                      (datetime(2017, 11, 23, 17, 31, 0), datetime(2017, 11, 23, 17, 50, 0))]
             else:
-                print('Error: <sub_scenario> (car) can only be "all", "city", "highway" or "static"!')
+                print('Error: <subscenario> (car) can only be "all", "city", "highway" or "static"!')
                 sys.exit(0)
 
         if scenario == 'office':
-            if sub_scenario == 'all':
+            if subscenario == 'all':
                 SUFFIX = ''
-            elif sub_scenario == 'night':
+            elif subscenario == 'night':
                 INCLUDE_INTERVALS = [(datetime(2017, 11, 27, 21, 0, 0), datetime(2017, 11, 28, 8, 0, 0)),
                                      (datetime(2017, 11, 28, 21, 0, 0), datetime(2017, 11, 29, 8, 0, 0)),
                                      (datetime(2017, 11, 29, 21, 0, 0), datetime(2017, 11, 30, 8, 0, 0)),
@@ -842,21 +843,21 @@ if __name__ == '__main__':
                                      (datetime(2017, 12, 1, 21, 0, 0), datetime(2017, 12, 2, 8, 0, 0)),
                                      (datetime(2017, 12, 2, 21, 0, 0), datetime(2017, 12, 3, 8, 0, 0)),
                                      (datetime(2017, 12, 3, 21, 0, 0), datetime(2017, 12, 4, 8, 0, 0))]
-            elif sub_scenario == 'weekday':
+            elif subscenario == 'weekday':
                 INCLUDE_INTERVALS = [(datetime(2017, 11, 27, 8, 0, 0), datetime(2017, 11, 27, 21, 0, 0)),
                                      (datetime(2017, 11, 28, 8, 0, 0), datetime(2017, 11, 28, 21, 0, 0)),
                                      (datetime(2017, 11, 29, 8, 0, 0), datetime(2017, 11, 29, 21, 0, 0)),
                                      (datetime(2017, 11, 30, 8, 0, 0), datetime(2017, 11, 30, 21, 0, 0)),
                                      (datetime(2017, 12, 1, 8, 0, 0), datetime(2017, 12, 1, 21, 0, 0)),
                                      (datetime(2017, 12, 4, 8, 0, 0), datetime(2017, 12, 4, 21, 0, 0))]
-            elif sub_scenario == 'weekend':
+            elif subscenario == 'weekend':
                 INCLUDE_INTERVALS = [(datetime(2017, 12, 2, 8, 0, 0), datetime(2017, 12, 2, 21, 0, 0)),
                                      (datetime(2017, 12, 3, 8, 0, 0), datetime(2017, 12, 3, 21, 0, 0))]
             else:
-                print('Error: <sub_scenario> (office) can only be "all", "night", "weekday" or "weekend"!')
+                print('Error: <subscenario> (office) can only be "all", "night", "weekday" or "weekend"!')
                 sys.exit(0)
     else:
-        print('Usage: aggregate_results.py <root_path> <scenario> <sub_scenario>'
+        print('Usage: python3 aggregate_results.py <root_path> <scenario> <subscenario>'
               '(optional - <num_workers>) (optional - <feature set (audio|sensor)>')
         sys.exit(0)
 
