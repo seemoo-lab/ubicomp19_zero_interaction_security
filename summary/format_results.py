@@ -673,13 +673,13 @@ if __name__ == '__main__':
         # Assign input args
         ROOT_PATH = sys.argv[1]
         scenario = sys.argv[2]
-        sub_scenario = sys.argv[3]
+        subscenario = sys.argv[3]
 
     elif len(sys.argv) == 5:
         # Assign input args
         ROOT_PATH = sys.argv[1]
         scenario = sys.argv[2]
-        sub_scenario = sys.argv[3]
+        subscenario = sys.argv[3]
         NUM_WORKERS = sys.argv[4]
 
         # Check if <num_workers> is an integer more than 2
@@ -692,7 +692,7 @@ if __name__ == '__main__':
             print('Error: <num_workers> must be a positive number > 1!')
             sys.exit(0)
     else:
-        print('Usage: format_results.py <root_path> <scenario> <sub_scenario> (optional - <num_workers>)')
+        print('Usage: python3 format_results.py <root_path> <scenario> <subscenario> (optional - <num_workers>)')
         sys.exit(0)
 
     # Get the number of cores on the system
@@ -725,21 +725,21 @@ if __name__ == '__main__':
         SENSORS.append(SENSORS_CAR1)
         SENSORS.append(SENSORS_CAR2)
 
-        # Check <sub_scenario>
-        if sub_scenario == 'all':
+        # Check <subscenario>
+        if subscenario == 'all':
             # Format features
             format_features('Summary.json')
-        elif sub_scenario == 'city':
+        elif subscenario == 'city':
             # Format features
             format_features('Summary-city.json')
-        elif sub_scenario == 'highway':
+        elif subscenario == 'highway':
             # Format features
             format_features('Summary-highway.json')
-        elif sub_scenario == 'static':
+        elif subscenario == 'static':
             # Format features
             format_features('Summary-static.json')
         else:
-            print('Error: <sub_scenario> (car) can only be "all", "city", "highway" or "static"!')
+            print('Error: <subscenario> (car) can only be "all", "city", "highway" or "static"!')
             sys.exit(0)
 
     elif scenario == 'office':
@@ -748,21 +748,21 @@ if __name__ == '__main__':
         SENSORS.append(SENSORS_OFFICE2)
         SENSORS.append(SENSORS_OFFICE3)
 
-        # Check <sub_scenario>
-        if sub_scenario == 'all':
+        # Check <subscenario>
+        if subscenario == 'all':
             # Format features
             format_features('Summary.json')
-        elif sub_scenario == 'night':
+        elif subscenario == 'night':
             # Format features
             format_features('Summary-night.json')
-        elif sub_scenario == 'weekday':
+        elif subscenario == 'weekday':
             # Format features
             format_features('Summary-weekday.json')
-        elif sub_scenario == 'weekend':
+        elif subscenario == 'weekend':
             # Format features
             format_features('Summary-weekend.json')
         else:
-            print('Error: <sub_scenario> (office) can only be "all", "night", "weekday" or "weekend"!')
+            print('Error: <subscenario> (office) can only be "all", "night", "weekday" or "weekend"!')
             sys.exit(0)
     else:
         print('Error: <scenario> can only be "power", "car" or "office"!')
