@@ -269,11 +269,11 @@ if __name__ == "__main__":
     bar_files = []
 
     # Find all accelerometer, gyroscope result files that are available
-    for temp_file in glob("Sensor-*/sensors/tmpData"):
+    for temp_file in glob("Sensor-*/sensors/tmpData*"):
         temp_files.append(temp_file)
-    for hum_file in glob("Sensor-*/sensors/humData"):
+    for hum_file in glob("Sensor-*/sensors/humData*"):
         hum_files.append(hum_file)
-    for bar_file in glob("Sensor-*/sensors/barData"):
+    for bar_file in glob("Sensor-*/sensors/barData*"):
         bar_files.append(bar_file)
 
     pool = Pool(processes=40, maxtasksperchild=1)
