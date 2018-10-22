@@ -42,7 +42,7 @@ class Measurement:
 
     def __init__(self, ident, rssi, time):
         """Initialize the measurement with identifier, rssi, and time"""
-        self.ident = ident
+        self.ident = ident.lower()
         self.rssi = rssi
         self.time = time
 
