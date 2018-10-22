@@ -17,7 +17,7 @@ p = parpool(c);
 %end
 
 % Version of the script
-scriptVersion = 'v1.2.2';
+scriptVersion = 'v1.2.3';
 
 % Date format for logs
 dateFormat = 'yyyy-mm-dd HH:MM:SS.FFF';
@@ -37,20 +37,26 @@ if isempty(expFolder)
     return; 
 end
 
-% Load a timestamp from a file 
+% File name to read a timestamp from
 fileName = char(strcat(expPath, '/', expFolder.name));
-    
+
+% Open a file for reading
 fileID = fopen(fileName);
     
-% File should contain only one line with a timestamp of dateFormat
-tline = fgets(fileID);
-    
+% Read the first line from the file, removing new line characters
+startTime = fgetl(fileID);
+
 % Close *.time file
 fclose(fileID);
-    
-% Remove new line character
-startTime = tline(1:end-1);
 
+% Verify that startTime has required dateFormat (# of milliseconds is ignored)
+try
+    startTimeNum = datenum(startTime, dateFormat);
+catch
+	fprintf('File "%s" contains incorrect date format, must be "%s"\n', fileName, dateFormat);
+    return;
+end
+ 
 % Precompute SPF filter bank
 spfFilterBankFile = strcat(expPath, '/', 'spfFilterBank.mat');
 if exist(spfFilterBankFile, 'file') == 2
@@ -265,7 +271,28 @@ for i = 1:length(timeInterval)
 
     % Array of delays between audio pairs in samples computed with xcorr
     audioPairDelay = zeros(nChunks, 1);
-
+	
+	% The commented part can be used to compute individual dealys between pairs of audio signals. 
+	% In this case we can acheive better alignment between two audio pairs. 
+	% Downside: the computations will take longer because the aligment will happen for all paris: 
+	% function 'alignTwoSignals' called in the individual feature functioins: 'audioFingerprint', 'soundProofXcorr'
+	% and 'timeFreqDistance'. Also, doing this kind of alignment is not realistic in the real deployment
+	% CURRENLY: we do not do the individual audio paris alignment, it can be enabled by 
+	% uncommenting the lines below: 278--288 . The alignment is currently done by finding 
+	% a lag between input audio sequences: S1 and S2 with xcorr (timeLag = 3; lines: 111--119) and shifting them.
+	
+	%{
+	% Here time lag should be samller as chunks can be small, e.g. 5 sec.
+    % Still not tight synch is assumed
+    timeLag = 1;
+    
+    % Find delays between audio chunks
+    fprintf('Computing delays...\n');
+    parfor j = 1:nChunks
+        audioPairDelay(j) = xcorrDelay(sig1{j}, sig2{j}, timeLag, Fs);
+    end
+	%}
+	
     % Construct commonData struct
     commonData = struct;
     commonData.Fs = Fs;

@@ -35,9 +35,10 @@ SUMMARY_FILE = 'Summary.json'
 # /Sensor-xx/audio/<audio_features>/<time_intervals>
 ROOT_PATH = ''
 
-
+# Intervals for subscenarios
 INCLUDE_INTERVALS = []
 
+# Flags for separate audio and sensor aggregation
 USE_AUDIO = True
 USE_SENSOR = True 
 
@@ -157,9 +158,6 @@ def process_folder(file_list, feature='', feature_class=''):
                 sys.exit(0)
             '''
 
-            if not feature_res:
-                print('empty dictionary is returned - do not save json file')
-
             # Get the file name, e.g. Sensor-02 - a key in the json_dict
             # (take different slashes into account: / or \)
             regex = re.escape(cur_folder) + r'(?:/|\\)(.*).json.gz'
@@ -170,9 +168,7 @@ def process_folder(file_list, feature='', feature_class=''):
                 print('process_folder: no match for the file name, exiting...')
                 sys.exit(0)
 
-            if feature_res:
-                # Add data to json_dict
-                json_dict[match.group(1).lower()] = feature_res
+            json_dict[match.group(1).lower()] = feature_res
 
         # Result that goes into JSON (name stolen from Max;))
         rv = {}
@@ -210,13 +206,12 @@ def process_folder(file_list, feature='', feature_class=''):
 
         # Save the summary JSON file
         if SUFFIX:
-            filename = log_path + "Summary-{}.json".format(SUFFIX)
+            filename = log_path + 'Summary-{}.json'.format(SUFFIX)
         else:
             filename = log_path + SUMMARY_FILE
         #print('Saving a file: %s' % filename)
-        if feature_res:
-            with open(filename, 'w') as f:
-                f.write(dumps(rv, indent=4, sort_keys=True))
+        with open(filename, 'w') as f:
+            f.write(dumps(rv, indent=4, sort_keys=True))
 
     except Exception as e:
         print(e)
@@ -262,8 +257,9 @@ def process_afp(json_file):
             continue
         afp_similarity_list.append(v['fingerprints_similarity_percent'])
     if len(afp_similarity_list) == 0:
-        print("process_afp: No applicable data, skipping", json_file)
-        return {}
+        #print("process_afp: No applicable data, skipping", json_file)
+        res_dict['fingerprints_similarity_percent'] = 'no overlap'
+        return res_dict
 
     # Convert list to np array
     afp_similarity_array = np.array(list(afp_similarity_list), dtype=float)
@@ -289,14 +285,19 @@ def process_nfp(json_file):
         json = loads(f.read())
         results = json['results']
 
+    # Count valid samples
+    record_count = 0
+
     # Store 'fingerprints_similarity_percent' fields in the list
     for k, v in sorted(results.items()):
         if not include_result(k):
             continue
         nfp_similarity = v['fingerprints_similarity_percent']
-    if len(nfp_similarity) == 0:
-        print("process_nfp: No applicable data, skipping", json_file)
-        return {}
+        record_count += 1
+    if record_count == 0:
+        #print("process_nfp: No applicable data, skipping", json_file)
+        res_dict['fingerprints_similarity_percent'] = 'no overlap'
+        return res_dict
 
     # Add fp_sim_dict to the res_dict
     res_dict['fingerprints_similarity_percent'] = nfp_similarity
@@ -317,6 +318,23 @@ def process_spf(json_file):
         results = json['results']
         res_len = len(results)
 
+    # Get list of band names
+    band_dict = results[next(iter(sorted(results)))]['xcorr_freq_bands']
+    band_list = list(band_dict.keys())
+
+    # Sort band list
+    band_list.sort()
+
+    # Check if we have a legitimate number of bands
+    if len(band_list) != 20:
+        print('Error in file %s, number of bands must be 20!' % json_file)
+        return
+
+    # Initialize list of lists for spf band xcorr scores
+    band_lists = [[] for i in range(len(band_list))]
+
+    res_count = 0
+
     # Store 'max_xcorr' fields in the list
     for k, v in sorted(results.items()):
         if not include_result(k):
@@ -326,9 +344,16 @@ def process_spf(json_file):
             # Take into account the power threshold
             if v['power1_db'] >= 40 and v['power2_db'] >= 40:
                 spf_xcorr_list.append(v['max_xcorr'])
+                for key, val in sorted(v['xcorr_freq_bands'].items()):
+                    idx = get_band_number(key)
+                    band_lists[idx-1].append(val)
+
+        res_count += 1
+
     if len(spf_xcorr_list) == 0:
-        print("process_spf: No applicable data, skipping", json_file)
-        return {}
+        #print("process_spf: No applicable data, skipping", json_file)
+        res_dict['max_xcorr'] = 'no overlap'
+        return res_dict
 
     # Convert list to np array
     spf_xcorr_array = np.array(list(spf_xcorr_list), dtype=float)
@@ -337,12 +362,31 @@ def process_spf(json_file):
     xcorr_dict = compute_metrics(spf_xcorr_array)
 
     # Add threshold percent to xcorr_dict
-    xcorr_dict['threshold_percent'] = (len(spf_xcorr_list) / res_len) * 100
+    xcorr_dict['threshold_percent'] = (len(spf_xcorr_list) / res_count) * 100
+    #xcorr_dict['threshold_percent'] = (len(spf_xcorr_list) / res_len) * 100
 
     # Add xcorr_dict to the res_dict
     res_dict['max_xcorr'] = xcorr_dict
 
+    # Index for band in band_lists
+    idx = 0
+
+    # Iterate over all bands
+    for band in band_list:
+        spf_band_array = np.array(list(band_lists[idx]), dtype=float)
+        res_dict[band] = compute_metrics(spf_band_array)
+        idx += 1
+
     return res_dict
+
+
+def get_band_number(spf_band):
+
+    # Split the band name, e.g. 01_50 and convert 01 to int index
+    res = spf_band.split('_')
+    res = int(res[0])
+
+    return res
 
 
 def process_tfd(json_file):
@@ -367,8 +411,10 @@ def process_tfd(json_file):
             tfd_xcorr_list.append(v['max_xcorr'])
             tfd_tfd_list.append(v['time_freq_dist'])
     if len(tfd_xcorr_list) == 0:
-        print("process_tfd: No applicable data, skipping", json_file)
-        return {}
+        #print("process_tfd: No applicable data, skipping", json_file)
+        res_dict['max_xcorr'] = 'no overlap'
+        res_dict['time_freq_dist'] = 'no overlap'
+        return res_dict
 
     # Convert xcorr and tfd lists to np arrays
     tfd_xcorr_array = np.array(list(tfd_xcorr_list), dtype=float)
@@ -411,8 +457,10 @@ def process_ble(json_file):
                 ble_eucl_list.append(v['euclidean'])
                 ble_jacc_list.append(v['jaccard'])
     if len(ble_eucl_list) == 0:
-        print("process_ble: No applicable data, skipping", json_file)
-        return {}
+        #print("process_ble: No applicable data, skipping", json_file)
+        res_dict['euclidean'] = 'no overlap'
+        res_dict['jaccard'] = 'no overlap'
+        return res_dict
 
     # Convert eucl and jacc lists to np arrays
     ble_eucl_array = np.array(list(ble_eucl_list), dtype=float)
@@ -528,8 +576,9 @@ def process_phy(json_file):
             continue
         phy_ham_list.append(v)
     if len(phy_ham_list) == 0:
-        print("process_phy: No applicable data, skipping", json_file)
-        return {}
+        #print("process_phy: No applicable data, skipping", json_file)
+        res_dict['hamming_dist'] = 'no overlap'
+        return res_dict
 
     # Convert hamming_dist to np array
     phy_ham_array = np.array(list(phy_ham_list), dtype=float)
@@ -637,6 +686,7 @@ def aggregate_non_interval_features(feature, feature_class):
 def aggregate_features():
 
     if USE_AUDIO:
+
         # Audio feature
         feature = 'audioFingerprint'
 
@@ -666,6 +716,16 @@ def aggregate_features():
 
         # Aggregate TFD
         print('aggregating TFD...')
+        aggregate_interval_features(feature, feature_class)
+
+        # Audio feature
+        feature = 'soundProofXcorr'
+
+        # Feature class
+        feature_class = 'audio'
+
+        # Aggregate SPF
+        print('aggregating SPF...')
         aggregate_interval_features(feature, feature_class)
 
     if USE_SENSOR:
@@ -738,9 +798,9 @@ if __name__ == '__main__':
         # Assign input args
         ROOT_PATH = sys.argv[1]
         scenario = sys.argv[2]
-        NUM_WORKERS = sys.argv[3]
-        subset = sys.argv[4]
-        SUFFIX = subset
+        subscenario = sys.argv[3]
+        SUFFIX = subscenario
+        NUM_WORKERS = sys.argv[4]
 
         # Check if <num_workers> is an integer more than 2
         try:
@@ -753,24 +813,29 @@ if __name__ == '__main__':
             sys.exit(0)
 
         if scenario == 'car':
-            if subset == 'static':
+            if subscenario == 'all':
+                SUFFIX = ''
+            elif subscenario == 'city':
+                INCLUDE_INTERVALS = [(datetime(2017, 11, 23, 14, 46, 0), datetime(2017, 11, 23, 15, 15, 0)),
+                                     (datetime(2017, 11, 23, 15, 55, 0), datetime(2017, 11, 23, 16, 25, 0)),
+                                     (datetime(2017, 11, 23, 17, 18, 0), datetime(2017, 11, 23, 17, 31, 0))]
+            elif subscenario == 'highway':
+                INCLUDE_INTERVALS = [(datetime(2017, 11, 23, 15, 18, 0), datetime(2017, 11, 23, 15, 55, 0)),
+                                     (datetime(2017, 11, 23, 16, 25, 0), datetime(2017, 11, 23, 16, 43, 0)),
+                                     (datetime(2017, 11, 23, 17, 5, 0), datetime(2017, 11, 23, 17, 18, 0))]
+            elif subscenario == 'static':
                 INCLUDE_INTERVALS = [(datetime(2017, 11, 23, 14, 40, 0), datetime(2017, 11, 23, 14, 46, 0)),
                                      (datetime(2017, 11, 23, 15, 15, 0), datetime(2017, 11, 23, 15, 18, 0)),
                                      (datetime(2017, 11, 23, 16, 43, 0), datetime(2017, 11, 23, 17, 5, 0)),
                                      (datetime(2017, 11, 23, 17, 31, 0), datetime(2017, 11, 23, 17, 50, 0))]
-            elif subset == 'city':
-                INCLUDE_INTERVALS = [(datetime(2017, 11, 23, 14, 46, 0), datetime(2017, 11, 23, 15, 15, 0)),
-                                     (datetime(2017, 11, 23, 15, 55, 0), datetime(2017, 11, 23, 16, 25, 0)),
-                                     (datetime(2017, 11, 23, 17, 18, 0), datetime(2017, 11, 23, 17, 31, 0))]
-            elif subset == 'highway':
-                INCLUDE_INTERVALS = [(datetime(2017, 11, 23, 15, 18, 0), datetime(2017, 11, 23, 15, 55, 0)),
-                                     (datetime(2017, 11, 23, 16, 25, 0), datetime(2017, 11, 23, 16, 43, 0)),
-                                     (datetime(2017, 11, 23, 17, 5, 0), datetime(2017, 11, 23, 17, 18, 0))]
             else:
-                print("Unknown subset, must be one of static, city, highway for car scenario!")
+                print('Error: <subscenario> (car) can only be "all", "city", "highway" or "static"!')
                 sys.exit(0)
+
         if scenario == 'office':
-            if subset == 'night':
+            if subscenario == 'all':
+                SUFFIX = ''
+            elif subscenario == 'night':
                 INCLUDE_INTERVALS = [(datetime(2017, 11, 27, 21, 0, 0), datetime(2017, 11, 28, 8, 0, 0)),
                                      (datetime(2017, 11, 28, 21, 0, 0), datetime(2017, 11, 29, 8, 0, 0)),
                                      (datetime(2017, 11, 29, 21, 0, 0), datetime(2017, 11, 30, 8, 0, 0)),
@@ -778,22 +843,22 @@ if __name__ == '__main__':
                                      (datetime(2017, 12, 1, 21, 0, 0), datetime(2017, 12, 2, 8, 0, 0)),
                                      (datetime(2017, 12, 2, 21, 0, 0), datetime(2017, 12, 3, 8, 0, 0)),
                                      (datetime(2017, 12, 3, 21, 0, 0), datetime(2017, 12, 4, 8, 0, 0))]
-            elif subset == "weekday":
+            elif subscenario == 'weekday':
                 INCLUDE_INTERVALS = [(datetime(2017, 11, 27, 8, 0, 0), datetime(2017, 11, 27, 21, 0, 0)),
                                      (datetime(2017, 11, 28, 8, 0, 0), datetime(2017, 11, 28, 21, 0, 0)),
                                      (datetime(2017, 11, 29, 8, 0, 0), datetime(2017, 11, 29, 21, 0, 0)),
                                      (datetime(2017, 11, 30, 8, 0, 0), datetime(2017, 11, 30, 21, 0, 0)),
                                      (datetime(2017, 12, 1, 8, 0, 0), datetime(2017, 12, 1, 21, 0, 0)),
                                      (datetime(2017, 12, 4, 8, 0, 0), datetime(2017, 12, 4, 21, 0, 0))]
-            elif subset == "weekend":
+            elif subscenario == 'weekend':
                 INCLUDE_INTERVALS = [(datetime(2017, 12, 2, 8, 0, 0), datetime(2017, 12, 2, 21, 0, 0)),
                                      (datetime(2017, 12, 3, 8, 0, 0), datetime(2017, 12, 3, 21, 0, 0))]
             else:
-                print("Unknown subset, must be one of night, weekday, weekend for office scenario!")
+                print('Error: <subscenario> (office) can only be "all", "night", "weekday" or "weekend"!')
                 sys.exit(0)
-
     else:
-        print('Usage: aggregate_results.py <root_path> <scenario> (optional - <num_workers>) (optional - <subset>) (optional - <feature set (audio|sensor)>')
+        print('Usage: python3 aggregate_results.py <root_path> <scenario> <subscenario>'
+              '(optional - <num_workers>) (optional - <feature set (audio|sensor)>')
         sys.exit(0)
 
     if len(sys.argv) == 6:
@@ -802,7 +867,7 @@ if __name__ == '__main__':
         elif sys.argv[5] == 'sensor':
             USE_AUDIO = False
         else:
-            print("Error, feature set must be one of audio, sensor")
+            print('Error: feature set must be either "audio" or "sensor"!')
             sys.exit(0)
 
     # Get the number of cores on the system

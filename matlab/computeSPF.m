@@ -56,6 +56,12 @@ metadata.generator_script = strcat('audioJob.m', '/', mfilename);
 % Metadata struct: processing_start
 metadata.processing_start = datestr(datetime('now'), commonData.dateFormat);
 
+% Compute power in dB of two audio chunks 
+% 32768 is used to get back from 'double' to 'native' (16 bit values, see 
+% https://mathworks.com/help/matlab/ref/audioread.html#btiabil-1-dataType)
+powerS1 = pow2db(sum(abs(int16(S1 * 32768)).^2)/length(S1));
+powerS2 = pow2db(sum(abs(int16(S2 * 32768)).^2)/length(S2));
+
 % Compute SPF
 [maxXCorr, xcorrFreqBands] = soundProofXcorr(S1, S2, sampleDiff, ...
     commonData.Fs, spfFilterBank);
@@ -74,6 +80,8 @@ if sampleDiff ~= 0
     feature.delay_xcorr_sec = sampleDiff/commonData.Fs;
 end
 feature.max_xcorr = maxXCorr;
+feature.power1_db = powerS1;
+feature.power2_db = powerS2;
 feature.xcorr_freq_bands = xcorrFreqBands; 
 
 % Hashmap: "<timestamp>:" "<feature_struct>"

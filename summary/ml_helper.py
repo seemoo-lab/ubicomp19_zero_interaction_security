@@ -1,5 +1,9 @@
 import sys
 import os
+from dateutil import parser
+from datetime import datetime
+from json import dumps, loads
+import math
 
 def from_arff():
     filename = 'C:/Users/mfomichev/Desktop/shrestha_full.txt'
@@ -184,7 +188,73 @@ def to_csv(filename, num_features):
         csv_list = map(lambda line: line + '\n', csv_list)
         f.writelines(csv_list)
 
+
+INCLUDE_INTERVALS = [(datetime(2017, 12, 2, 8, 0, 0), datetime(2017, 12, 2, 21, 0, 0)),
+                     (datetime(2017, 12, 3, 8, 0, 0), datetime(2017, 12, 3, 21, 0, 0))]
+
+
+def include_result(time):
+    if INCLUDE_INTERVALS == []:
+        return True
+    dt = parser.parse(time)
+    for int_start, int_end in INCLUDE_INTERVALS:
+        if int_start <= dt <= int_end:
+            return True
+    return False
+
+
+RES_FILES = ['5_Sensor-15.json', '6_Sensor-15.json', '7_Sensor-15.json']
+
 if __name__ == '__main__':
+
+    root_path = 'C:/Users/mfomichev/Desktop/'
+
+    spf_xcorr_list = []
+    all_count = 0
+    in_count = 0
+
+    for res_file in RES_FILES:
+
+        # Json file name
+        json_file = root_path + res_file
+
+        # Open and read the GZIP file
+        with open(json_file, 'r') as f:
+            json = loads(f.read())
+            results = json['results']
+
+        # Store 'max_xcorr' fields in the list
+        for k, v in sorted(results.items()):
+            if not include_result(k):
+                continue
+
+            # print(k, res_file)
+
+            # Take into account accident with Sensor-07
+            if not math.isnan(float(v['max_xcorr'])):
+                # Take into account the power threshold
+                if v['power1_db'] >= 40 and v['power2_db'] >= 40:
+                    spf_xcorr_list.append(v['max_xcorr'])
+
+            all_count += 1
+
+    print()
+
+    '''
+    res_count = 0
+
+    for i in range(0,10):
+        if i != 5:
+            continue
+    res_count += 1
+
+    print(res_count)
+
+    print()
+    '''
+
+
+    '''
     # Check the number of input args
     if len(sys.argv) == 3:
         # Assign input args
@@ -206,3 +276,4 @@ if __name__ == '__main__':
     else:
         print('Error: <dataset_type> can only be "small" or "big"!')
         sys.exit(0)
+    '''
