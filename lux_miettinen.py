@@ -196,7 +196,7 @@ if __name__ == "__main__":
     lux_files = []
 
     # Find all WiFi and BLE result files that are available
-    for lux_file in glob("Sensor-*/sensors/luxData.clean"):
+    for lux_file in glob("Sensor-*/sensors/luxData.*clean"):
         lux_files.append(lux_file)
 
     pool = Pool(processes=cpu_count(), maxtasksperchild=1)
