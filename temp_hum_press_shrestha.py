@@ -53,7 +53,7 @@ def read_results(filename):
             try:
                 value, timestring = line.strip().split(" ")
             except ValueError:
-                print("[WARN] Error while parsing line, skipping")
+                print("[WARN] Error while parsing line in file %s, skipping" % filename)
                 continue
             # Cast read value to float
             value = float(value)
