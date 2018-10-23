@@ -19,9 +19,10 @@ for wi_file in glob("Sensor-*/wifi/wifi.txt"):
             # Parse out information from the line
             try:
                 mac, rssi, date = line.strip().split(" ")
+                mac = mac.lower()
             except ValueError:
                 fo2.write(line)
-                continue 
+                continue
             # Check if we have seen the MAC before - if not, assign unique ID
             if mac not in WIFI_MAC_MAP:
                 WIFI_MAC_MAP[mac] = WIFI_MAC_CTR
@@ -38,6 +39,7 @@ for ble_file in glob("Sensor-*/ble/ble.txt"):
             # Parse out information from the line
             try:
                 mac, rssi, date = line.strip().split(" ")
+                mac = mac.lower()
             except ValueError:
                 fo2.write(line)
                 continue

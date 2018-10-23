@@ -42,7 +42,7 @@ class Measurement:
 
     def __init__(self, ident, rssi, time):
         """Initialize the measurement with identifier, rssi, and time"""
-        self.ident = ident
+        self.ident = ident.lower()
         self.rssi = rssi
         self.time = time
 
@@ -531,20 +531,20 @@ if __name__ == "__main__":
 # ---------
 def test_intersection():
     # Prepare input values
-    pop1 = [Measurement("Eduroam", -80, datetime.now()),
-            Measurement("Hans", -76, datetime.now()),
-            Measurement("TalonTestbed", -60, datetime.now())]
-    pop2 = [Measurement("Eduroam", -90, datetime.now()),
-            Measurement("Hans", -50, datetime.now())]
+    pop1 = [Measurement("eduroam", -80, datetime.now()),
+            Measurement("hans", -76, datetime.now()),
+            Measurement("talontestbed", -60, datetime.now())]
+    pop2 = [Measurement("eduroam", -90, datetime.now()),
+            Measurement("hans", -50, datetime.now())]
     # Compute intersection
     intersect = intersection(pop1, pop2)
     # Ensure results are sane
     assert len(intersect) == 2
     for element in intersect:
-        if element.ident == "Eduroam":
+        if element.ident == "eduroam":
             assert element.rssi1 == -80
             assert element.rssi2 == -90
-        elif element.ident == "Hans":
+        elif element.ident == "hans":
             assert element.rssi1 == -76
             assert element.rssi2 == -50
         else:
@@ -578,16 +578,16 @@ def test_union():
     # Ensure results are sane
     assert len(set_union) == 4
     for element in set_union:
-        if element.ident == "Eduroam":
+        if element.ident == "eduroam":
             assert element.rssi1 == -80
             assert element.rssi2 == -90
-        elif element.ident == "Hans":
+        elif element.ident == "hans":
             assert element.rssi1 == -76
             assert element.rssi2 == -50
-        elif element.ident == "TalonTestbed":
+        elif element.ident == "talontestbed":
             assert element.rssi1 == -60
             assert element.rssi2 == -100
-        elif element.ident == "Freifunk":
+        elif element.ident == "freifunk":
             assert element.rssi1 == -100
             assert element.rssi2 == -93
         else:
@@ -602,9 +602,9 @@ def test_sorted_list():
             Measurement("TalonTestbed", -60, datetime.now()),
             Measurement("Hans", -76, datetime.now())]
     pop_sorted = sorted_list(pop1, intersection(pop1, pop2))
-    assert pop_sorted[0].ident == "TalonTestbed"
-    assert pop_sorted[1].ident == "Hans"
-    assert pop_sorted[2].ident == "Eduroam"
+    assert pop_sorted[0].ident == "talontestbed"
+    assert pop_sorted[1].ident == "hans"
+    assert pop_sorted[2].ident == "eduroam"
 
 
 def test_timeslot_list():

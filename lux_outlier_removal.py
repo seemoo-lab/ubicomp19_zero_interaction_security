@@ -10,7 +10,7 @@ any issues with the accuracy of the data.
 from glob import glob
 
 # Blind WiFi files
-for lux_file in glob("Sensor-*/sensors/luxData"):
+for lux_file in glob("Sensor-*/sensors/luxData*"):
     print(lux_file)
     values = []
     with open(lux_file, 'r') as fo:
