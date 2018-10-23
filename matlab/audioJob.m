@@ -23,8 +23,7 @@ scriptVersion = 'v1.2.3';
 dateFormat = 'yyyy-mm-dd HH:MM:SS.FFF';
 
 % Array of time intervals to compute on in sec
-% timeInterval = [5 10 15 30 60 120];
-timeInterval = [10 30];
+timeInterval = [5 10 15 30 60 120];
 
 % Basic sampling frequency with which we are working
 Fs = 16000;
