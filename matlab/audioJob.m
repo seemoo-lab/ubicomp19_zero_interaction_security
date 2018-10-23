@@ -115,7 +115,7 @@ hourS1 = S1(1:hourLen);
 hourS2 = S2(1:hourLen);
     
 % Time lag in sec to bind xcorrDelay computation: we assume devices
-% should be able to sycn at some point in time, but not tightly
+% should be able to sync at some point in time, but not tightly
 timeLag = 3;
     
 % Find a delay between two 1-hour chunks of two signals

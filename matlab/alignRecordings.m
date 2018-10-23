@@ -119,10 +119,10 @@ for i = 1:nSubfolders
         fprintf('Cannot find *.%s file in: %s\n', audioTSPath, fileFormat);
         return; 
     end
-
+    
     % Name of audio file
     fileName = char(strcat(audioTSPath, '/', audioFolder.name));
-    
+
     % Load signal
     sig = loadSignal(fileName, dataType);
 
@@ -191,8 +191,13 @@ for i = 1:nSubfolders
     if sigSampleDelays(i) ~= 0
         sig = sig(sigSampleDelays(i):end);
     end
-
-    sig = sig(1:minSigLen);
+    
+    % Cases with incomplete signals
+    if length(sig) < minSigLen
+        sig = sig(1:end);
+    else
+        sig = sig(1:minSigLen);
+    end
     
     % New file name of alinged audio
     aligFileName = extractBetween(fileName, 'Sensor-', '/audio');
