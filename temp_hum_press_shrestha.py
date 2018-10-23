@@ -98,7 +98,7 @@ def sync_populations(pop1, pop2, sensor1="", sensor2=""):
         if acceptable_difference(pop1[p1_ctr], pop2[p2_ctr]):
             # If the sync was bad before, log recovery
             if deteriorate:
-                print("Sync reestablished:", pop1[p1_ctr].time, pop2[p2_ctr].time)
+                # print("Sync reestablished:", pop1[p1_ctr].time, pop2[p2_ctr].time)
                 deteriorate = False
             # The two elements have an acceptable difference, save them
             rv_1.append(pop1[p1_ctr])
@@ -109,7 +109,7 @@ def sync_populations(pop1, pop2, sensor1="", sensor2=""):
         else:
             # Check if the sync was bad before, log if it is newly bad
             if not deteriorate:
-                print("Sync deteriorated:", pop1[p1_ctr].time, pop2[p2_ctr].time)
+                # print("Sync deteriorated:", pop1[p1_ctr].time, pop2[p2_ctr].time)
                 deteriorate = True
             # The difference is unacceptably high, we need to reconcile
             # Find the earlier timestamp and increment the index of that list
