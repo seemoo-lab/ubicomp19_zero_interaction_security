@@ -23,7 +23,8 @@ scriptVersion = 'v1.2.3';
 dateFormat = 'yyyy-mm-dd HH:MM:SS.FFF';
 
 % Array of time intervals to compute on in sec
-timeInterval = [5 10 15 30 60 120];
+% timeInterval = [5 10 15 30 60 120];
+timeInterval = [10 30];
 
 % Basic sampling frequency with which we are working
 Fs = 16000;
@@ -320,49 +321,49 @@ for i = 1:length(timeInterval)
     % Merge JSONs and save the result back to the network share
     localMerge(localPath, nameS2, savePath);
   
-    % Change the feature log folder: SPF
-    commonData.feature = strcat(logFolders{2}, '/', ...
-        num2str(floor(timeInterval(i)/timeDiv)), timeStr);
-
-    % Compute SPF
-    fprintf('Computing SPF...\n');
-    parfor j = 1:nChunks
-        computeSPF(sig1{j}, sig2{j}, audioPairDelay(j), ...
-        spfFilterBank, nameSlice1(j), nameSlice2(j), commonData, j);
-    end
-    
-    % Construct savePath
-    savePath = strcat(expPath, '/', res{1}, '/', res{2}, '/', ...
-        commonData.feature); 
-    
-    % Merge JSONs and save the result back to the network share
-    localMerge(localPath, nameS2, savePath);
-    
-	% Change the feature log folder: AFP
-	commonData.feature = strcat(logFolders{3}, '/', ...
-		num2str(floor(timeInterval(i)/timeDiv)), timeStr);
-
-	% Compute AFP
-	fprintf('Computing AFP...\n');
-    parfor j = 1:nChunks
-		computeAFP(sig1{j}, sig2{j}, audioPairDelay(j), ...
-		afpFilterBank, nameSlice1(j), nameSlice2(j), commonData, j);
-    end
-	
-    % Construct savePath
-    savePath = strcat(expPath, '/', res{1}, '/', res{2}, '/', ...
-        commonData.feature); 
-    
-    % Merge JSONs and save the result back to the network share
-    localMerge(localPath, nameS2, savePath);
-    
-    % Change the feature log folder: NFP
-    noiseData.feature = strcat(logFolders{4}, '/', ...
-        num2str(floor(timeInterval(i)/timeDiv)), timeStr);
-    
-    % Compute NFP
-    fprintf('Computing NFP...\n');
-    computeNFP(nL1, nL2, timeInterval(i), noiseData);
+%     % Change the feature log folder: SPF
+%     commonData.feature = strcat(logFolders{2}, '/', ...
+%         num2str(floor(timeInterval(i)/timeDiv)), timeStr);
+% 
+%     % Compute SPF
+%     fprintf('Computing SPF...\n');
+%     parfor j = 1:nChunks
+%         computeSPF(sig1{j}, sig2{j}, audioPairDelay(j), ...
+%         spfFilterBank, nameSlice1(j), nameSlice2(j), commonData, j);
+%     end
+%     
+%     % Construct savePath
+%     savePath = strcat(expPath, '/', res{1}, '/', res{2}, '/', ...
+%         commonData.feature); 
+%     
+%     % Merge JSONs and save the result back to the network share
+%     localMerge(localPath, nameS2, savePath);
+%     
+% 	% Change the feature log folder: AFP
+% 	commonData.feature = strcat(logFolders{3}, '/', ...
+% 		num2str(floor(timeInterval(i)/timeDiv)), timeStr);
+% 
+% 	% Compute AFP
+% 	fprintf('Computing AFP...\n');
+%     parfor j = 1:nChunks
+% 		computeAFP(sig1{j}, sig2{j}, audioPairDelay(j), ...
+% 		afpFilterBank, nameSlice1(j), nameSlice2(j), commonData, j);
+%     end
+% 	
+%     % Construct savePath
+%     savePath = strcat(expPath, '/', res{1}, '/', res{2}, '/', ...
+%         commonData.feature); 
+%     
+%     % Merge JSONs and save the result back to the network share
+%     localMerge(localPath, nameS2, savePath);
+%     
+%     % Change the feature log folder: NFP
+%     noiseData.feature = strcat(logFolders{4}, '/', ...
+%         num2str(floor(timeInterval(i)/timeDiv)), timeStr);
+%     
+%     % Compute NFP
+%     fprintf('Computing NFP...\n');
+%     computeNFP(nL1, nL2, timeInterval(i), noiseData);
        
 end
 
