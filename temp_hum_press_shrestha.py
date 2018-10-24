@@ -198,11 +198,6 @@ def process_temp(files_tuple):
     with open(path, "w") as fo:
         fo.write(dumps(rv, indent=4, sort_keys=True))
 
-    # Redundant save for the other direction (Sensor2 -> Sensor1)
-    path = derive_result_path(no2, "temp", SCRIPT, no1)
-    with open(path, "w") as fo:
-        fo.write(dumps(rv, indent=4, sort_keys=True))
-
 
 def process_hum(files_tuple):
     pop1, pop2 = files_tuple
@@ -224,11 +219,6 @@ def process_hum(files_tuple):
 
     # Save result json to file
     path = derive_result_path(no1, "hum", SCRIPT, no2)
-    with open(path, "w") as fo:
-        fo.write(dumps(rv, indent=4, sort_keys=True))
-
-    # Redundant save for the other direction (Sensor2 -> Sensor1)
-    path = derive_result_path(no2, "hum", SCRIPT, no1)
     with open(path, "w") as fo:
         fo.write(dumps(rv, indent=4, sort_keys=True))
 
@@ -256,11 +246,6 @@ def process_bar(files_tuple):
     with open(path, "w") as fo:
         fo.write(dumps(rv, indent=4, sort_keys=True))
 
-    # Redundant save for the other direction (Sensor2 -> Sensor1)
-    path = derive_result_path(no2, "press", SCRIPT, no1)
-    with open(path, "w") as fo:
-        fo.write(dumps(rv, indent=4, sort_keys=True))
-
 
 if __name__ == "__main__":
     # Prepare variables to hold stuff
@@ -269,11 +254,11 @@ if __name__ == "__main__":
     bar_files = []
 
     # Find all accelerometer, gyroscope result files that are available
-    for temp_file in glob("Sensor-*/sensors/tmpData*"):
+    for temp_file in sorted(glob("Sensor-*/sensors/tmpData*")):
         temp_files.append(temp_file)
-    for hum_file in glob("Sensor-*/sensors/humData*"):
+    for hum_file in sorted(glob("Sensor-*/sensors/humData*")):
         hum_files.append(hum_file)
-    for bar_file in glob("Sensor-*/sensors/barData*"):
+    for bar_file in sorted(glob("Sensor-*/sensors/barData*")):
         bar_files.append(bar_file)
 
     pool = Pool(processes=cpu_count(), maxtasksperchild=1)
