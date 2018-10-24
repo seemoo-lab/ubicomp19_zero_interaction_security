@@ -32,6 +32,15 @@ SENSORS_OFFICE3 = ['17', '18', '19', '20', '21', '22', '23', '24']
 # Sensors to exclude from Office 1, 2 and 3 ('hidden' devices)
 EXCL_SENSORS_OFFICE = ['07', '15', '24']
 
+# Sensor mapping: mobile devices experiment (24 sensors)
+# Static devices in rooms 1, 2 and 3
+SENSORS_STATIC1 = ['02', '03', '04']
+SENSORS_STATIC2 = ['11', '12', '13', '14']
+SENSORS_STATIC3 = ['18', '19', '20', '21']
+
+# Mobile nodes with changing location
+SENSORS_MOBILE = ['05', '06', '07', '08', '09', '10', '15', '16', '17', '22', '23', '24', '25']
+
 # List of sensors to be excluded
 EXCL_SENSORS = []
 
@@ -170,17 +179,27 @@ def process_dataset(json_file, dataset='', feature='', time_interval='', root_pa
 
         sensor = match.group(1)
 
-        # Binary classification label (0 - non-colocated or 1 - co-located) for csv format
-        label = '0'
+        # If we have a mobile device scenario - label will be a list, otherwise a string
+        if sensors[0] == SENSORS_STATIC1 and sensors[-1] == SENSORS_MOBILE:
+            # Label will contain sensor pair, e.g. 02,03
+            label = []
+            label.append(target_sensor)
+            label.append(sensor)
 
-        # Iterate over list of sensors' lists
-        for sensor_list in sensors:
-            # Check if both target sensor and sensor are in sensor_list
-            if target_sensor in sensor_list and sensor in sensor_list:
-                # Set label to 1, means co-located
-                label = '1'
-                # Get out from the loop
-                break
+            # Get dictionary out of include intervals
+            incl_intervals = incl_intervals[0]
+        else:
+            # Binary classification label (0 - non-colocated or 1 - co-located) for csv format
+            label = '0'
+
+            # Iterate over list of sensors' lists
+            for sensor_list in sensors:
+                # Check if both target sensor and sensor are in sensor_list
+                if target_sensor in sensor_list and sensor in sensor_list:
+                    # Set label to 1, means co-located
+                    label = '1'
+                    # Get out from the loop
+                    break
 
         # Temporary path to store intermediate results
         tmp_path = tmp_path + target_sensor + '_' + sensor + '.csv'
@@ -209,7 +228,7 @@ def process_dataset(json_file, dataset='', feature='', time_interval='', root_pa
                 # 7_144-168h/Sensor-01, thus all subscenarios are covered
                 json_file = {}
 
-                if incl_intervals:
+                if incl_intervals and isinstance(incl_intervals, list):
                     # Update json_file (w.r.t. subscenario)
                     for k, v in sorted(audio_res.items()):
                         # Check the subscenario
@@ -255,7 +274,7 @@ def build_truong_dataset(json_file, ble_path, wifi_path, tmp_path, label, featur
 
     if isinstance(json_file, dict):
         audio_res = json_file
-        # ToDO: extra should be inferred form the data
+        # ToDO: extra should be inferred from the data
         extra = 2
     elif isinstance(json_file, str):
         # Read gzipped audio JSON
@@ -584,7 +603,7 @@ def build_shrestha_dataset(json_file, hum_path, press_path, tmp_path, label, inc
 
     # Update temp_res (w.r.t. subscenario)
     temp_res = {}
-    if incl_intervals:
+    if incl_intervals and isinstance(incl_intervals, list):
         for k, v in sorted(temp_json.items()):
             # Check the subscenario
             if not include_result(k, incl_intervals):
@@ -601,7 +620,7 @@ def build_shrestha_dataset(json_file, hum_path, press_path, tmp_path, label, inc
 
     # Update temp_res (w.r.t. subscenario)
     hum_res = {}
-    if incl_intervals:
+    if incl_intervals and isinstance(incl_intervals, list):
         for k, v in sorted(hum_json.items()):
             # Check the subscenario
             if not include_result(k, incl_intervals):
@@ -618,7 +637,7 @@ def build_shrestha_dataset(json_file, hum_path, press_path, tmp_path, label, inc
 
     # Update temp_res (w.r.t. subscenario)
     press_res = {}
-    if incl_intervals:
+    if incl_intervals and isinstance(incl_intervals, list):
         for k, v in sorted(press_json.items()):
             # Check the subscenario
             if not include_result(k, incl_intervals):
@@ -651,8 +670,16 @@ def build_shrestha_dataset(json_file, hum_path, press_path, tmp_path, label, inc
     # Sort the key list
     key_list.sort()
 
+    # Case of mobile devices
+    if isinstance(label, list):
+        labels = label.copy()
+
     # Construct temp, hum and press features
     for key in key_list:
+
+        # If mobile device scenario use actula colocation info for label
+        if labels:
+            label = determine_label(key, labels, incl_intervals)
 
         # A row in a csv file
         csv_row = ''
@@ -687,12 +714,45 @@ def build_shrestha_dataset(json_file, hum_path, press_path, tmp_path, label, inc
         csv_list.append(csv_row)
 
     # Remove duplicates, add count (default behavior)
-    csv_list = remove_duplicates_add_count(csv_list)
+    # csv_list = remove_duplicates_add_count(csv_list)
 
     # Save the results
     with open(tmp_path, 'w') as f:
         csv_list = map(lambda line: line + '\n', csv_list)
         f.writelines(csv_list)
+
+
+def determine_label(timestamp, sensors, mobile_coloc):
+    # Store sensor locations: 1, 2 or 3
+    colocation = []
+
+    # Sanity check input
+    if len(sensors) != 2:
+        print('determine_label: Exactly two sensors must be provided for colocation decision', sensors)
+        sys.exit(0)
+
+    # Iterate over sensors
+    for sensor in sensors:
+        # List containing colocation infomation
+        for coloc_info in mobile_coloc[sensor]:
+            # Check if timestamp is between start and end time as specified in coloc_info
+            if coloc_info[0] <= parser.parse(timestamp.split('_')[0]) <= coloc_info[1]:
+                # Add location number to list
+                colocation.append(coloc_info[-1])
+                break
+        else:
+            continue
+
+    # Sanity check output
+    if len(colocation) == 2:
+        # Return label
+        if colocation[0] == colocation[-1]:
+            return '1'
+        else:
+            return '0'
+    else:
+        print('determine_label: Exactly two sensors must be provided for colocation decision', colocation)
+        sys.exit(0)
 
 
 def remove_duplicates_add_count(csv_list):
@@ -1240,6 +1300,15 @@ def get_shrestha_dataset(scenario):
         # Update file_list
         file_list = tmp_file_list
 
+    for json_file in file_list:
+        print(json_file)
+
+    file_list = [file_list[2]]
+
+    # process_dataset(file_list[0], dataset=dataset, feature=feature, time_interval=time_interval, root_path=ROOT_PATH,
+    #                tmp_path=tmp_path, time_delta=TIME_DELTA, sensors=SENSORS, incl_intervals=INCLUDE_INTERVALS)
+
+    # '''
     # Initiate a pool of workers
     pool = Pool(processes=NUM_WORKERS, maxtasksperchild=1)
 
@@ -1253,7 +1322,7 @@ def get_shrestha_dataset(scenario):
     # Wait for processes to terminate
     pool.close()
     pool.join()
-    
+    '''
     # Check reduce flag and reflect in the file name
     reduce_str = ''
     if REDUCE_FLAG:
@@ -1276,6 +1345,7 @@ def get_shrestha_dataset(scenario):
 
     # Remove duplicates and add counts in the merged file
     remove_duplicates_merged(file_path, csv_header, feature_dtypes)
+    '''
 
 
 # ToDo: separate bullshit for test sets
@@ -1452,6 +1522,128 @@ def remove_duplicates_merged(file_path, csv_header, feature_dtypes):
 
 
 if __name__ == '__main__':
+
+    ROOT_PATH = 'C:/Users/mfomichev/Desktop/features/'
+    RESULT_PATH = 'C:/Users/mfomichev/Desktop/results/'
+    scenario = 'mobile'
+
+    NUM_WORKERS = 1
+
+    SUFFIX = ''
+
+    SENSORS.append(SENSORS_STATIC1)
+    SENSORS.append(SENSORS_STATIC2)
+    SENSORS.append(SENSORS_STATIC3)
+    SENSORS.append(SENSORS_MOBILE)
+
+    MOBILE_COLOC = {}
+    MOBILE_COLOC['02'] = [(datetime(2018, 10, 21, 9, 20, 0), datetime(2018, 10, 21, 17, 30, 0), 1)]
+    MOBILE_COLOC['03'] = [(datetime(2018, 10, 21, 9, 20, 0), datetime(2018, 10, 21, 17, 30, 0), 1)]
+    MOBILE_COLOC['04'] = [(datetime(2018, 10, 21, 9, 20, 0), datetime(2018, 10, 21, 17, 30, 0), 1)]
+
+    MOBILE_COLOC['05'] = [(datetime(2018, 10, 21, 9, 20, 0), datetime(2018, 10, 21, 13, 51, 0), 1),
+                          (datetime(2018, 10, 21, 13, 51, 0), datetime(2018, 10, 21, 13, 55, 0), 2),
+                          (datetime(2018, 10, 21, 13, 55, 0), datetime(2018, 10, 21, 14, 2, 0), 1),
+                          (datetime(2018, 10, 21, 14, 2, 0), datetime(2018, 10, 21, 15, 0, 0), 3),
+                          (datetime(2018, 10, 21, 15, 0, 0), datetime(2018, 10, 21, 16, 4, 0), 2),
+                          (datetime(2018, 10, 21, 16, 4, 0), datetime(2018, 10, 21, 16, 7, 0), 1),
+                          (datetime(2018, 10, 21, 16, 7, 0), datetime(2018, 10, 21, 16, 9, 0), 2),
+                          (datetime(2018, 10, 21, 16, 9, 0), datetime(2018, 10, 21, 17, 30, 0), 1)]
+
+    MOBILE_COLOC['06'] = [(datetime(2018, 10, 21, 9, 20, 0), datetime(2018, 10, 21, 13, 51, 0), 1),
+                          (datetime(2018, 10, 21, 13, 51, 0), datetime(2018, 10, 21, 13, 55, 0), 2),
+                          (datetime(2018, 10, 21, 13, 55, 0), datetime(2018, 10, 21, 14, 2, 0), 1),
+                          (datetime(2018, 10, 21, 14, 2, 0), datetime(2018, 10, 21, 15, 0, 0), 3),
+                          (datetime(2018, 10, 21, 15, 0, 0), datetime(2018, 10, 21, 16, 4, 0), 2),
+                          (datetime(2018, 10, 21, 16, 4, 0), datetime(2018, 10, 21, 16, 7, 0), 1),
+                          (datetime(2018, 10, 21, 16, 7, 0), datetime(2018, 10, 21, 16, 9, 0), 2),
+                          (datetime(2018, 10, 21, 16, 9, 0), datetime(2018, 10, 21, 17, 30, 0), 1)]
+
+    MOBILE_COLOC['07'] = [(datetime(2018, 10, 21, 9, 20, 0), datetime(2018, 10, 21, 14, 2, 0), 1),
+                          (datetime(2018, 10, 21, 14, 2, 0), datetime(2018, 10, 21, 15, 0, 0), 3),
+                          (datetime(2018, 10, 21, 15, 0, 0), datetime(2018, 10, 21, 16, 4, 0), 2),
+                          (datetime(2018, 10, 21, 16, 4, 0), datetime(2018, 10, 21, 17, 30, 0), 1)]
+
+    MOBILE_COLOC['08'] = [(datetime(2018, 10, 21, 9, 20, 0), datetime(2018, 10, 21, 14, 12, 0), 1),
+                          (datetime(2018, 10, 21, 14, 12, 0), datetime(2018, 10, 21, 15, 0, 0), 3),
+                          (datetime(2018, 10, 21, 15, 0, 0), datetime(2018, 10, 21, 16, 4, 0), 2),
+                          (datetime(2018, 10, 21, 16, 4, 0), datetime(2018, 10, 21, 16, 16, 0), 1),
+                          (datetime(2018, 10, 21, 16, 16, 0), datetime(2018, 10, 21, 16, 25, 0), 2),
+                          (datetime(2018, 10, 21, 16, 25, 0), datetime(2018, 10, 21, 17, 30, 0), 1)]
+
+    MOBILE_COLOC['09'] = [(datetime(2018, 10, 21, 9, 20, 0), datetime(2018, 10, 21, 14, 12, 0), 1),
+                          (datetime(2018, 10, 21, 14, 12, 0), datetime(2018, 10, 21, 15, 0, 0), 3),
+                          (datetime(2018, 10, 21, 15, 0, 0), datetime(2018, 10, 21, 16, 4, 0), 2),
+                          (datetime(2018, 10, 21, 16, 4, 0), datetime(2018, 10, 21, 16, 16, 0), 1),
+                          (datetime(2018, 10, 21, 16, 16, 0), datetime(2018, 10, 21, 16, 25, 0), 2),
+                          (datetime(2018, 10, 21, 16, 25, 0), datetime(2018, 10, 21, 17, 30, 0), 1)]
+
+    MOBILE_COLOC['10'] = [(datetime(2018, 10, 21, 9, 20, 0), datetime(2018, 10, 21, 14, 20, 0), 1),
+                          (datetime(2018, 10, 21, 14, 20, 0), datetime(2018, 10, 21, 15, 0, 0), 3),
+                          (datetime(2018, 10, 21, 15, 0, 0), datetime(2018, 10, 21, 16, 4, 0), 2),
+                          (datetime(2018, 10, 21, 16, 4, 0), datetime(2018, 10, 21, 17, 30, 0), 1)]
+
+    MOBILE_COLOC['11'] = [(datetime(2018, 10, 21, 9, 20, 0), datetime(2018, 10, 21, 17, 30, 0), 2)]
+    MOBILE_COLOC['12'] = [(datetime(2018, 10, 21, 9, 20, 0), datetime(2018, 10, 21, 17, 30, 0), 2)]
+    MOBILE_COLOC['13'] = [(datetime(2018, 10, 21, 9, 20, 0), datetime(2018, 10, 21, 17, 30, 0), 2)]
+    MOBILE_COLOC['14'] = [(datetime(2018, 10, 21, 9, 20, 0), datetime(2018, 10, 21, 17, 30, 0), 2)]
+
+    MOBILE_COLOC['15'] = [(datetime(2018, 10, 21, 9, 20, 0), datetime(2018, 10, 21, 10, 48, 0), 2),
+                          (datetime(2018, 10, 21, 10, 48, 0), datetime(2018, 10, 21, 10, 52, 0), 3),
+                          (datetime(2018, 10, 21, 10, 52, 0), datetime(2018, 10, 21, 12, 9, 0), 2),
+                          (datetime(2018, 10, 21, 12, 9, 0), datetime(2018, 10, 21, 12, 49, 0), 1),
+                          (datetime(2018, 10, 21, 12, 49, 0), datetime(2018, 10, 21, 14, 17, 0), 2),
+                          (datetime(2018, 10, 21, 14, 17, 0), datetime(2018, 10, 21, 15, 0, 0), 3),
+                          (datetime(2018, 10, 21, 15, 0, 0), datetime(2018, 10, 21, 16, 4, 0), 1),
+                          (datetime(2018, 10, 21, 16, 4, 0), datetime(2018, 10, 21, 16, 25, 0), 2),
+                          (datetime(2018, 10, 21, 16, 25, 0), datetime(2018, 10, 21, 17, 30, 0), 1)]
+
+    MOBILE_COLOC['16'] = [(datetime(2018, 10, 21, 9, 20, 0), datetime(2018, 10, 21, 9, 28, 0), 1),
+                          (datetime(2018, 10, 21, 9, 28, 0), datetime(2018, 10, 21, 10, 48, 0), 2),
+                          (datetime(2018, 10, 21, 10, 48, 0), datetime(2018, 10, 21, 10, 52, 0), 3),
+                          (datetime(2018, 10, 21, 10, 52, 0), datetime(2018, 10, 21, 12, 9, 0), 2),
+                          (datetime(2018, 10, 21, 12, 9, 0), datetime(2018, 10, 21, 12, 49, 0), 1),
+                          (datetime(2018, 10, 21, 12, 49, 0), datetime(2018, 10, 21, 14, 17, 0), 2),
+                          (datetime(2018, 10, 21, 14, 17, 0), datetime(2018, 10, 21, 15, 0, 0), 3),
+                          (datetime(2018, 10, 21, 15, 0, 0), datetime(2018, 10, 21, 16, 4, 0), 1),
+                          (datetime(2018, 10, 21, 16, 4, 0), datetime(2018, 10, 21, 16, 25, 0), 2),
+                          (datetime(2018, 10, 21, 16, 25, 0), datetime(2018, 10, 21, 17, 30, 0), 1)]
+
+    MOBILE_COLOC['17'] = [(datetime(2018, 10, 21, 9, 20, 0), datetime(2018, 10, 21, 14, 17, 0), 2),
+                          (datetime(2018, 10, 21, 14, 17, 0), datetime(2018, 10, 21, 15, 0, 0), 3),
+                          (datetime(2018, 10, 21, 15, 0, 0), datetime(2018, 10, 21, 16, 4, 0), 1),
+                          (datetime(2018, 10, 21, 16, 4, 0), datetime(2018, 10, 21, 16, 35, 0), 2),
+                          (datetime(2018, 10, 21, 16, 35, 0), datetime(2018, 10, 21, 17, 30, 0), 1)]
+
+    MOBILE_COLOC['18'] = [(datetime(2018, 10, 21, 9, 20, 0), datetime(2018, 10, 21, 17, 30, 0), 3)]
+    MOBILE_COLOC['19'] = [(datetime(2018, 10, 21, 9, 20, 0), datetime(2018, 10, 21, 17, 30, 0), 3)]
+    MOBILE_COLOC['20'] = [(datetime(2018, 10, 21, 9, 20, 0), datetime(2018, 10, 21, 17, 30, 0), 3)]
+    MOBILE_COLOC['21'] = [(datetime(2018, 10, 21, 9, 20, 0), datetime(2018, 10, 21, 17, 30, 0), 3)]
+
+    MOBILE_COLOC['22'] = [(datetime(2018, 10, 21, 9, 20, 0), datetime(2018, 10, 21, 9, 28, 0), 1),
+                          (datetime(2018, 10, 21, 9, 28, 0), datetime(2018, 10, 21, 12, 13, 0), 3),
+                          (datetime(2018, 10, 21, 12, 13, 0), datetime(2018, 10, 21, 12, 46, 0), 1),
+                          (datetime(2018, 10, 21, 12, 46, 0), datetime(2018, 10, 21, 17, 30, 0), 3)]
+
+    MOBILE_COLOC['23'] = [(datetime(2018, 10, 21, 9, 20, 0), datetime(2018, 10, 21, 9, 28, 0), 1),
+                          (datetime(2018, 10, 21, 9, 28, 0), datetime(2018, 10, 21, 12, 13, 0), 3),
+                          (datetime(2018, 10, 21, 12, 13, 0), datetime(2018, 10, 21, 12, 46, 0), 1),
+                          (datetime(2018, 10, 21, 12, 46, 0), datetime(2018, 10, 21, 17, 30, 0), 3)]
+
+    MOBILE_COLOC['24'] = [(datetime(2018, 10, 21, 9, 20, 0), datetime(2018, 10, 21, 17, 30, 0), 3)]
+
+    MOBILE_COLOC['25'] = [(datetime(2018, 10, 21, 9, 20, 0), datetime(2018, 10, 21, 14, 5, 0), 1),
+                          (datetime(2018, 10, 21, 14, 5, 0), datetime(2018, 10, 21, 15, 1, 0), 2),
+                          (datetime(2018, 10, 21, 15, 1, 0), datetime(2018, 10, 21, 16, 7, 0), 3),
+                          (datetime(2018, 10, 21, 16, 7, 0), datetime(2018, 10, 21, 17, 30, 0), 1)]
+
+    INCLUDE_INTERVALS = [MOBILE_COLOC]
+
+    get_shrestha_dataset('mobile')
+
+    print()
+
+    '''
     # Check the number of input args
     if len(sys.argv) == 6:
         # Assign input args
@@ -1660,4 +1852,5 @@ if __name__ == '__main__':
     else:
         print('Error: <scenario> can only be "car" or "office"!')
         sys.exit(0)
+    '''
 
