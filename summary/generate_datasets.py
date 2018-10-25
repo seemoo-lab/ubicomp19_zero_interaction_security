@@ -261,8 +261,9 @@ def build_truong_dataset(json_file, ble_path, wifi_path, tmp_path, label, featur
     # List to store the results
     csv_list = []
 
-    # Check the scenario: json file as dict corresponds to office, as str to car and mobile
+    # Check the scenario: json_file is dict - office; str - car and mobile
     if isinstance(json_file, dict):
+        # Re-assign json_file just for convenience
         audio_res = json_file
     elif isinstance(json_file, str):
         # Read gzipped audio JSON
@@ -307,22 +308,26 @@ def build_truong_dataset(json_file, ble_path, wifi_path, tmp_path, label, featur
     else:
         ble_res = ble_json
 
-    # Read gzipped wifi JSON
-    with gzip.open(wifi_path, 'rt') as f:
-        wifi_json = loads(f.read())
-        wifi_json = wifi_json['results']
+    # Wifi data can be completely missing ((
+    if os.path.isfile(wifi_path):
+        # Read gzipped wifi JSON
+        with gzip.open(wifi_path, 'rt') as f:
+            wifi_json = loads(f.read())
+            wifi_json = wifi_json['results']
 
-    # Update wifi_res (w.r.t. subscenario)
-    wifi_res = {}
-    if incl_intervals and isinstance(incl_intervals, list):
-        for k, v in sorted(wifi_json.items()):
-            # Check the subscenario
-            if not include_result(k, incl_intervals):
-                continue
-            # Add element to a dict
-            wifi_res[k] = v
+        # Update wifi_res (w.r.t. subscenario)
+        wifi_res = {}
+        if incl_intervals and isinstance(incl_intervals, list):
+            for k, v in sorted(wifi_json.items()):
+                # Check the subscenario
+                if not include_result(k, incl_intervals):
+                    continue
+                # Add element to a dict
+                wifi_res[k] = v
+        else:
+            wifi_res = wifi_json
     else:
-        wifi_res = wifi_json
+        wifi_res = {}
 
     # Get a timestamp of audio (started later)
     first_audio_ts = date_to_sec(next(iter(sorted(audio_res))))
@@ -342,6 +347,11 @@ def build_truong_dataset(json_file, ble_path, wifi_path, tmp_path, label, featur
     # Sort the key list
     key_list.sort()
 
+    # Case of mobile devices
+    labels = []
+    if isinstance(label, list):
+        labels = label.copy()
+
     # Construct ble and wifi features before audio started
     for key in key_list:
 
@@ -357,6 +367,10 @@ def build_truong_dataset(json_file, ble_path, wifi_path, tmp_path, label, featur
         # Iterate until the proximity of the first audio ts
         # Adjust here to '< first_audio_ts'(car - from 30 to 20)
         if date_to_sec(key) + time_delta[0] <= first_audio_ts:
+
+            # If mobile device scenario use actual colocation info for label
+            if labels:
+                label = determine_label(key, labels, incl_intervals)
 
             # Check if ble_res has a key
             if key in ble_res:
@@ -442,6 +456,10 @@ def build_truong_dataset(json_file, ble_path, wifi_path, tmp_path, label, featur
         # Add audio features
         csv_row = add_features(feature, v, csv_row)
 
+        # If mobile device scenario use actual colocation info for label
+        if labels:
+            label = determine_label(k, labels, incl_intervals)
+
         # Check ble features
         if check_ts in ble_res:
             # Check if the value ble_res[check_ts] is not empty
@@ -514,6 +532,10 @@ def build_truong_dataset(json_file, ble_path, wifi_path, tmp_path, label, featur
         # Feature counter
         feature_count = 0
 
+        # If mobile device scenario use actual colocation info for label
+        if labels:
+            label = determine_label(key, labels, incl_intervals)
+
         # Check ble features
         if key in ble_res:
             # Check if the value ble_res[key] is not empty
@@ -572,7 +594,7 @@ def build_truong_dataset(json_file, ble_path, wifi_path, tmp_path, label, featur
                 csv_list.append(csv_row)
 
     # Remove duplicates, add count (default behavior)
-    csv_list = remove_duplicates_add_count(csv_list)
+    # csv_list = remove_duplicates_add_count(csv_list)
 
     # Save the results
     with open(tmp_path, 'w') as f:
@@ -951,6 +973,7 @@ def infer_time_deltas(audio_path, time_interval):
         audio_json = loads(f.read())
         audio_json = audio_json['results']
 
+    # Have to check because of missing wifi data
     # Load 1st wifi file
     with gzip.open(wifi_path, 'rt') as f:
         wifi_json = loads(f.read())
@@ -1004,7 +1027,7 @@ def get_truong_dataset(scenario):
     feature = 'timeFreqDistance'
 
     # Time interval of the feature
-    time_interval = '30sec'
+    time_interval = '10sec'
 
     # Type of the dataset
     dataset = 'truong'
@@ -1116,12 +1139,13 @@ def get_truong_dataset(scenario):
         # Update file_list
         file_list = tmp_file_list
 
-    # for json_file in file_list:
-    #     print(json_file)
+    for json_file in file_list:
+        print(json_file)
 
-    # process_dataset(file_list[0], dataset=dataset, feature=feature, time_interval=time_interval, root_path=ROOT_PATH,
-    #                tmp_path=tmp_path, time_delta=time_deltas, sensors=SENSORS, incl_intervals=INCLUDE_INTERVALS)
+    process_dataset(file_list[4], dataset=dataset, feature=feature, time_interval=time_interval, root_path=ROOT_PATH,
+                   tmp_path=tmp_path, time_delta=time_deltas, sensors=SENSORS, incl_intervals=INCLUDE_INTERVALS)
 
+    '''
     # Initiate a pool of workers
     pool = Pool(processes=NUM_WORKERS, maxtasksperchild=1)
 
@@ -1158,7 +1182,7 @@ def get_truong_dataset(scenario):
 
     # Remove duplicates and add counts in the merged file
     remove_duplicates_merged(file_path, csv_header, feature_dtypes)
-
+    '''
 
 # ToDo: separate bullshit for test sets
 def get_truong_test(scenario):
@@ -1599,27 +1623,27 @@ def remove_duplicates_merged(file_path, csv_header, feature_dtypes):
 
 
 if __name__ == '__main__':
-    # ROOT_PATH = 'C:/Users/mfomichev/Desktop/features/'
+    ROOT_PATH = 'C:/Users/mfomichev/Desktop/features/'
     # ROOT_PATH = 'D:/data1/car/'
-    ROOT_PATH = 'D:/data1/office-sensors/'
+    # ROOT_PATH = 'D:/data1/office-sensors/'
     RESULT_PATH = 'C:/Users/mfomichev/Desktop/results/'
-    scenario = 'office'
+    scenario = 'mobile'
 
     NUM_WORKERS = 1
 
     SUFFIX = ''
 
-    # SENSORS.append(SENSORS_STATIC1)
-    # SENSORS.append(SENSORS_STATIC2)
-    # SENSORS.append(SENSORS_STATIC3)
-    # SENSORS.append(SENSORS_MOBILE)
+    SENSORS.append(SENSORS_STATIC1)
+    SENSORS.append(SENSORS_STATIC2)
+    SENSORS.append(SENSORS_STATIC3)
+    SENSORS.append(SENSORS_MOBILE)
 
     # SENSORS.append(SENSORS_CAR1)
     # SENSORS.append(SENSORS_CAR2)
 
-    SENSORS.append(SENSORS_OFFICE1)
-    SENSORS.append(SENSORS_OFFICE2)
-    SENSORS.append(SENSORS_OFFICE3)
+    # SENSORS.append(SENSORS_OFFICE1)
+    # SENSORS.append(SENSORS_OFFICE2)
+    # SENSORS.append(SENSORS_OFFICE3)
 
     MOBILE_COLOC = {}
     MOBILE_COLOC['02'] = [(datetime(2018, 10, 21, 9, 20, 0), datetime(2018, 10, 21, 17, 30, 0), 1)]
@@ -1722,7 +1746,7 @@ if __name__ == '__main__':
                           (datetime(2018, 10, 21, 15, 1, 0), datetime(2018, 10, 21, 16, 7, 0), 3),
                           (datetime(2018, 10, 21, 16, 7, 0), datetime(2018, 10, 21, 17, 30, 0), 1)]
 
-    # INCLUDE_INTERVALS = [MOBILE_COLOC]
+    INCLUDE_INTERVALS = [MOBILE_COLOC]
 
     get_truong_dataset(scenario)
 
