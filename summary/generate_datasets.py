@@ -57,10 +57,6 @@ RESULT_PATH = ''
 # Number of workers to be used in parallel
 NUM_WORKERS = 0
 
-# ToDO: this has to be implemented with automatic inference, not as constant
-# Time used to sync audio with wifi and ble features
-TIME_DELTA = 0
-
 # ToDO: this can be discontinued
 # Reduce flag
 REDUCE_FLAG = False
@@ -137,7 +133,7 @@ def parse_folders(path, feature):
 
 
 def process_dataset(json_file, dataset='', feature='', time_interval='', root_path='', \
-                    tmp_path='', time_delta='', sensors=[], incl_intervals=[]):
+                    tmp_path='', time_delta=[], sensors=[], incl_intervals=[]):
     # 'Try' clause is used for catching errors
     try:
         # Check the instance of json_file
@@ -239,12 +235,6 @@ def process_dataset(json_file, dataset='', feature='', time_interval='', root_pa
                 else:
                     json_file = audio_res
 
-                # ToDO: time_delta - infer form the data, no magic numbers: '10' here
-                # Update time_delta for the cases where time_interval != 10sec
-                # (applies only to the office scenario, does not need for the car)
-                if time_interval == '30sec':
-                    time_delta = time_delta + 10
-
             # Build the truong's data set
             build_truong_dataset(json_file, ble_path, wifi_path, tmp_path, label, feature, time_delta,
                                 incl_intervals)
@@ -270,12 +260,10 @@ def build_truong_dataset(json_file, ble_path, wifi_path, tmp_path, label, featur
                         incl_intervals):
     # List to store the results
     csv_list = []
-    extra = 0
 
+    # Check the scenario: json file as dict corresponds to office, as str to car and mobile
     if isinstance(json_file, dict):
         audio_res = json_file
-        # ToDO: extra should be inferred from the data
-        extra = 2
     elif isinstance(json_file, str):
         # Read gzipped audio JSON
         with gzip.open(json_file, 'rt') as f:
@@ -288,7 +276,7 @@ def build_truong_dataset(json_file, ble_path, wifi_path, tmp_path, label, featur
         # all subscenarios are automatically covered
         audio_res = {}
 
-        if incl_intervals:
+        if incl_intervals and isinstance(incl_intervals, list):
             # Update audio_res (w.r.t. subscenario)
             for k, v in sorted(audio_json.items()):
                 # Check the subscenario
@@ -309,7 +297,7 @@ def build_truong_dataset(json_file, ble_path, wifi_path, tmp_path, label, featur
 
     # Update ble_res (w.r.t. subscenario)
     ble_res = {}
-    if incl_intervals:
+    if incl_intervals and isinstance(incl_intervals, list):
         for k, v in sorted(ble_json.items()):
             # Check the subscenario
             if not include_result(k, incl_intervals):
@@ -326,7 +314,7 @@ def build_truong_dataset(json_file, ble_path, wifi_path, tmp_path, label, featur
 
     # Update wifi_res (w.r.t. subscenario)
     wifi_res = {}
-    if incl_intervals:
+    if incl_intervals and isinstance(incl_intervals, list):
         for k, v in sorted(wifi_json.items()):
             # Check the subscenario
             if not include_result(k, incl_intervals):
@@ -368,7 +356,7 @@ def build_truong_dataset(json_file, ble_path, wifi_path, tmp_path, label, featur
 
         # Iterate until the proximity of the first audio ts
         # Adjust here to '< first_audio_ts'(car - from 30 to 20)
-        if date_to_sec(key) + time_delta - extra <= first_audio_ts:
+        if date_to_sec(key) + time_delta[0] <= first_audio_ts:
 
             # Check if ble_res has a key
             if key in ble_res:
@@ -448,7 +436,7 @@ def build_truong_dataset(json_file, ble_path, wifi_path, tmp_path, label, featur
 
         # Get the check timestamp (yyyy-mm-dd HH:MM:SS) used for wifi and ble
         # Adjust here to 'audio_ts - time_delta' (car - from 30 to 20)
-        check_ts = datetime.fromtimestamp(audio_ts + time_delta).strftime('%Y-%m-%d %H:%M:%S')
+        check_ts = datetime.fromtimestamp(audio_ts + time_delta[1]).strftime('%Y-%m-%d %H:%M:%S')
 
         # ToDo: add support for adding more audio features
         # Add audio features
@@ -671,13 +659,14 @@ def build_shrestha_dataset(json_file, hum_path, press_path, tmp_path, label, inc
     key_list.sort()
 
     # Case of mobile devices
+    labels = []
     if isinstance(label, list):
         labels = label.copy()
 
     # Construct temp, hum and press features
     for key in key_list:
 
-        # If mobile device scenario use actula colocation info for label
+        # If mobile device scenario use actual colocation info for label
         if labels:
             label = determine_label(key, labels, incl_intervals)
 
@@ -714,7 +703,7 @@ def build_shrestha_dataset(json_file, hum_path, press_path, tmp_path, label, inc
         csv_list.append(csv_row)
 
     # Remove duplicates, add count (default behavior)
-    # csv_list = remove_duplicates_add_count(csv_list)
+    csv_list = remove_duplicates_add_count(csv_list)
 
     # Save the results
     with open(tmp_path, 'w') as f:
@@ -764,8 +753,6 @@ def remove_duplicates_add_count(csv_list):
     cond_csv_list = []
     for k, v in sorted(condensed_csv.items()):
         cond_csv_list.append(str(v) + ',' + k)
-
-    # ToDO:think if we need to 'cond_csv_list.sort()' here
 
     return cond_csv_list
 
@@ -927,6 +914,89 @@ def add_features(feature, value, csv_row):
     return csv_row
 
 
+def infer_time_deltas(audio_path, time_interval):
+    # Return a list of time deltas: before audio starts and after
+    time_delta = [None] * 2
+
+    # Get target sensor number - Sensor-xx/audio/<feature>/<time_interval>
+    match = re.search(r'Sensor-(.*)(?:/|\\)audio(?:/|\\)', audio_path)
+
+    # If there is no match - exit
+    if not match:
+        print('process_dataset: no match for the folder number, exiting...')
+        sys.exit(0)
+
+    target_sensor = match.group(1)
+
+    # Get sensor number from all the sensor in the current folder, e.g. 01, 02, etc.
+    regex = re.escape(time_interval) + r'(?:/|\\)Sensor-(.*)\.json.gz'
+    match = re.search(regex, audio_path)
+
+    # If there is no match - exit
+    if not match:
+        print('process_dataset: no match for the sensor number, exiting...')
+        sys.exit(0)
+
+    sensor = match.group(1)
+
+    # Construct Wi-Fi and BLE paths
+    ble_path = ROOT_PATH + 'Sensor-' + target_sensor + '/ble/ble_wifi_truong/' + time_interval + \
+               '/Sensor-' + sensor + '.json.gz'
+
+    wifi_path = ROOT_PATH + 'Sensor-' + target_sensor + '/wifi/ble_wifi_truong/' + time_interval + \
+                '/Sensor-' + sensor + '.json.gz'
+
+    # Load 1st audio file
+    with gzip.open(audio_path, 'rt') as f:
+        audio_json = loads(f.read())
+        audio_json = audio_json['results']
+
+    # Load 1st wifi file
+    with gzip.open(wifi_path, 'rt') as f:
+        wifi_json = loads(f.read())
+        wifi_json = wifi_json['results']
+
+    # Load 1st ble file
+    with gzip.open(ble_path, 'rt') as f:
+        ble_json = loads(f.read())
+        ble_json = ble_json['results']
+
+    # Get 1st audio timestamp: we assume that audio starts after wifi and ble
+    audio_start = next(iter(sorted(audio_json))).split('.')[0]
+
+    # Find out wifi timestamps just before audio starts and right after
+    wifi_ts = [None] * 2
+    for k,v in sorted(wifi_json.items()):
+        if parser.parse(k) >= parser.parse(audio_start):
+            wifi_ts[1] = k
+            break
+        wifi_ts[0] = k
+
+    # Find out ble timestamps just before audio starts and right after
+    ble_ts = [None] * 2
+    for k,v in sorted(ble_json.items()):
+        if parser.parse(k) >= parser.parse(audio_start):
+            ble_ts[1] = k
+            break
+        ble_ts[0] = k
+
+    # For time delta before audio we find closest(wifi, ble) timestamp before audio starts and
+    # take diff: audio_start - closest(wifi, ble)
+    if parser.parse(wifi_ts[0]) > parser.parse(ble_ts[0]):
+        time_delta[0] = int((parser.parse(audio_start) - parser.parse(wifi_ts[0])).total_seconds())
+    else:
+        time_delta[0] = int((parser.parse(audio_start) - parser.parse(ble_ts[0])).total_seconds())
+
+    # For time delta after audio we find closest(wifi, ble) timestamp after audio starts and
+    # take diff: closest(wifi, ble) - audio_start
+    if parser.parse(wifi_ts[1]) < parser.parse(ble_ts[1]):
+        time_delta[1] = int((parser.parse(wifi_ts[1]) - parser.parse(audio_start)).total_seconds())
+    else:
+        time_delta[1] = int((parser.parse(ble_ts[1]) - parser.parse(audio_start)).total_seconds())
+
+    return time_delta
+
+
 # ToDo: merge get_dataset functions into one with input feature param
 def get_truong_dataset(scenario):
 
@@ -934,7 +1004,7 @@ def get_truong_dataset(scenario):
     feature = 'timeFreqDistance'
 
     # Time interval of the feature
-    time_interval = '10sec'
+    time_interval = '30sec'
 
     # Type of the dataset
     dataset = 'truong'
@@ -957,7 +1027,7 @@ def get_truong_dataset(scenario):
         os.makedirs(tmp_path)
 
     # Generate file list depending on the scenario
-    if scenario == 'car':
+    if scenario == 'car' or scenario == 'mobile':
         # Path to result data files
         feature_path = ROOT_PATH + 'Sensor-*/audio/' + feature + '/' + time_interval + '/Sensor-*.json.gz'
 
@@ -968,6 +1038,9 @@ def get_truong_dataset(scenario):
 
         # Sort the file_list
         file_list.sort()
+
+        # Infer time_deltas from the data
+        time_deltas = infer_time_deltas(file_list[0], time_interval)
 
     elif scenario == 'office':
 
@@ -1009,6 +1082,9 @@ def get_truong_dataset(scenario):
                     # Append sensor list to file list
                     file_list.append(sensor_list)
 
+        # Infer time deltas from the data
+        time_deltas = infer_time_deltas(file_list[0][0], time_interval)
+
     # Check if the file list was successfully created
     if not file_list:
         print('get_truong_dataset: File list is empty, exiting...')
@@ -1040,12 +1116,18 @@ def get_truong_dataset(scenario):
         # Update file_list
         file_list = tmp_file_list
 
+    # for json_file in file_list:
+    #     print(json_file)
+
+    # process_dataset(file_list[0], dataset=dataset, feature=feature, time_interval=time_interval, root_path=ROOT_PATH,
+    #                tmp_path=tmp_path, time_delta=time_deltas, sensors=SENSORS, incl_intervals=INCLUDE_INTERVALS)
+
     # Initiate a pool of workers
     pool = Pool(processes=NUM_WORKERS, maxtasksperchild=1)
 
     # Use partial to pass static params: feature, ... sensors
     func = partial(process_dataset, dataset=dataset, feature=feature, time_interval=time_interval, root_path=ROOT_PATH,
-                   tmp_path=tmp_path, time_delta=TIME_DELTA, sensors=SENSORS, incl_intervals=INCLUDE_INTERVALS)
+                   tmp_path=tmp_path, time_delta=time_deltas, sensors=SENSORS, incl_intervals=INCLUDE_INTERVALS)
 
     # Let workers do the job
     pool.imap(func, file_list)
@@ -1112,6 +1194,9 @@ def get_truong_test(scenario):
         # Sort the file_list
         file_list.sort()
 
+        # Infer time_deltas from the data
+        time_deltas = infer_time_deltas(file_list[0], time_interval)
+
     elif scenario == 'office':
 
         # Get the overall number of sensors in the experiment
@@ -1151,6 +1236,9 @@ def get_truong_test(scenario):
                     sensor_list.sort()
                     # Append sensor list to file list
                     file_list.append(sensor_list)
+
+        # Infer time_deltas from the data
+        time_deltas = infer_time_deltas(file_list[0][0], time_interval)
 
     # Check if the file list was successfully created
     if not file_list:
@@ -1206,7 +1294,7 @@ def get_truong_test(scenario):
 
             # Use partial to pass static params: feature, ... sensors
             func = partial(process_dataset, dataset=dataset, feature=feature, time_interval=time_interval,
-                           root_path=ROOT_PATH, tmp_path=tmp_path, time_delta=TIME_DELTA, sensors=SENSORS,
+                           root_path=ROOT_PATH, tmp_path=tmp_path, time_delta=time_deltas, sensors=SENSORS,
                            incl_intervals=INCLUDE_INTERVALS)
 
             # Let workers do the job
@@ -1243,7 +1331,6 @@ def get_truong_test(scenario):
 
 
 def get_shrestha_dataset(scenario):
-
     # Physical feature
     feature = 'temp'
 
@@ -1300,21 +1387,12 @@ def get_shrestha_dataset(scenario):
         # Update file_list
         file_list = tmp_file_list
 
-    for json_file in file_list:
-        print(json_file)
-
-    file_list = [file_list[2]]
-
-    # process_dataset(file_list[0], dataset=dataset, feature=feature, time_interval=time_interval, root_path=ROOT_PATH,
-    #                tmp_path=tmp_path, time_delta=TIME_DELTA, sensors=SENSORS, incl_intervals=INCLUDE_INTERVALS)
-
-    # '''
     # Initiate a pool of workers
     pool = Pool(processes=NUM_WORKERS, maxtasksperchild=1)
 
     # Use partial to pass static params: dataset, ... sensors
     func = partial(process_dataset, dataset=dataset, feature=feature, time_interval=time_interval, root_path=ROOT_PATH,
-                   tmp_path=tmp_path, time_delta=TIME_DELTA, sensors=SENSORS, incl_intervals=INCLUDE_INTERVALS)
+                   tmp_path=tmp_path, time_delta=[], sensors=SENSORS, incl_intervals=INCLUDE_INTERVALS)
 
     # Let workers do the job
     pool.imap(func, file_list)
@@ -1322,7 +1400,7 @@ def get_shrestha_dataset(scenario):
     # Wait for processes to terminate
     pool.close()
     pool.join()
-    '''
+
     # Check reduce flag and reflect in the file name
     reduce_str = ''
     if REDUCE_FLAG:
@@ -1345,7 +1423,6 @@ def get_shrestha_dataset(scenario):
 
     # Remove duplicates and add counts in the merged file
     remove_duplicates_merged(file_path, csv_header, feature_dtypes)
-    '''
 
 
 # ToDo: separate bullshit for test sets
@@ -1431,7 +1508,7 @@ def get_shrestha_test(scenario):
 
             # Use partial to pass static params: dataset, ... sensors
             func = partial(process_dataset, dataset=dataset, feature=feature, time_interval=time_interval,
-                           root_path=ROOT_PATH, tmp_path=tmp_path, time_delta=TIME_DELTA, sensors=SENSORS,
+                           root_path=ROOT_PATH, tmp_path=tmp_path, time_delta=[], sensors=SENSORS,
                            incl_intervals=INCLUDE_INTERVALS)
 
             # Let workers do the job
@@ -1522,19 +1599,27 @@ def remove_duplicates_merged(file_path, csv_header, feature_dtypes):
 
 
 if __name__ == '__main__':
-
-    ROOT_PATH = 'C:/Users/mfomichev/Desktop/features/'
+    # ROOT_PATH = 'C:/Users/mfomichev/Desktop/features/'
+    # ROOT_PATH = 'D:/data1/car/'
+    ROOT_PATH = 'D:/data1/office-sensors/'
     RESULT_PATH = 'C:/Users/mfomichev/Desktop/results/'
-    scenario = 'mobile'
+    scenario = 'office'
 
     NUM_WORKERS = 1
 
     SUFFIX = ''
 
-    SENSORS.append(SENSORS_STATIC1)
-    SENSORS.append(SENSORS_STATIC2)
-    SENSORS.append(SENSORS_STATIC3)
-    SENSORS.append(SENSORS_MOBILE)
+    # SENSORS.append(SENSORS_STATIC1)
+    # SENSORS.append(SENSORS_STATIC2)
+    # SENSORS.append(SENSORS_STATIC3)
+    # SENSORS.append(SENSORS_MOBILE)
+
+    # SENSORS.append(SENSORS_CAR1)
+    # SENSORS.append(SENSORS_CAR2)
+
+    SENSORS.append(SENSORS_OFFICE1)
+    SENSORS.append(SENSORS_OFFICE2)
+    SENSORS.append(SENSORS_OFFICE3)
 
     MOBILE_COLOC = {}
     MOBILE_COLOC['02'] = [(datetime(2018, 10, 21, 9, 20, 0), datetime(2018, 10, 21, 17, 30, 0), 1)]
@@ -1637,11 +1722,12 @@ if __name__ == '__main__':
                           (datetime(2018, 10, 21, 15, 1, 0), datetime(2018, 10, 21, 16, 7, 0), 3),
                           (datetime(2018, 10, 21, 16, 7, 0), datetime(2018, 10, 21, 17, 30, 0), 1)]
 
-    INCLUDE_INTERVALS = [MOBILE_COLOC]
+    # INCLUDE_INTERVALS = [MOBILE_COLOC]
 
-    get_shrestha_dataset('mobile')
+    get_truong_dataset(scenario)
 
     print()
+
 
     '''
     # Check the number of input args
@@ -1722,8 +1808,6 @@ if __name__ == '__main__':
     if scenario == 'car':
         SENSORS.append(SENSORS_CAR1)
         SENSORS.append(SENSORS_CAR2)
-        
-        TIME_DELTA = 5
 
         # Check <subscenario>
         if subscenario == 'all':
@@ -1786,8 +1870,6 @@ if __name__ == '__main__':
         SENSORS.append(SENSORS_OFFICE1)
         SENSORS.append(SENSORS_OFFICE2)
         SENSORS.append(SENSORS_OFFICE3)
-        
-        TIME_DELTA = 6
 
         if subscenario == 'all':
             SUFFIX = ''
