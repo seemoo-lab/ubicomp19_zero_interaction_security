@@ -368,10 +368,6 @@ def build_truong_dataset(json_file, ble_path, wifi_path, tmp_path, label, featur
         # Adjust here to '< first_audio_ts'(car - from 30 to 20)
         if date_to_sec(key) + time_delta[0] <= first_audio_ts:
 
-            # If mobile device scenario use actual colocation info for label
-            if labels:
-                label = determine_label(key, labels, incl_intervals)
-
             # Check if ble_res has a key
             if key in ble_res:
                 # Check if the value ble_res[key] is not empty
@@ -433,6 +429,10 @@ def build_truong_dataset(json_file, ble_path, wifi_path, tmp_path, label, featur
             # Add csv_row to the list
             if csv_row:
                 if feature_count != na_count:
+                    # If mobile device scenario use actual colocation info for label
+                    if labels:
+                        label = determine_label(key, labels, incl_intervals)
+
                     # First two NA account for missing audio features
                     csv_row = 'NA,NA,' + csv_row + label
                     csv_list.append(csv_row)
@@ -455,10 +455,6 @@ def build_truong_dataset(json_file, ble_path, wifi_path, tmp_path, label, featur
         # ToDo: add support for adding more audio features
         # Add audio features
         csv_row = add_features(feature, v, csv_row)
-
-        # If mobile device scenario use actual colocation info for label
-        if labels:
-            label = determine_label(k, labels, incl_intervals)
 
         # Check ble features
         if check_ts in ble_res:
@@ -502,6 +498,10 @@ def build_truong_dataset(json_file, ble_path, wifi_path, tmp_path, label, featur
 
         # Add csv_row to the list
         if csv_row:
+            # If mobile device scenario use actual colocation info for label
+            if labels:
+                label = determine_label(key, labels, incl_intervals)
+
             csv_row = csv_row + label
             csv_list.append(csv_row)
 
@@ -531,10 +531,6 @@ def build_truong_dataset(json_file, ble_path, wifi_path, tmp_path, label, featur
 
         # Feature counter
         feature_count = 0
-
-        # If mobile device scenario use actual colocation info for label
-        if labels:
-            label = determine_label(key, labels, incl_intervals)
 
         # Check ble features
         if key in ble_res:
@@ -589,12 +585,16 @@ def build_truong_dataset(json_file, ble_path, wifi_path, tmp_path, label, featur
         # Add csv_row to the list
         if csv_row:
             if feature_count != na_count:
+                # If mobile device scenario use actual colocation info for label
+                if labels:
+                    label = determine_label(key, labels, incl_intervals)
+
                 # First two NA account for missing audio features
                 csv_row = 'NA,NA,' + csv_row + label
                 csv_list.append(csv_row)
 
     # Remove duplicates, add count (default behavior)
-    # csv_list = remove_duplicates_add_count(csv_list)
+    csv_list = remove_duplicates_add_count(csv_list)
 
     # Save the results
     with open(tmp_path, 'w') as f:
@@ -687,11 +687,6 @@ def build_shrestha_dataset(json_file, hum_path, press_path, tmp_path, label, inc
 
     # Construct temp, hum and press features
     for key in key_list:
-
-        # If mobile device scenario use actual colocation info for label
-        if labels:
-            label = determine_label(key, labels, incl_intervals)
-
         # A row in a csv file
         csv_row = ''
 
@@ -717,6 +712,10 @@ def build_shrestha_dataset(json_file, hum_path, press_path, tmp_path, label, inc
             press_feature = str(press_res[key]) + ','
         else:
             press_feature = 'NA,'
+
+        # If mobile device scenario use actual colocation info for label
+        if labels:
+            label = determine_label(key, labels, incl_intervals)
 
         # Construct csv_row
         csv_row = temp_feature + hum_feature + press_feature + label
@@ -945,7 +944,7 @@ def infer_time_deltas(audio_path, time_interval):
 
     # If there is no match - exit
     if not match:
-        print('process_dataset: no match for the folder number, exiting...')
+        print('infer_time_deltas: no match for the folder number, exiting...')
         sys.exit(0)
 
     target_sensor = match.group(1)
@@ -956,7 +955,7 @@ def infer_time_deltas(audio_path, time_interval):
 
     # If there is no match - exit
     if not match:
-        print('process_dataset: no match for the sensor number, exiting...')
+        print('infer_time_deltas: no match for the sensor number, exiting...')
         sys.exit(0)
 
     sensor = match.group(1)
@@ -1027,7 +1026,7 @@ def get_truong_dataset(scenario):
     feature = 'timeFreqDistance'
 
     # Time interval of the feature
-    time_interval = '10sec'
+    time_interval = '30sec'
 
     # Type of the dataset
     dataset = 'truong'
@@ -1139,13 +1138,6 @@ def get_truong_dataset(scenario):
         # Update file_list
         file_list = tmp_file_list
 
-    for json_file in file_list:
-        print(json_file)
-
-    process_dataset(file_list[4], dataset=dataset, feature=feature, time_interval=time_interval, root_path=ROOT_PATH,
-                   tmp_path=tmp_path, time_delta=time_deltas, sensors=SENSORS, incl_intervals=INCLUDE_INTERVALS)
-
-    '''
     # Initiate a pool of workers
     pool = Pool(processes=NUM_WORKERS, maxtasksperchild=1)
 
@@ -1182,7 +1174,7 @@ def get_truong_dataset(scenario):
 
     # Remove duplicates and add counts in the merged file
     remove_duplicates_merged(file_path, csv_header, feature_dtypes)
-    '''
+
 
 # ToDo: separate bullshit for test sets
 def get_truong_test(scenario):
@@ -1424,7 +1416,7 @@ def get_shrestha_dataset(scenario):
     # Wait for processes to terminate
     pool.close()
     pool.join()
-
+    
     # Check reduce flag and reflect in the file name
     reduce_str = ''
     if REDUCE_FLAG:
@@ -1623,137 +1615,6 @@ def remove_duplicates_merged(file_path, csv_header, feature_dtypes):
 
 
 if __name__ == '__main__':
-    ROOT_PATH = 'C:/Users/mfomichev/Desktop/features/'
-    # ROOT_PATH = 'D:/data1/car/'
-    # ROOT_PATH = 'D:/data1/office-sensors/'
-    RESULT_PATH = 'C:/Users/mfomichev/Desktop/results/'
-    scenario = 'mobile'
-
-    NUM_WORKERS = 1
-
-    SUFFIX = ''
-
-    SENSORS.append(SENSORS_STATIC1)
-    SENSORS.append(SENSORS_STATIC2)
-    SENSORS.append(SENSORS_STATIC3)
-    SENSORS.append(SENSORS_MOBILE)
-
-    # SENSORS.append(SENSORS_CAR1)
-    # SENSORS.append(SENSORS_CAR2)
-
-    # SENSORS.append(SENSORS_OFFICE1)
-    # SENSORS.append(SENSORS_OFFICE2)
-    # SENSORS.append(SENSORS_OFFICE3)
-
-    MOBILE_COLOC = {}
-    MOBILE_COLOC['02'] = [(datetime(2018, 10, 21, 9, 20, 0), datetime(2018, 10, 21, 17, 30, 0), 1)]
-    MOBILE_COLOC['03'] = [(datetime(2018, 10, 21, 9, 20, 0), datetime(2018, 10, 21, 17, 30, 0), 1)]
-    MOBILE_COLOC['04'] = [(datetime(2018, 10, 21, 9, 20, 0), datetime(2018, 10, 21, 17, 30, 0), 1)]
-
-    MOBILE_COLOC['05'] = [(datetime(2018, 10, 21, 9, 20, 0), datetime(2018, 10, 21, 13, 51, 0), 1),
-                          (datetime(2018, 10, 21, 13, 51, 0), datetime(2018, 10, 21, 13, 55, 0), 2),
-                          (datetime(2018, 10, 21, 13, 55, 0), datetime(2018, 10, 21, 14, 2, 0), 1),
-                          (datetime(2018, 10, 21, 14, 2, 0), datetime(2018, 10, 21, 15, 0, 0), 3),
-                          (datetime(2018, 10, 21, 15, 0, 0), datetime(2018, 10, 21, 16, 4, 0), 2),
-                          (datetime(2018, 10, 21, 16, 4, 0), datetime(2018, 10, 21, 16, 7, 0), 1),
-                          (datetime(2018, 10, 21, 16, 7, 0), datetime(2018, 10, 21, 16, 9, 0), 2),
-                          (datetime(2018, 10, 21, 16, 9, 0), datetime(2018, 10, 21, 17, 30, 0), 1)]
-
-    MOBILE_COLOC['06'] = [(datetime(2018, 10, 21, 9, 20, 0), datetime(2018, 10, 21, 13, 51, 0), 1),
-                          (datetime(2018, 10, 21, 13, 51, 0), datetime(2018, 10, 21, 13, 55, 0), 2),
-                          (datetime(2018, 10, 21, 13, 55, 0), datetime(2018, 10, 21, 14, 2, 0), 1),
-                          (datetime(2018, 10, 21, 14, 2, 0), datetime(2018, 10, 21, 15, 0, 0), 3),
-                          (datetime(2018, 10, 21, 15, 0, 0), datetime(2018, 10, 21, 16, 4, 0), 2),
-                          (datetime(2018, 10, 21, 16, 4, 0), datetime(2018, 10, 21, 16, 7, 0), 1),
-                          (datetime(2018, 10, 21, 16, 7, 0), datetime(2018, 10, 21, 16, 9, 0), 2),
-                          (datetime(2018, 10, 21, 16, 9, 0), datetime(2018, 10, 21, 17, 30, 0), 1)]
-
-    MOBILE_COLOC['07'] = [(datetime(2018, 10, 21, 9, 20, 0), datetime(2018, 10, 21, 14, 2, 0), 1),
-                          (datetime(2018, 10, 21, 14, 2, 0), datetime(2018, 10, 21, 15, 0, 0), 3),
-                          (datetime(2018, 10, 21, 15, 0, 0), datetime(2018, 10, 21, 16, 4, 0), 2),
-                          (datetime(2018, 10, 21, 16, 4, 0), datetime(2018, 10, 21, 17, 30, 0), 1)]
-
-    MOBILE_COLOC['08'] = [(datetime(2018, 10, 21, 9, 20, 0), datetime(2018, 10, 21, 14, 12, 0), 1),
-                          (datetime(2018, 10, 21, 14, 12, 0), datetime(2018, 10, 21, 15, 0, 0), 3),
-                          (datetime(2018, 10, 21, 15, 0, 0), datetime(2018, 10, 21, 16, 4, 0), 2),
-                          (datetime(2018, 10, 21, 16, 4, 0), datetime(2018, 10, 21, 16, 16, 0), 1),
-                          (datetime(2018, 10, 21, 16, 16, 0), datetime(2018, 10, 21, 16, 25, 0), 2),
-                          (datetime(2018, 10, 21, 16, 25, 0), datetime(2018, 10, 21, 17, 30, 0), 1)]
-
-    MOBILE_COLOC['09'] = [(datetime(2018, 10, 21, 9, 20, 0), datetime(2018, 10, 21, 14, 12, 0), 1),
-                          (datetime(2018, 10, 21, 14, 12, 0), datetime(2018, 10, 21, 15, 0, 0), 3),
-                          (datetime(2018, 10, 21, 15, 0, 0), datetime(2018, 10, 21, 16, 4, 0), 2),
-                          (datetime(2018, 10, 21, 16, 4, 0), datetime(2018, 10, 21, 16, 16, 0), 1),
-                          (datetime(2018, 10, 21, 16, 16, 0), datetime(2018, 10, 21, 16, 25, 0), 2),
-                          (datetime(2018, 10, 21, 16, 25, 0), datetime(2018, 10, 21, 17, 30, 0), 1)]
-
-    MOBILE_COLOC['10'] = [(datetime(2018, 10, 21, 9, 20, 0), datetime(2018, 10, 21, 14, 20, 0), 1),
-                          (datetime(2018, 10, 21, 14, 20, 0), datetime(2018, 10, 21, 15, 0, 0), 3),
-                          (datetime(2018, 10, 21, 15, 0, 0), datetime(2018, 10, 21, 16, 4, 0), 2),
-                          (datetime(2018, 10, 21, 16, 4, 0), datetime(2018, 10, 21, 17, 30, 0), 1)]
-
-    MOBILE_COLOC['11'] = [(datetime(2018, 10, 21, 9, 20, 0), datetime(2018, 10, 21, 17, 30, 0), 2)]
-    MOBILE_COLOC['12'] = [(datetime(2018, 10, 21, 9, 20, 0), datetime(2018, 10, 21, 17, 30, 0), 2)]
-    MOBILE_COLOC['13'] = [(datetime(2018, 10, 21, 9, 20, 0), datetime(2018, 10, 21, 17, 30, 0), 2)]
-    MOBILE_COLOC['14'] = [(datetime(2018, 10, 21, 9, 20, 0), datetime(2018, 10, 21, 17, 30, 0), 2)]
-
-    MOBILE_COLOC['15'] = [(datetime(2018, 10, 21, 9, 20, 0), datetime(2018, 10, 21, 10, 48, 0), 2),
-                          (datetime(2018, 10, 21, 10, 48, 0), datetime(2018, 10, 21, 10, 52, 0), 3),
-                          (datetime(2018, 10, 21, 10, 52, 0), datetime(2018, 10, 21, 12, 9, 0), 2),
-                          (datetime(2018, 10, 21, 12, 9, 0), datetime(2018, 10, 21, 12, 49, 0), 1),
-                          (datetime(2018, 10, 21, 12, 49, 0), datetime(2018, 10, 21, 14, 17, 0), 2),
-                          (datetime(2018, 10, 21, 14, 17, 0), datetime(2018, 10, 21, 15, 0, 0), 3),
-                          (datetime(2018, 10, 21, 15, 0, 0), datetime(2018, 10, 21, 16, 4, 0), 1),
-                          (datetime(2018, 10, 21, 16, 4, 0), datetime(2018, 10, 21, 16, 25, 0), 2),
-                          (datetime(2018, 10, 21, 16, 25, 0), datetime(2018, 10, 21, 17, 30, 0), 1)]
-
-    MOBILE_COLOC['16'] = [(datetime(2018, 10, 21, 9, 20, 0), datetime(2018, 10, 21, 9, 28, 0), 1),
-                          (datetime(2018, 10, 21, 9, 28, 0), datetime(2018, 10, 21, 10, 48, 0), 2),
-                          (datetime(2018, 10, 21, 10, 48, 0), datetime(2018, 10, 21, 10, 52, 0), 3),
-                          (datetime(2018, 10, 21, 10, 52, 0), datetime(2018, 10, 21, 12, 9, 0), 2),
-                          (datetime(2018, 10, 21, 12, 9, 0), datetime(2018, 10, 21, 12, 49, 0), 1),
-                          (datetime(2018, 10, 21, 12, 49, 0), datetime(2018, 10, 21, 14, 17, 0), 2),
-                          (datetime(2018, 10, 21, 14, 17, 0), datetime(2018, 10, 21, 15, 0, 0), 3),
-                          (datetime(2018, 10, 21, 15, 0, 0), datetime(2018, 10, 21, 16, 4, 0), 1),
-                          (datetime(2018, 10, 21, 16, 4, 0), datetime(2018, 10, 21, 16, 25, 0), 2),
-                          (datetime(2018, 10, 21, 16, 25, 0), datetime(2018, 10, 21, 17, 30, 0), 1)]
-
-    MOBILE_COLOC['17'] = [(datetime(2018, 10, 21, 9, 20, 0), datetime(2018, 10, 21, 14, 17, 0), 2),
-                          (datetime(2018, 10, 21, 14, 17, 0), datetime(2018, 10, 21, 15, 0, 0), 3),
-                          (datetime(2018, 10, 21, 15, 0, 0), datetime(2018, 10, 21, 16, 4, 0), 1),
-                          (datetime(2018, 10, 21, 16, 4, 0), datetime(2018, 10, 21, 16, 35, 0), 2),
-                          (datetime(2018, 10, 21, 16, 35, 0), datetime(2018, 10, 21, 17, 30, 0), 1)]
-
-    MOBILE_COLOC['18'] = [(datetime(2018, 10, 21, 9, 20, 0), datetime(2018, 10, 21, 17, 30, 0), 3)]
-    MOBILE_COLOC['19'] = [(datetime(2018, 10, 21, 9, 20, 0), datetime(2018, 10, 21, 17, 30, 0), 3)]
-    MOBILE_COLOC['20'] = [(datetime(2018, 10, 21, 9, 20, 0), datetime(2018, 10, 21, 17, 30, 0), 3)]
-    MOBILE_COLOC['21'] = [(datetime(2018, 10, 21, 9, 20, 0), datetime(2018, 10, 21, 17, 30, 0), 3)]
-
-    MOBILE_COLOC['22'] = [(datetime(2018, 10, 21, 9, 20, 0), datetime(2018, 10, 21, 9, 28, 0), 1),
-                          (datetime(2018, 10, 21, 9, 28, 0), datetime(2018, 10, 21, 12, 13, 0), 3),
-                          (datetime(2018, 10, 21, 12, 13, 0), datetime(2018, 10, 21, 12, 46, 0), 1),
-                          (datetime(2018, 10, 21, 12, 46, 0), datetime(2018, 10, 21, 17, 30, 0), 3)]
-
-    MOBILE_COLOC['23'] = [(datetime(2018, 10, 21, 9, 20, 0), datetime(2018, 10, 21, 9, 28, 0), 1),
-                          (datetime(2018, 10, 21, 9, 28, 0), datetime(2018, 10, 21, 12, 13, 0), 3),
-                          (datetime(2018, 10, 21, 12, 13, 0), datetime(2018, 10, 21, 12, 46, 0), 1),
-                          (datetime(2018, 10, 21, 12, 46, 0), datetime(2018, 10, 21, 17, 30, 0), 3)]
-
-    MOBILE_COLOC['24'] = [(datetime(2018, 10, 21, 9, 20, 0), datetime(2018, 10, 21, 17, 30, 0), 3)]
-
-    MOBILE_COLOC['25'] = [(datetime(2018, 10, 21, 9, 20, 0), datetime(2018, 10, 21, 14, 5, 0), 1),
-                          (datetime(2018, 10, 21, 14, 5, 0), datetime(2018, 10, 21, 15, 1, 0), 2),
-                          (datetime(2018, 10, 21, 15, 1, 0), datetime(2018, 10, 21, 16, 7, 0), 3),
-                          (datetime(2018, 10, 21, 16, 7, 0), datetime(2018, 10, 21, 17, 30, 0), 1)]
-
-    INCLUDE_INTERVALS = [MOBILE_COLOC]
-
-    get_truong_dataset(scenario)
-
-    print()
-
-
-    '''
     # Check the number of input args
     if len(sys.argv) == 6:
         # Assign input args
@@ -1955,8 +1816,139 @@ if __name__ == '__main__':
         else:
             print('Error: <dataset> can only be "truong" or "shrestha"!')
             sys.exit(0)
+
+    elif scenario == 'mobile':
+        SENSORS.append(SENSORS_STATIC1)
+        SENSORS.append(SENSORS_STATIC2)
+        SENSORS.append(SENSORS_STATIC3)
+        SENSORS.append(SENSORS_MOBILE)
+
+        if subscenario == 'all':
+            SUFFIX = ''
+
+            # Colocation configuration for mobile scenario
+            MOBILE_COLOC = {}
+            MOBILE_COLOC['02'] = [(datetime(2018, 10, 21, 8, 30, 0), datetime(2018, 10, 21, 17, 30, 0), 1)]
+            MOBILE_COLOC['03'] = [(datetime(2018, 10, 21, 8, 30, 0), datetime(2018, 10, 21, 17, 30, 0), 1)]
+            MOBILE_COLOC['04'] = [(datetime(2018, 10, 21, 8, 30, 0), datetime(2018, 10, 21, 17, 30, 0), 1)]
+
+            MOBILE_COLOC['05'] = [(datetime(2018, 10, 21, 8, 30, 0), datetime(2018, 10, 21, 13, 51, 0), 1),
+                                  (datetime(2018, 10, 21, 13, 51, 0), datetime(2018, 10, 21, 13, 55, 0), 2),
+                                  (datetime(2018, 10, 21, 13, 55, 0), datetime(2018, 10, 21, 14, 2, 0), 1),
+                                  (datetime(2018, 10, 21, 14, 2, 0), datetime(2018, 10, 21, 15, 0, 0), 3),
+                                  (datetime(2018, 10, 21, 15, 0, 0), datetime(2018, 10, 21, 16, 4, 0), 2),
+                                  (datetime(2018, 10, 21, 16, 4, 0), datetime(2018, 10, 21, 16, 7, 0), 1),
+                                  (datetime(2018, 10, 21, 16, 7, 0), datetime(2018, 10, 21, 16, 9, 0), 2),
+                                  (datetime(2018, 10, 21, 16, 9, 0), datetime(2018, 10, 21, 17, 30, 0), 1)]
+
+            MOBILE_COLOC['06'] = [(datetime(2018, 10, 21, 8, 30, 0), datetime(2018, 10, 21, 13, 51, 0), 1),
+                                  (datetime(2018, 10, 21, 13, 51, 0), datetime(2018, 10, 21, 13, 55, 0), 2),
+                                  (datetime(2018, 10, 21, 13, 55, 0), datetime(2018, 10, 21, 14, 2, 0), 1),
+                                  (datetime(2018, 10, 21, 14, 2, 0), datetime(2018, 10, 21, 15, 0, 0), 3),
+                                  (datetime(2018, 10, 21, 15, 0, 0), datetime(2018, 10, 21, 16, 4, 0), 2),
+                                  (datetime(2018, 10, 21, 16, 4, 0), datetime(2018, 10, 21, 16, 7, 0), 1),
+                                  (datetime(2018, 10, 21, 16, 7, 0), datetime(2018, 10, 21, 16, 9, 0), 2),
+                                  (datetime(2018, 10, 21, 16, 9, 0), datetime(2018, 10, 21, 17, 30, 0), 1)]
+
+            MOBILE_COLOC['07'] = [(datetime(2018, 10, 21, 8, 30, 0), datetime(2018, 10, 21, 14, 2, 0), 1),
+                                  (datetime(2018, 10, 21, 14, 2, 0), datetime(2018, 10, 21, 15, 0, 0), 3),
+                                  (datetime(2018, 10, 21, 15, 0, 0), datetime(2018, 10, 21, 16, 4, 0), 2),
+                                  (datetime(2018, 10, 21, 16, 4, 0), datetime(2018, 10, 21, 17, 30, 0), 1)]
+
+            MOBILE_COLOC['08'] = [(datetime(2018, 10, 21, 8, 30, 0), datetime(2018, 10, 21, 14, 12, 0), 1),
+                                  (datetime(2018, 10, 21, 14, 12, 0), datetime(2018, 10, 21, 15, 0, 0), 3),
+                                  (datetime(2018, 10, 21, 15, 0, 0), datetime(2018, 10, 21, 16, 4, 0), 2),
+                                  (datetime(2018, 10, 21, 16, 4, 0), datetime(2018, 10, 21, 16, 16, 0), 1),
+                                  (datetime(2018, 10, 21, 16, 16, 0), datetime(2018, 10, 21, 16, 25, 0), 2),
+                                  (datetime(2018, 10, 21, 16, 25, 0), datetime(2018, 10, 21, 17, 30, 0), 1)]
+
+            MOBILE_COLOC['09'] = [(datetime(2018, 10, 21, 8, 30, 0), datetime(2018, 10, 21, 14, 12, 0), 1),
+                                  (datetime(2018, 10, 21, 14, 12, 0), datetime(2018, 10, 21, 15, 0, 0), 3),
+                                  (datetime(2018, 10, 21, 15, 0, 0), datetime(2018, 10, 21, 16, 4, 0), 2),
+                                  (datetime(2018, 10, 21, 16, 4, 0), datetime(2018, 10, 21, 16, 16, 0), 1),
+                                  (datetime(2018, 10, 21, 16, 16, 0), datetime(2018, 10, 21, 16, 25, 0), 2),
+                                  (datetime(2018, 10, 21, 16, 25, 0), datetime(2018, 10, 21, 17, 30, 0), 1)]
+
+            MOBILE_COLOC['10'] = [(datetime(2018, 10, 21, 8, 30, 0), datetime(2018, 10, 21, 14, 20, 0), 1),
+                                  (datetime(2018, 10, 21, 14, 20, 0), datetime(2018, 10, 21, 15, 0, 0), 3),
+                                  (datetime(2018, 10, 21, 15, 0, 0), datetime(2018, 10, 21, 16, 4, 0), 2),
+                                  (datetime(2018, 10, 21, 16, 4, 0), datetime(2018, 10, 21, 17, 30, 0), 1)]
+
+            MOBILE_COLOC['11'] = [(datetime(2018, 10, 21, 8, 30, 0), datetime(2018, 10, 21, 17, 30, 0), 2)]
+            MOBILE_COLOC['12'] = [(datetime(2018, 10, 21, 8, 30, 0), datetime(2018, 10, 21, 17, 30, 0), 2)]
+            MOBILE_COLOC['13'] = [(datetime(2018, 10, 21, 8, 30, 0), datetime(2018, 10, 21, 17, 30, 0), 2)]
+            MOBILE_COLOC['14'] = [(datetime(2018, 10, 21, 8, 30, 0), datetime(2018, 10, 21, 17, 30, 0), 2)]
+
+            MOBILE_COLOC['15'] = [(datetime(2018, 10, 21, 8, 30, 0), datetime(2018, 10, 21, 10, 48, 0), 2),
+                                  (datetime(2018, 10, 21, 10, 48, 0), datetime(2018, 10, 21, 10, 52, 0), 3),
+                                  (datetime(2018, 10, 21, 10, 52, 0), datetime(2018, 10, 21, 12, 9, 0), 2),
+                                  (datetime(2018, 10, 21, 12, 9, 0), datetime(2018, 10, 21, 12, 49, 0), 1),
+                                  (datetime(2018, 10, 21, 12, 49, 0), datetime(2018, 10, 21, 14, 17, 0), 2),
+                                  (datetime(2018, 10, 21, 14, 17, 0), datetime(2018, 10, 21, 15, 0, 0), 3),
+                                  (datetime(2018, 10, 21, 15, 0, 0), datetime(2018, 10, 21, 16, 4, 0), 1),
+                                  (datetime(2018, 10, 21, 16, 4, 0), datetime(2018, 10, 21, 16, 25, 0), 2),
+                                  (datetime(2018, 10, 21, 16, 25, 0), datetime(2018, 10, 21, 17, 30, 0), 1)]
+
+            MOBILE_COLOC['16'] = [(datetime(2018, 10, 21, 8, 30, 0), datetime(2018, 10, 21, 9, 28, 0), 1),
+                                  (datetime(2018, 10, 21, 9, 28, 0), datetime(2018, 10, 21, 10, 48, 0), 2),
+                                  (datetime(2018, 10, 21, 10, 48, 0), datetime(2018, 10, 21, 10, 52, 0), 3),
+                                  (datetime(2018, 10, 21, 10, 52, 0), datetime(2018, 10, 21, 12, 9, 0), 2),
+                                  (datetime(2018, 10, 21, 12, 9, 0), datetime(2018, 10, 21, 12, 49, 0), 1),
+                                  (datetime(2018, 10, 21, 12, 49, 0), datetime(2018, 10, 21, 14, 17, 0), 2),
+                                  (datetime(2018, 10, 21, 14, 17, 0), datetime(2018, 10, 21, 15, 0, 0), 3),
+                                  (datetime(2018, 10, 21, 15, 0, 0), datetime(2018, 10, 21, 16, 4, 0), 1),
+                                  (datetime(2018, 10, 21, 16, 4, 0), datetime(2018, 10, 21, 16, 25, 0), 2),
+                                  (datetime(2018, 10, 21, 16, 25, 0), datetime(2018, 10, 21, 17, 30, 0), 1)]
+
+            MOBILE_COLOC['17'] = [(datetime(2018, 10, 21, 8, 30, 0), datetime(2018, 10, 21, 14, 17, 0), 2),
+                                  (datetime(2018, 10, 21, 14, 17, 0), datetime(2018, 10, 21, 15, 0, 0), 3),
+                                  (datetime(2018, 10, 21, 15, 0, 0), datetime(2018, 10, 21, 16, 4, 0), 1),
+                                  (datetime(2018, 10, 21, 16, 4, 0), datetime(2018, 10, 21, 16, 35, 0), 2),
+                                  (datetime(2018, 10, 21, 16, 35, 0), datetime(2018, 10, 21, 17, 30, 0), 1)]
+
+            MOBILE_COLOC['18'] = [(datetime(2018, 10, 21, 8, 30, 0), datetime(2018, 10, 21, 17, 30, 0), 3)]
+            MOBILE_COLOC['19'] = [(datetime(2018, 10, 21, 8, 30, 0), datetime(2018, 10, 21, 17, 30, 0), 3)]
+            MOBILE_COLOC['20'] = [(datetime(2018, 10, 21, 8, 30, 0), datetime(2018, 10, 21, 17, 30, 0), 3)]
+            MOBILE_COLOC['21'] = [(datetime(2018, 10, 21, 8, 30, 0), datetime(2018, 10, 21, 17, 30, 0), 3)]
+
+            MOBILE_COLOC['22'] = [(datetime(2018, 10, 21, 8, 30, 0), datetime(2018, 10, 21, 9, 28, 0), 1),
+                                  (datetime(2018, 10, 21, 9, 28, 0), datetime(2018, 10, 21, 12, 13, 0), 3),
+                                  (datetime(2018, 10, 21, 12, 13, 0), datetime(2018, 10, 21, 12, 46, 0), 1),
+                                  (datetime(2018, 10, 21, 12, 46, 0), datetime(2018, 10, 21, 17, 30, 0), 3)]
+
+            MOBILE_COLOC['23'] = [(datetime(2018, 10, 21, 8, 30, 0), datetime(2018, 10, 21, 9, 28, 0), 1),
+                                  (datetime(2018, 10, 21, 9, 28, 0), datetime(2018, 10, 21, 12, 13, 0), 3),
+                                  (datetime(2018, 10, 21, 12, 13, 0), datetime(2018, 10, 21, 12, 46, 0), 1),
+                                  (datetime(2018, 10, 21, 12, 46, 0), datetime(2018, 10, 21, 17, 30, 0), 3)]
+
+            MOBILE_COLOC['24'] = [(datetime(2018, 10, 21, 8, 30, 0), datetime(2018, 10, 21, 17, 30, 0), 3)]
+
+            MOBILE_COLOC['25'] = [(datetime(2018, 10, 21, 8, 30, 0), datetime(2018, 10, 21, 14, 5, 0), 1),
+                                  (datetime(2018, 10, 21, 14, 5, 0), datetime(2018, 10, 21, 15, 1, 0), 2),
+                                  (datetime(2018, 10, 21, 15, 1, 0), datetime(2018, 10, 21, 16, 7, 0), 3),
+                                  (datetime(2018, 10, 21, 16, 7, 0), datetime(2018, 10, 21, 17, 30, 0), 1)]
+
+            INCLUDE_INTERVALS = [MOBILE_COLOC]
+
+            # Check the <dataset> parameter
+            if dataset == 'truong':
+                start_time = time.time()
+                print('%s: building truong "%s" dataset using %d workers...' % (scenario, subscenario, NUM_WORKERS))
+                get_truong_dataset(scenario)
+                print('--- %s seconds ---' % (time.time() - start_time))
+            elif dataset == 'shrestha':
+                start_time = time.time()
+                print('%s: building shrestha "%s" dataset using %d workers...' % (scenario, subscenario, NUM_WORKERS))
+                get_shrestha_dataset(scenario)
+                print('--- %s seconds ---' % (time.time() - start_time))
+            else:
+                print('Error: <dataset> can only be "truong" or "shrestha"!')
+                sys.exit(0)
+        else:
+            print('Error: <subscenario> (mobile) can only be "all"!')
+            sys.exit(0)
     else:
-        print('Error: <scenario> can only be "car" or "office"!')
+        print('Error: <scenario> can only be "car", "office" or "mobile"!')
         sys.exit(0)
-    '''
+
 
