@@ -500,7 +500,7 @@ def build_truong_dataset(json_file, ble_path, wifi_path, tmp_path, label, featur
         if csv_row:
             # If mobile device scenario use actual colocation info for label
             if labels:
-                label = determine_label(key, labels, incl_intervals)
+                label = determine_label(k, labels, incl_intervals)
 
             csv_row = csv_row + label
             csv_list.append(csv_row)
@@ -1026,7 +1026,7 @@ def get_truong_dataset(scenario):
     feature = 'timeFreqDistance'
 
     # Time interval of the feature
-    time_interval = '30sec'
+    time_interval = '10sec'
 
     # Type of the dataset
     dataset = 'truong'
@@ -1151,7 +1151,7 @@ def get_truong_dataset(scenario):
     # Wait for processes to terminate
     pool.close()
     pool.join()
-
+    
     tint_str = ''
     if time_interval != '10sec':
         tint_str = '_' + time_interval
