@@ -101,7 +101,7 @@ logPath1 = strcat(expPath, '/', char(pathS1));
 logPath2 = strcat(expPath, '/', char(pathS2));
 
 % Length of one hour recoding in samples: nSec * Fs
-hourLen = 3600*Fs; 
+alignLen = 600*Fs; 
 
 % Type of loaded audio data: native for noise features
 dataType = 'native';
@@ -111,15 +111,22 @@ S1 = loadSignal(filePath1, dataType);
 S2 = loadSignal(filePath2, dataType);
 
 % Get only the first hour of audio
-hourS1 = S1(1:hourLen);
-hourS2 = S2(1:hourLen);
+alignS1 = S1(1:alignLen);
+alignS2 = S2(1:alignLen);
     
 % Time lag in sec to bind xcorrDelay computation: we assume devices
 % should be able to sync at some point in time, but not tightly
-timeLag = 3;
+timeLag = 15;
     
 % Find a delay between two 1-hour chunks of two signals
-sampleDiff = xcorrDelay(hourS1, hourS2, timeLag, Fs);
+sampleDiff = xcorrDelay(alignS1, alignS2, timeLag, Fs);
+
+% Check if we need to adjust a timestamp
+if abs(sampleDiff / Fs) > 10
+    startTimeNum = datenum(startTime, dateFormat);
+    startTimeNum = addtodate(startTimeNum, 10, 'second');
+    startTime = datestr(startTimeNum, dateFormat);
+end
     
 % Align two signals based on the delay
 [S1, S2] = alignTwoSignals(S1, S2, sampleDiff);
@@ -281,17 +288,17 @@ for i = 1:length(timeInterval)
 	% uncommenting the lines below: 278--288 . The alignment is currently done by finding 
 	% a lag between input audio sequences: S1 and S2 with xcorr (timeLag = 3; lines: 111--119) and shifting them.
 	
-	%{
+	%%{
 	% Here time lag should be samller as chunks can be small, e.g. 5 sec.
     % Still not tight synch is assumed
-    timeLag = 1;
+    timeLag = 1.5;
     
     % Find delays between audio chunks
     fprintf('Computing delays...\n');
     parfor j = 1:nChunks
         audioPairDelay(j) = xcorrDelay(sig1{j}, sig2{j}, timeLag, Fs);
     end
-	%}
+	%%}
 	
     % Construct commonData struct
     commonData = struct;
