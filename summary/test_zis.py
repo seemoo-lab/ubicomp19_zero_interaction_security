@@ -5,6 +5,7 @@ import sys
 import re
 import matplotlib.pyplot as plt
 import numpy as np
+import matplotlib
 
 CAR1 = ['2_1', '2_3', '2_4', '2_5', '6_1', '6_3', '6_4', '6_5']
 CAR2 = ['8_7', '8_9', '8_10', '8_11', '12_7', '12_9', '12_10', '12_11']
@@ -16,6 +17,7 @@ OFFICE3 = ['8_7', '8_9', '8_10', '8_11', '12_7', '12_9', '12_10', '12_11']
 FAR = [0.001, 0.005, 0.01, 0.015, 0.02, 0.025, 0.03, 0.035, 0.04, 0.045, 0.05]
 
 
+# ToDO: read files in the format provided, e.g. 1min_rates.json, 5sec-night_rates.json
 def read_files(path, feature, bit_len=''):
     # Sanity checks on 'path'
     # 1. Check if 'path' exists
@@ -56,6 +58,7 @@ def read_files(path, feature, bit_len=''):
     return file_dict
 
 
+# ToDo: merge with the previous function, differentiate based on the provided args
 def read_files_ml(path):
     # Sanity checks on 'path'
     # 1. Check if 'path' exists
@@ -188,6 +191,7 @@ def print_eers(json_file, feature, scenario):
     print()
 
 
+# ToDo: provide path as params - no hardcoding
 def adv_diff(feature, scenario, bit_len=''):
 
     if scenario == 'car':
@@ -219,6 +223,25 @@ def adv_diff(feature, scenario, bit_len=''):
             sys.exit(0)
 
         save_path = 'C:/Users/mfomichev/Desktop/error_rates/office/'
+
+    elif scenario == 'mobile':
+        if feature == 'AFP':
+            root_path = 'C:/Users/mfomichev/Desktop/json/MobileExp/audioFingerprint/fingerprints_similarity_percent'
+        elif feature == 'SPF':
+            root_path = 'C:/Users/mfomichev/Desktop/json/MobileExp/soundProofXcorr/max_xcorr'
+        elif feature == 'NFP':
+            root_path = 'C:/Users/mfomichev/Desktop/json/MobileExp/noiseFingerprint/similarity_percent/' + bit_len
+        elif feature == 'LFP':
+            root_path = 'C:/Users/mfomichev/Desktop/json/MobileExp/lux_miettinen/similarity_percent/' + bit_len
+        else:
+            print('adv_diff: Feature can only be "AFP" or "SPF", exiting...')
+            sys.exit(0)
+
+        save_path = 'C:/Users/mfomichev/Desktop/error_rates/mobile/'
+
+    # Create folder to safe results if it does not exist
+    if not os.path.exists(save_path):
+        os.makedirs(save_path)
 
     # Read files in the root_path
     file_dict = read_files(root_path, feature, bit_len)
@@ -255,7 +278,111 @@ def adv_diff(feature, scenario, bit_len=''):
     '''
 
 
+def plot_error_rates(sub_list, feature, save_path, bit_len=''):
+
+    matplotlib.rcParams.update({'font.size': 12})
+
+    # Iterate over subscenarios
+    for sub in sub_list:
+        if sub:
+            sub_dict = {}
+            for json_file in sub:
+                # Open and read data JSON file
+                with open(json_file, 'r') as f:
+                    json_data = loads(f.read())
+                    base = json_data['base']
+
+                filename = get_filename(json_file, feature, bit_len)
+
+                if not filename:
+                    print('Could get the file name from %s, exiting...', json_file)
+                    sys.exit(0)
+
+                time_interval = filename.split('-')[0]
+
+                if not time_interval:
+                    print('Could get the time interval from %s, exiting...', filename)
+                    sys.exit(0)
+
+                # ToDO: double check with old stuff: "if not bit_len:"
+                if bit_len:
+                    scenario = re.search('-(.*)_', filename).group(1)
+
+                    if not scenario:
+                        print('Could get the scenario from %s, exiting...', filename)
+                        sys.exit(0)
+                else:
+                    scenario = 'Full'
+
+                frr_list = []
+
+                # Iterate over base dict, calculate diff between base and adv error rates
+                for k, v in sorted(base.items()):
+                    if k != 'eer':
+                        frr_list.append(v['frr'])
+
+                sub_dict[time_interval] = frr_list
+
+            plot_settings = [[':', 'o', 'lightseagreen'], ['-.', '^', 'crimson'], ['--', 's', 'darkgreen'],
+                             [[3, 1, 1, 1, 1, 1], '*', 'purple'], ['-', 'D', 'blue'], [[5, 1], 'x', 'black']]
+
+            idx = 0
+
+            plt.figure()
+
+            # Starting from here we will plot
+            for k, v in sub_dict.items():
+
+                # label = k + '-' + scenario
+                label = k
+
+                print(k)
+
+                ax = plt.axes()
+                if isinstance(plot_settings[idx][0], str):
+                    plt.plot(FAR, v, linestyle=plot_settings[idx][0], marker=plot_settings[idx][1],
+                             color=plot_settings[idx][2], label=label, linewidth=4)
+                elif isinstance(plot_settings[idx][0], list):
+                    if plot_settings[idx][1] == '*':
+                        # mew = 1
+                        # ms = 9
+                        mew = 1.5
+                        ms = 9.5
+                    elif plot_settings[idx][1] == 'x':
+                        # mew = 2
+                        # ms = 7
+                        mew = 2.5
+                        ms = 7.5
+
+                    plt.plot(FAR, v, dashes=plot_settings[idx][0], marker=plot_settings[idx][1],
+                             color=plot_settings[idx][2], label=label, linewidth=4, mew=mew, ms=ms)
+                plt.xticks(FAR)
+                plt.yticks(np.arange(0, 1.1, step=0.1))
+                ax.set_xticklabels(FAR, rotation=45)
+
+                idx += 1
+
+                # print()
+            plt.xlabel('False Accept Rate')
+            plt.ylabel('False Reject Rate')
+            plt.legend(loc='best', prop={'size': 12})
+            plt.tight_layout()
+            plt.grid(True)
+            bit_len_str = ''
+            if bit_len:
+                bit_len_str = '-' + bit_len
+            path = save_path + feature + '-' + scenario + bit_len_str + '.png'
+            plt.savefig(path, format='png', dpi=1000)
+            path = save_path + feature + '-' + scenario + bit_len_str + '.eps'
+            plt.savefig(path, format='eps', dpi=1000)
+
+            # plt.show()
+            # print()
+
+
+# ToDo: merge with plot_error_rates
 def plot_error_rates_miet(file_dict, feature, save_path, scenario):
+    matplotlib.rcParams.update({'font.size': 12})
     plt.figure()
     for k, v in file_dict.items():
         if v:
@@ -306,35 +433,42 @@ def plot_error_rates_miet(file_dict, feature, save_path, scenario):
                 ax = plt.axes()
                 if isinstance(plot_settings[0], str):
                     if plot_settings[1] == '*':
-                        mew = 1
-                        ms = 9
+                        # mew = 1
+                        # ms = 9
+                        mew = 1.5
+                        ms = 9.5
                         plt.plot(FAR, frr_list, linestyle=plot_settings[0], marker=plot_settings[1],
-                                 color=plot_settings[2], label=label, linewidth=3, mew=mew, ms=ms)
+                                 color=plot_settings[2], label=label, linewidth=4, mew=mew, ms=ms)
                     elif plot_settings[1] == 'x':
-                        mew = 2
-                        ms = 7
+                        # mew = 2
+                        # ms = 7
+                        mew = 2.5
+                        ms = 7.5
                         plt.plot(FAR, frr_list, linestyle=plot_settings[0], marker=plot_settings[1],
-                                 color=plot_settings[2], label=label, linewidth=3, mew=mew, ms=ms)
+                                 color=plot_settings[2], label=label, linewidth=4, mew=mew, ms=ms)
                     else:
                         plt.plot(FAR, frr_list, linestyle=plot_settings[0], marker=plot_settings[1],
-                                 color=plot_settings[2], label=label, linewidth=3)
+                                 color=plot_settings[2], label=label, linewidth=4)
                 elif isinstance(plot_settings[0], list):
                     if plot_settings[1] == '*':
-                        mew = 1
-                        ms = 9
+                        # mew = 1
+                        # ms = 9
+                        mew = 1.5
+                        ms = 9.5
 
                         plt.plot(FAR, frr_list, dashes=plot_settings[0], marker=plot_settings[1],
-                                 color=plot_settings[2], label=label, linewidth=3, mew=mew, ms=ms)
+                                 color=plot_settings[2], label=label, linewidth=4, mew=mew, ms=ms)
                     elif plot_settings[1] == 'x':
-                        mew = 2
-                        ms = 7
+                        # mew = 2
+                        # ms = 7
+                        mew = 2.5
+                        ms = 7.5
 
                         plt.plot(FAR, frr_list, dashes=plot_settings[0], marker=plot_settings[1],
-                                 color=plot_settings[2], label=label, linewidth=3, mew=mew, ms=ms)
+                                 color=plot_settings[2], label=label, linewidth=4, mew=mew, ms=ms)
                     else:
                         plt.plot(FAR, frr_list, dashes=plot_settings[0], marker=plot_settings[1],
-                             color=plot_settings[2], label=label, linewidth=3)
-
+                             color=plot_settings[2], label=label, linewidth=4)
 
                 plt.xticks(FAR)
                 plt.yticks(np.arange(0, 1.1, step=0.1))
@@ -342,7 +476,7 @@ def plot_error_rates_miet(file_dict, feature, save_path, scenario):
 
     plt.xlabel('False Accept Rate')
     plt.ylabel('False Reject Rate')
-    plt.legend(loc='best')
+    plt.legend(loc='best', prop={'size': 12})
     plt.tight_layout()
     plt.grid(True)
     bit_len_str = ''
@@ -350,8 +484,8 @@ def plot_error_rates_miet(file_dict, feature, save_path, scenario):
     plt.savefig(path, format='png', dpi=1000)
     path = save_path + feature + '-' + scenario  + '.eps'
     plt.savefig(path, format='eps', dpi=1000)
-    # plt.show()
 
+    # plt.show()
     # print()
 
 
@@ -404,102 +538,9 @@ def get_interval(filename):
     return
 
 
-def plot_error_rates(sub_list, feature, save_path, bit_len=''):
-
-    # Iterate over subscenarios
-    for sub in sub_list:
-        if sub:
-            sub_dict = {}
-            for json_file in sub:
-                # Open and read data JSON file
-                with open(json_file, 'r') as f:
-                    json_data = loads(f.read())
-                    base = json_data['base']
-
-                filename = get_filename(json_file, feature, bit_len)
-
-                if not filename:
-                    print('Could get the file name from %s, exiting...', json_file)
-                    sys.exit(0)
-
-                time_interval = filename.split('-')[0]
-
-                if not time_interval:
-                    print('Could get the time interval from %s, exiting...', filename)
-                    sys.exit(0)
-
-                if not bit_len:
-                    scenario = re.search('-(.*)_', filename).group(1)
-
-                    if not scenario:
-                        print('Could get the scenario from %s, exiting...', filename)
-                        sys.exit(0)
-                else:
-                    scenario = 'Full'
-
-                frr_list = []
-
-                # Iterate over base dict, calculate diff between base and adv error rates
-                for k, v in sorted(base.items()):
-                    if k != 'eer':
-                        frr_list.append(v['frr'])
-
-                sub_dict[time_interval] = frr_list
-
-            plot_settings = [[':', 'o', 'lightseagreen'], ['-.', '^', 'crimson'], ['--', 's', 'darkgreen'],
-                             [[3, 1, 1, 1, 1, 1], '*', 'purple'], ['-', 'D', 'blue'], [[5, 1], 'x', 'black']]
-
-            idx = 0
-
-            plt.figure()
-
-            # Starting from here we will plot
-            for k, v in sub_dict.items():
-
-                # label = k + '-' + scenario
-                label = k
-
-                print(k)
-
-                ax = plt.axes()
-                if isinstance(plot_settings[idx][0], str):
-                    plt.plot(FAR, v, linestyle=plot_settings[idx][0], marker=plot_settings[idx][1],
-                             color=plot_settings[idx][2], label=label, linewidth=3)
-                elif isinstance(plot_settings[idx][0], list):
-                    if plot_settings[idx][1] == '*':
-                        mew = 1
-                        ms = 9
-                    elif plot_settings[idx][1] == 'x':
-                        mew = 2
-                        ms = 7
-
-                    plt.plot(FAR, v, dashes=plot_settings[idx][0], marker=plot_settings[idx][1],
-                             color=plot_settings[idx][2], label=label, linewidth=3, mew=mew, ms=ms)
-                plt.xticks(FAR)
-                plt.yticks(np.arange(0, 1.1, step=0.1))
-                ax.set_xticklabels(FAR, rotation=45)
-
-                idx += 1
-
-                # print()
-            plt.xlabel('False Accept Rate')
-            plt.ylabel('False Reject Rate')
-            plt.legend(loc='best')
-            plt.tight_layout()
-            plt.grid(True)
-            bit_len_str = ''
-            if bit_len:
-                bit_len_str = '-' + bit_len
-            path = save_path + feature + '-' + scenario + bit_len_str + '.png'
-            plt.savefig(path, format='png', dpi=1000)
-            path = save_path + feature + '-' + scenario + bit_len_str + '.eps'
-            plt.savefig(path, format='eps', dpi=1000)
-            # plt.show()
-
-            # print()
-
-
+# ToDO: ideally also merge with SPF and AFP
 def plot_error_rates_ml(file_list, feature, scenario, save_path):
+    matplotlib.rcParams.update({'font.size': 12})
 
     plot_settings = [[':', 'o', 'lightseagreen'], ['-.', '^', 'crimson'], ['--', 's', 'darkgreen'],
                      [[3, 1, 1, 1, 1, 1], '*', 'purple'], ['-', 'D', 'blue'], [[5, 1], 'x', 'black']]
@@ -520,16 +561,21 @@ def plot_error_rates_ml(file_list, feature, scenario, save_path):
             print('plot_error_rates_ml: Could get the scenario from %s, exiting...', json_file)
             sys.exit(0)
 
+        # ToDO: update this shit - no renaming
         if subscenario == 'all':
             subscenario = 'Full'
 
+        '''
         if ml_alg == 'Gradient Boosting Machine':
             label = subscenario.title() + '-' + 'GBM'
         elif ml_alg == 'Distributed Random Forest':
             label = subscenario.title() + '-' + 'DRF'
         else:
-            print('plot_error_rates_ml: Unknown ML algorithm %s, exiting...', ml_alg)
+            print('plot_error_rates_ml: Unknown ML algorithm "%s", exiting...' % ml_alg)
             sys.exit(0)
+        '''
+
+        label = subscenario.title() + '-' + ml_alg
 
         frr_list = []
 
@@ -542,16 +588,20 @@ def plot_error_rates_ml(file_list, feature, scenario, save_path):
         ax = plt.axes()
         if isinstance(plot_settings[idx][0], str):
             plt.plot(FAR, frr_list, linestyle=plot_settings[idx][0], marker=plot_settings[idx][1],
-                     color=plot_settings[idx][2], label=label, linewidth=3)
+                     color=plot_settings[idx][2], label=label, linewidth=4)
         elif isinstance(plot_settings[idx][0], list):
             if plot_settings[idx][1] == '*':
-                mew = 1
-                ms = 9
+                # mew = 1
+                # ms = 9
+                mew = 1.5
+                ms = 9.5
             elif plot_settings[idx][1] == 'x':
-                mew = 2
-                ms = 7
+                # mew = 2
+                # ms = 7
+                mew = 2.5
+                ms = 7.5
             plt.plot(FAR, frr_list, dashes=plot_settings[idx][0], marker=plot_settings[idx][1],
-                     color=plot_settings[idx][2], label=label, linewidth=3, mew=mew, ms=ms)
+                     color=plot_settings[idx][2], label=label, linewidth=4, mew=mew, ms=ms)
         plt.xticks(FAR)
         plt.yticks(np.arange(0, 1.1, step=0.1))
         ax.set_xticklabels(FAR, rotation=45)
@@ -560,15 +610,15 @@ def plot_error_rates_ml(file_list, feature, scenario, save_path):
 
     plt.xlabel('False Accept Rate')
     plt.ylabel('False Reject Rate')
-    plt.legend(loc='best')
+    plt.legend(loc='best', prop={'size': 12})
     plt.tight_layout()
     plt.grid(True)
     path = save_path + feature + '-' + scenario + '.png'
     plt.savefig(path, format='png', dpi=1000)
     path = save_path + feature + '-' + scenario + '.eps'
     plt.savefig(path, format='eps', dpi=1000)
-    # plt.show()
 
+    # plt.show()
     # print()
 
 
@@ -599,6 +649,19 @@ def ml_plots(feature, scenario):
             sys.exit(0)
 
         save_path = 'C:/Users/mfomichev/Desktop/error_rates/office/'
+
+    elif scenario == 'mobile':
+        if feature == 'truong':
+            root_path = 'C:/Users/mfomichev/Desktop/ML/MobileExp/truong/ml/'
+        elif feature == 'truong_30sec':
+            root_path = 'C:/Users/mfomichev/Desktop/ML/MobileExp/truong_30sec/ml/'
+        elif feature == 'shrestha':
+            root_path = 'C:/Users/mfomichev/Desktop/ML/MobileExp/shrestha/ml/'
+        else:
+            print('ml_plots: Feature can only be "truong" or "shrestha", exiting...')
+            sys.exit(0)
+
+        save_path = 'C:/Users/mfomichev/Desktop/error_rates/mobile/'
 
     # Read files in the root_path
     file_list = read_files_ml(root_path)
@@ -730,14 +793,76 @@ def get_robustness(feature, scenario):
 
 if __name__ == '__main__':
 
-    adv_diff('LFP', 'car')
-    # ml_plots('shrestha', 'office')
+    adv_diff('LFP', 'office')
+    # ml_plots('shrestha', 'mobile')
     # get_robustness('SPF', 'car')
 
+    '''
+    res = np.loadtxt('C:/Users/mfomichev/Desktop/02-11_cut-1.txt')
 
+    res_mean = np.mean(res)
+    res_std = np.std(res)
 
+    print('mean = %f, std = %f' % (res_mean, res_std))
+    '''
 
+    '''
+    import gzip
 
+    json_file = 'C:/Users/mfomichev/Desktop/Sensor-24.json.gz'
+
+    # Open and read the GZIP file
+    with gzip.open(json_file, 'rt') as f:
+        json = loads(f.read())
+        results = json['results']
+
+    power1 = []
+    power2 = []
+
+    for k,v in sorted(results.items()):
+        power1.append(v['power1_db'])
+        power2.append(v['power2_db'])
+
+    power1 = np.array(power1)
+    power2 = np.array(power2)
+
+    print('len power1 = %d, len p1 = %d', (len(power1), len(power1[power1 > 40])))
+    print('len power2 = %d, len p2 = %d', (len(power2), len(power2[power2 > 40])))
+
+    print()
+    '''
+
+    '''
+    mu1, sigma1 = 0, 0.1  # mean and standard deviation
+    s1 = np.random.normal(mu1, sigma1, 1000)
+
+    # count, bins, ignored = plt.hist(s, 30, normed=True)
+    count1, bins1 = np.histogram(s1, 50, normed=True)
+    # plt.plot(bins1, 1 / (sigma1 * np.sqrt(2 * np.pi)) * np.exp(- (bins1 - mu1) ** 2 / (2 * sigma1 ** 2)),
+    #          linewidth=2, color='r')
+    y1 = 1 / (sigma1 * np.sqrt(2 * np.pi)) * np.exp(- (bins1 - mu1) ** 2 / (2 * sigma1 ** 2))
+
+    mu2, sigma2 = -0.15, 0.03  # mean and standard deviation
+    s2 = np.random.normal(mu1, sigma1, 1000)
+
+    # count1, bins1, ignored1 = plt.hist(s1, 30, normed=True)
+    count2, bins2 = np.histogram(s2, 50, normed=True)
+    # plt.plot(bins2, 1 / (sigma2 * np.sqrt(2 * np.pi)) * np.exp(- (bins2 - mu2) ** 2 / (2 * sigma2 ** 2)),
+    #          linewidth=2, color='b')
+    y2 = 1 / (sigma2 * np.sqrt(2 * np.pi)) * np.exp(- (bins2 - mu2) ** 2 / (2 * sigma2 ** 2))
+
+    # fig, (ax, ax1) = plt.subplots(2, 1, sharex=True)
+    # ax.plot(bins, y1, bins1, y2, color='black')
+
+    plt.plot(bins1, y1, color='r', linewidth=2.2)
+    plt.plot(bins2, y2, color='b', linestyle='--', linewidth=2.2)
+
+    # ax.fill_between(bins1, y1, y2, where=y1 >= y2, facecolor='green', interpolate=True)
+    # ax.fill_between(bins2, y1, y2, where=y1 <= y2, facecolor='red', interpolate=True)
+    # ax.set_title('fill between where')
+
+    plt.show()
+    '''
 
 
 
