@@ -104,9 +104,8 @@ def get_error_rate_files(root_path, feature, subscenario):
         # Check validity of the results: each interval must have some results - no empty lists
         for k, v in error_rate_files.items():
             if not v:
-                print('get_error_rate_files: Empty list at "%s %s" is invalid, probably missing data, exiting...' %
-                      (feature, k))
-                sys.exit(0)
+                print('Warning "%s" feature: with given bit sizes %s, "%s" interval does not have any data!' %
+                      (feature, MIET_BSIZE_SUBSET, k))
 
         return error_rate_files
     else:
