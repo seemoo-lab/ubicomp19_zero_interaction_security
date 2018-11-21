@@ -218,7 +218,7 @@ def process_folder(file_list, feature='', feature_class=''):
 
 
 def process_feature(json_file, feature, feature_class):
-# Process each feature
+    # Process each feature
     if feature == 'audioFingerprint':
         return process_afp(json_file)
     elif feature == 'noiseFingerprint':
