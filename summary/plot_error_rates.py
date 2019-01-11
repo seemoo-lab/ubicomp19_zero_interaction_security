@@ -152,7 +152,7 @@ def get_error_rate_files(root_path, feature, subscenario):
 
 def plot_far_frr(error_rate_files, plot_path, feature, scenario, subscenario):
     # Increase font size of axes names and markings
-    matplotlib.rcParams.update({'font.size': 12})
+    matplotlib.rcParams.update({'font.size': 13})
 
     # Plot settings - my Precious ;)
     plot_settings = [[':', 'o', 'lightseagreen'], ['-.', '^', 'crimson'], ['--', 's', 'darkgreen'],
@@ -419,7 +419,7 @@ def plot_far_frr(error_rate_files, plot_path, feature, scenario, subscenario):
 
     # ToDo: Adjust legend size or position if necessary
     # Set location and font size of legend
-    plt.legend(loc='best', prop={'size': 12})
+    plt.legend(loc='best', prop={'size': 13})
 
     # Tight and girded layout
     plt.tight_layout()
@@ -432,9 +432,9 @@ def plot_far_frr(error_rate_files, plot_path, feature, scenario, subscenario):
         plot_filename = plot_path + feature + '-' + scenario
 
     # ToDo: Adjust here format if necessary
-    # Save plot as PNG and EPS
+    # Save plot as PNG and PDF
     plt.savefig(plot_filename + '.png', format='png', dpi=1000)
-    plt.savefig(plot_filename + '.eps', format='eps', dpi=1000)
+    plt.savefig(plot_filename + '.pdf', format='pdf', dpi=1000)
 
 
 def generate_plots(root_path, result_path, feature, scenario, subscenario):
