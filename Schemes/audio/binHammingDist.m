@@ -1,6 +1,12 @@
 function [hamDist] = binHammingDist(bfp1, bfp2)
-%BINHAMMINGDIST Summary of this function goes here
-%   Compute Hamming distance between two binary fingerprints
+% BINHAMMINGDIST Compute Hamming Distance between two binary fingerprints
+
+%   Input args:
+%   - bfp1 - First binary fingerprint (Nx1 vector)
+%   - bfp2 - Second binary fingerprint (Nx1 vector)
+
+%   Output args: 
+%   - hamDist - Hamming distance, i.e., a number of differing bits (integer)
 
 % Hamming distance in number of bits
 hamDist = 0;
@@ -16,4 +22,3 @@ for i=1:bfpSize
 end
 
 end
-

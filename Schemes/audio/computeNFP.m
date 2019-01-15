@@ -1,6 +1,14 @@
 function [] = computeNFP(nL1, nL2, timeInterval, noiseData)
-%COMPUTENFP Summary of this function goes here
-%   Detailed explanation goes here
+% COMPUTENFP Wrapper to compute noise fingerprint + metadata and store the
+% results in a JSON file
+
+%   Input args:
+%   - nL1 - Nose levels of generated from signal S1 (Mx1 vector)
+%   - nL2 - Nose levels of generated from signal S2 (Mx1 vector)
+%   - timeInterval - Time interval in seconds (integer)
+%   - noiseData - Structure storing metadata (struct)
+
+%   Output args: None
 
 % Construct metadata struct
 metadata = struct;
@@ -86,41 +94,14 @@ metadata.created_on = datestr(datetime('now'), noiseData.dateFormat);
 output.metadata = metadata; 
 output.results = containers.Map(keySet, valueSet);
 
-% Save the main log file
+% Construct log file path
 fileName = extractBetween(pathS2, 'audio/', '.flac');
 res = strsplit(pathS1, '/');
 logPath = strcat(noiseData.expPath, '/', res{1}, '/', res{2}); 
-mainLogFile = strcat(logPath, '/', noiseData.feature, '/', ...
+logFilePath = strcat(logPath, '/', noiseData.feature, '/', ...
     'Sensor-', fileName, '.json');
 
-saveJsonFile(char(mainLogFile), output);
-
-% % Flip metadata.source_files for symmetric log file
-% tmpStruct = metadata.source_files;
-% fileInfo.file1 = tmpStruct.file2;
-% fileInfo.file2 = tmpStruct.file1;
-% metadata.source_files = fileInfo;
-% 
-% % Flip feature.fingerprint_file1 and feature.fingerprint_file2 for
-% % symmetric log file
-% feature.fingerprint_noise_lev1 = nfpS2Str;
-% feature.fingerprint_noise_lev2 = nfpS1Str;
-% 
-% % Update hashmap
-% valueSet{1} = feature;
-% 
-% % Update output struct
-% output.metadata = metadata; 
-% output.results = containers.Map(keySet, valueSet);
-% 
-% % Save the symmetric log file
-% fileName = extractBetween(pathS1, 'audio/', '.flac');
-% res = strsplit(pathS2, '/');
-% logPath = strcat(noiseData.expPath, '/', res{1}, '/', res{2}); 
-% symLogFile = strcat(logPath, '/', noiseData.feature, '/', ...
-%     'Sensor-', fileName, '.json');
-% 
-% saveJsonFile(char(symLogFile), output);
+% Save log file
+saveJsonFile(char(logFilePath), output);
 
 end
-

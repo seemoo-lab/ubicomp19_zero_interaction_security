@@ -1,6 +1,14 @@
 function [] = localMerge(localPath, sensorIdx, savePath)
-%LOCALMERGE Summary of this function goes here
-%   Detailed explanation goes here
+%LOCALMERGE Merge result files from each chunk (store on the local drive) 
+% into a single result file (stored on the network share)
+
+%   Input args:
+%   - localPath - Path to a folder with result files from each chunk (string)
+%   - sensorIdx - Sensor index, i.e., when compute result between sensor 
+% XX and YY - it is YY (string)
+%   - savePath - Full path to save the combined result file (string)
+
+%   Output args: None
 
 % Content of the result folder for a specific sensorIdx
 resFolder = dir(char(strcat(localPath, '/', 'sensor-', sensorIdx, '*.json')));
@@ -90,4 +98,3 @@ delPath = strcat(localPath, '/', 'sensor-', sensorIdx, '*.json');
 delete(char(delPath));
 
 end
-

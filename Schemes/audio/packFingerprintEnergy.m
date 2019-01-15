@@ -1,6 +1,13 @@
 function [packedEnergy] = packFingerprintEnergy(signalEnergy, freqVect)
-%PACKFINGERPRINTENERGY Summary of this function goes here
-%   Detailed explanation goes here
+% PACKFINGERPRINTENERGY Reformat audio fingerprint metadata (frames energy)
+% for more convenient storage
+
+%   Input args:
+%   - signalEnergy - Frame energies in different frequency bands (struct)
+%   - freqVect - Frequency bands (struct)
+
+%   Output args: 
+%   - packedEnergy - Frames energy of corresponding frequency bands (struct)
 
 % Restore energy to cell
 signalEnergy = num2cell(signalEnergy, 2);
@@ -59,9 +66,3 @@ for i=1:nFrames
     packedEnergy.(structField) = containers.Map(keySet, valueSet);
     
 end
-
-
-
-
-
-

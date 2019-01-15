@@ -1,16 +1,16 @@
 function [freqBank] = thirdOctaveSplitter(signal, spfFilterBank)
-% function [freqBank] = thirdOctaveSplitter(signal, Fb, Fs)
-%THIRDOCTAVESPLITTER Split an audio signal into 1/3 Octave frequency bands
-%   this implementation "manually" splits the signal using a set of    
-%   bandpass Butterworth filters. The inspiration for this script is from:
-%   oct3bankFc.m and oct3dsgn.m
+% THIRDOCTAVESPLITTER Split an audio signal into 1/3 Octave bands.
+% This implementation "manually" splits the signal using a set of bandpass 
+% Butterworth filters. The inspiration for this script is from: 
+% oct3bankFc.m and oct3dsgn.m
 
 %   Input args:
-%   - signal - audio signal in samples (Nx1 vector)
-%   - spfFilterBank - 1xM cell array of "digitalFilter" objects
+%   - signal - Audio signal in samples (Nx1 vector)
+%   - spfFilterBank - Filter bank (cell of size Mx1, each cell contains
+% a digitalFilter object)
 
 %   Output args:
-%   - freqBank - signal split into specified freqeuncy bands (MxN matrix)
+%   - freqBank - Signal split into specified freqeuncy bands (MxN matrix)
 
 %   Notes:
 %   The filters are constructed in preComputeFilterSPF.m
@@ -24,4 +24,3 @@ for i = 1:length(spfFilterBank)
 end
 
 end
-

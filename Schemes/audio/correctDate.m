@@ -1,9 +1,12 @@
 function [outDate] = correctDate(inDate)
-%CORRECTDATE Summary of this function goes here
-%   Detailed explanation goes here
+%CORRECTDATE Remove JSON artifacts in the timestamp part fo the JSON after
+% merging log files from the whole signal
 
-% inDate format: 'xyyyy_mm_ddHH_MM_SS_FFF'
-% outDate format: 'yyyy-mm-dd HH:MM:SS.FFF' 
+%   Input args:
+%   - inDate - Input date, format: 'xyyyy_mm_ddHH_MM_SS_FFF' (string)
+
+%   Output args: 
+%   - outDate - Output date, format: 'yyyy-mm-dd HH:MM:SS.FFF' (string)
 
 % Desired format
 desiredFormat = 'yyyy-mm-dd HH:MM:SS.FFF';
@@ -38,4 +41,3 @@ time(length(time)-idx) = '.';
 outDate = horzcat(date, ' ', time);
 
 end
-

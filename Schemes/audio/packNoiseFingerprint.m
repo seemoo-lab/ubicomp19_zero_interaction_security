@@ -1,6 +1,15 @@
 function [nfpS1Str, nfpS2Str] = packNoiseFingerprint(nfpS1, nfpS2)
-%PACKNOISEFINGERPRINT Summary of this function goes here
-%   Detailed explanation goes here
+% PACKNOISEFINGERPRINT Wrapping noise fingerprint from the whole signal to
+% 512 chunks (used for convenient storage)
+
+%   Input args:
+%   - nfpS1 - Binary fingerprint of signal S1 ((nSnapshots-1)x1 vector)
+%   - nfpS2 - Binary fingerprint of signal S2 ((nSnapshots-1)x1 vector)
+% nSnapshots depends on the time interval used to generate the fingerprint
+
+%   Output args: 
+%   - nfpS1Str - Wrapped fingerprint of signal S1 (hashmap)
+%   - nfpS2Str - Wrapped fingerprint of signal S2 (hashmap)
 
 % The size of one nfp chunk
 chunkSize = 512;
@@ -85,4 +94,3 @@ nfpS1Str = containers.Map(keySet1, valueSet1);
 nfpS2Str = containers.Map(keySet2, valueSet2);
 
 end
-

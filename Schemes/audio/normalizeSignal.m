@@ -1,18 +1,18 @@
 function [signal] = normalizeSignal(signal)
-%NORMALIZESIGNAL Normalize audio signal w.r.t. its energy
+% NORMALIZESIGNAL Normalize audio signal w.r.t. its energy
 
 %   The code is courtesy of Hien Thi Thu Truong
 %   Paper: "Comparing and Fusing Different Sensor Modalities for
 %   Relay Attack Resistance in Zero-Interaction Authentication"
 
 %   Input args:
-%   - signal - incoming audio signal (can be Nx1 vector or NxM matrix)
+%   - signal - Incoming audio signal (can be Nx1 vector or NxM matrix)
 
-%   N - the size of audio signal (in samples)
-%   M - the number of audio signals in signal
+%   N - Size of audio signal (in samples)
+%   M - Number of audio streams in a signal
 
 %   Output args:
-%   - signal - normalized audio signal (can be Nx1 vector or NxM matrix)
+%   - signal - Normalized audio signal (can be Nx1 vector or NxM matrix)
 
 % Flip signal if necessary
 [rows, columns] = size(signal);
@@ -32,8 +32,3 @@ for i = 1:nAudioChannels
 end
 
 end
-
-
-
-
-

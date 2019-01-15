@@ -1,7 +1,22 @@
 function [maxXCorr, xcorrFreqBands] = soundProofXcorr(S1, S2, sampleDiff, Fs, spfFilterBank)
-% %SOUNDPROOFXCORR Implementaition of the Sound-Proof correlation engine
+% SOUNDPROOFXCORR Implementaition of the SoundProof correlation engine by
+% Karapanos, Nikolaos, et al. 
+% "Sound-Proof: Usable Two-Factor Authentication Based on Ambient Sound."
+% USENIX Security Symposium. 2015.
 
-% Frequency bands to be splitted into -> 20 bands: 50-4000Hz as in the SPF
+%   Input args:
+%   - S1 - First audio signal (Nx1 vector)
+%   - S2 - Second audio signal (Nx1 vector)
+%   - sampleDiff - Delay between two signals in samples (integer)
+%   - Fs - Sampling frequency in Hz (integer)
+%   - spfFilterBank - Filter bank (cell of size 20x1, each cell contains
+% a digitalFilter object)
+
+%   Output args:
+%   - maxXCorr - Avgerage maximum cross-corellation over 20 octave bands
+%   - xcorrFreqBands - Max correlation in each octave band (hashmap)
+
+% Frequency bands to be splitted into -> 20 bands: 50-4000 Hz as in the SPF
 % paper
 Fb = [50 63 80 100 125 160 200 250 315 400, ...
     500 630 800 1000 1250 1600 2000 2500 3150 4000];
@@ -62,5 +77,3 @@ xcorrFreqBands = containers.Map(keySet, valueSet);
 maxXCorr = maxXCorr/length(Fb);
 
 end
-
-

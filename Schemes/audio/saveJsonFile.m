@@ -1,6 +1,11 @@
 function [] = saveJsonFile(fileName, fileContent)
-%SAVEJSONFILE Summary of this function goes here
-%   Detailed explanation goes here
+% SAVEJSONFILE Save data to a JSON file
+
+%   Input args:
+%   - fileName - Full path of the resulting JSON file (string)
+%   - fileContent - Data to be saved (struct)
+
+%   Output args: None
 
 % Open a file for writing
 logID = fopen(fileName, 'w');
@@ -12,4 +17,3 @@ fprintf(logID, jsonencode(fileContent));
 fclose(logID);
 
 end
-

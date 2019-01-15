@@ -1,6 +1,20 @@
 function [maxXCorr, freqDist, timeFreqDist] = timeFreqDistance(S1, S2, sampleDiff)
-%TIMEFREQDISTANCE Summary of this function goes here
-%   Detailed explanation goes here
+%TIMEFREQDISTANCE Implementation of time-frequency distance computation by 
+% Truong, Hien Thi Thu, et al. 
+% "Comparing and fusing different sensor modalities for relay 
+% attack resistance in zero-interaction authentication." 
+% Pervasive Computing and Communications (PerCom), 
+% 2014 IEEE International Conference on. IEEE, 2014.
+
+%   Input args:
+%   - S1 - First audio signal (Nx1 vector)
+%   - S2 - Second audio signal (Nx1 vector)
+%   - sampleDiff - Delay between two signals in samples (integer)
+
+%   Output args:
+%   - maxXCorr - Maximum cross-correlation (float)
+%   - freqDist - Frequency distance (float)
+%   - timeFreqDist - Time-frequency distance (float)
 
 % Align two signals based on the computed with xcorr delay (sampleDiff)
 [S1, S2] = alignTwoSignals(S1, S2, sampleDiff);

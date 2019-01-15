@@ -1,19 +1,19 @@
 function [S1, S2] = alignTwoSignals(S1, S2, sampleDiff)
-%ALIGNTWOSIGNALS Align two audio signals using: 1)xcorr delay and
+% ALIGNTWOSIGNALS Align two audio signals using: 1)xcorr delay and
 % 2) cutting the length of both signals to the length of the shortest
 % signal
 
 %   Input args:
-%   - S1 - first audio signal (Nx1 vector)
-%   - S2 - second audio signal (Nx1 vector)
-%   - sampleDiff - delay between two signals in samples (integer)
+%   - S1 - First audio signal (Nx1 vector)
+%   - S2 - Second audio signal (Nx1 vector)
+%   - sampleDiff - Delay between two signals in samples (integer)
 
 %   Output args:
-%   - S1 - first audio signal aligned (Mx1 vector)
-%   - S2 - second audio signal aligned (Mx1 vector)
+%   - S1 - First audio signal aligned (Mx1 vector)
+%   - S2 - Second audio signal aligned (Mx1 vector)
 
-%   N - the size of origninal audio signals(in samples)
-%   M - the size of aligned audio signal (in samples)
+%   N - Size of original audio signals(in samples)
+%   M - Size of aligned audio signal (in samples)
 %   M <= N
 
 % Align two signals according to the delay
@@ -35,5 +35,3 @@ S1 = S1(1:signalLen);
 S2 = S2(1:signalLen);
 
 end
-
-

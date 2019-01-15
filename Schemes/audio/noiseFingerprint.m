@@ -1,14 +1,19 @@
 function [nfpS1, nfpS2] = noiseFingerprint(nL1, nL2, snapshotLen, noiseData)
-%NOISEFINGERPRINT Summary of this function goes here
-%   Detailed explanation goes here
+% NOISEFINGERPRINT Implementation of the scheme by Miettinen, Markus, et al. 
+% "Context-based zero-interaction pairing and key evolution 
+% for advanced personal devices." Proceedings of the 2014 ACM SIGSAC 
+% conference on computer and communications security. ACM, 2014.
 
 %   Input args:
-%   - nL1 - array of noise levels transformed from S1
-%   - nL2 - array of noise levels transformed from S2
-%   - snapshotLen - lenght of snapshot: e.g. 60 sec, 120 sec
-%	(snapshotLen values are form Miettinen et al.)
+%   - nL1 - Nose levels of generated from signal S1 (Mx1 vector)
+%   - nL2 - Nose levels of generated from signal S2 (Mx1 vector)
+%   - snapshotLen - Snapshot lenght in seconds (integer)
 
-% Threshold values are from Miettinen et al.
+%   Output args:
+%   - nfpS1 - S1 binary fingerprint ((nSnapshots-1)x1 vector)
+%   - nfpS2 - S2 binary fingerprint ((nSnapshots-1)x1 vector)
+
+% Thresholds were obtained in private communication with Markus Miettinen
 
 % Absolute threshold 
 absThreshold = 10;
@@ -57,6 +62,8 @@ nfpS2 = zeros(1, nfpSize);
 % Construct noise fingerprints
 for i=1:nfpSize
 
+    % Cases where part of the snapshot equals zero, set to non-zero to
+    % avoid divison by zero
     if snapshot1(i) == 0
        snapshot1(i) = 0.000001;
     end

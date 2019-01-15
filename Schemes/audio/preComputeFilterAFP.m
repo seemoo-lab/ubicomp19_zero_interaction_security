@@ -1,6 +1,12 @@
 function [afpFilterBank] = preComputeFilterAFP()
-%PRECOMPUTEFILTERAFP Summary of this function goes here
-%   Detailed explanation goes here
+%PRECOMPUTEFILTERAFP Precompute a filter bank to split an audio signal into
+% 32 uniform frequency bands
+
+%   Input args: None
+
+%   Output args:
+%   - afpFilterBank - Filter bank (cell of size 32x1, each cell contains
+% a digitalFilter object)
 
 % Basic sampling frequency with which we are working
 Fs = 16000;
@@ -47,4 +53,3 @@ for i=1:nFreqBands
 end
 
 end
-

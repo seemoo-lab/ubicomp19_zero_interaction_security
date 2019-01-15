@@ -1,10 +1,16 @@
 function [outResult] = correctBands(inResult)
-%CORRECTBANDS Summary of this function goes here
-%   Detailed explanation goes here
+% CORRECTBANDS Remove JSON artifacts in the resluts part fo the JSON after
+% merging log files from the whole signal
+
+%   Input args:
+%   - inResult - Input JSON (struct)
+
+%   Output args: 
+%   - outResult - Output JSON (struct)
 
 if isfield(inResult, 'vect_energy_chunk1') % Check if the feature is AFP
     
-    % Adjsut vect_energy_chunk1
+    % Adjust vect_energy_chunk1
     energyChunk = inResult.vect_energy_chunk1;
     
     % Cell array of frame names
@@ -184,7 +190,7 @@ if isfield(inResult, 'fingerprint_noise_lev2')
     end 
 end
 
+% Output the corrected JSON
 outResult = inResult;
 
 end
-

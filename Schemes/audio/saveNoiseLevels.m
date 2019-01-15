@@ -1,6 +1,12 @@
 function [] = saveNoiseLevels(nL1, nL2, noiseData)
-%SAVENOISELEVELS Summary of this function goes here
-%   Detailed explanation goes here
+% SAVENOISELEVELS Save noise levels to a JSON file
+
+%   Input args:
+%   - nL1 - Nose levels of generated from signal S1 (Mx1 vector)
+%   - nL2 - Nose levels of generated from signal S2 (Mx1 vector)
+%   - noiseData - Structure storing metadata (struct)
+
+%   Output args: None
 
 % Construct metadata struct
 metadata = struct;
@@ -89,4 +95,3 @@ end
 saveJsonFile(char(mainLogFile), output);
 
 end
-

@@ -1,6 +1,12 @@
 function [spfFilterBank] = preComputeFilterSPF()
-%PRECOMPUTEFILTERSPF Summary of this function goes here
-%   Detailed explanation goes here
+% PRECOMPUTEFILTERSPF Precompute a filter bank for splitting an audio
+% signal into 20 octave bands
+
+%   Input args: None
+
+%   Output args:
+%   - spfFilterBank - Filter bank (cell of size 20x1, each cell contains
+% a digitalFilter object)
 
 % Basic sampling frequency with which we are working
 Fs = 16000;
@@ -51,4 +57,3 @@ for i = 1:length(Fc)
 end
 
 end
-

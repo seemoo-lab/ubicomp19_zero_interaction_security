@@ -1,12 +1,15 @@
 function [signal, Fs] = loadSignal(fileName, dataType)
-%LOADSIGNAL Summary of this function goes here
-%   Detailed explanation goes here
+%LOADSIGNAL Load an audio file
 
 %   Input args:
 %   - fileName - absolute path to an audio file
 %   - dataType - type of data to be loaded from an audio file:
 %   'double' - double-precision normalized samples ([-1, 1])
 %   'native' - raw PCM values from a .flac file
+
+%   Output args:
+%   - signal - Audio data (vector Mx1)
+%   - Fs - Samplig rate in Hz (integer)
 
 % Sampling frequency of audio from SensorTag
 Fs = 16000;

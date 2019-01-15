@@ -1,6 +1,19 @@
 function [] = computeSPF(S1, S2, sampleDiff, spfFilterBank, pathS1, pathS2, commonData, idx)
-%COMPUTESPF Summary of this function goes here
-%   Detailed explanation goes here
+%COMPUTESPF Wrapper to compute cross-correlation + metadata and store the
+% results in a JSON file
+
+%   Input args:
+%   - S1 - First audio chunk (Kx1 vector)
+%   - S2 - Second audio chunk (Kx1 vector)
+%   - sampleDiff - Delay between two chunks in samples (integer)
+%   - spfFilterBank - Filter bank (cell of size 20x1, each cell contains
+% a digitalFilter object)
+%   - pathS1 - Name of the first audio chunk (string)
+%   - pathS2 - Name of the second audio chunk (string)
+%   - commonData - Structure storing metadata (struct)
+%   - idx - Index of an audio chunk (integer)
+
+%   Output args: None
 
 % Construct metadata struct
 metadata = struct;
@@ -113,43 +126,11 @@ metadata.created_on = datestr(datetime('now'), commonData.dateFormat);
 output.metadata = metadata; 
 output.results = containers.Map(keySet, valueSet);
 
-% Save the main log file
+% Construct log file path
 fileName = extractBetween(pathS2, 'audio/', '.flac');
-% res = strsplit(pathS1, '/');
-% logPath = strcat(commonData.expPath, '/', res{1}, '/', res{2}); 
-% mainLogFile = strcat(logPath, '/', commonData.feature, '/', ...
-%     'sensor-', fileName, '.json');
+logFilePath = strcat(commonData.expPath, '/', 'sensor-', fileName, '.json');
 
-mainLogFile = strcat(commonData.expPath, '/', 'sensor-', fileName, '.json');
-
-saveJsonFile(mainLogFile, output);
-
-% % Flip metadata.source_files for symmetric log file
-% tmpStruct = metadata.source_files;
-% fileInfo.chunk1 = tmpStruct.chunk2;
-% fileInfo.chunk2 = tmpStruct.chunk1;
-% metadata.source_files = fileInfo;
-% 
-% % Change the sign of feature.delay_xcorr_sec for symmetric log file
-% if sampleDiff ~= 0
-%     feature.delay_xcorr_sec = -sampleDiff/commonData.Fs;
-% end
-% 
-% % Update hashmap
-% valueSet{1} = feature;
-% 
-% % Update output struct
-% output.metadata = metadata; 
-% output.results = containers.Map(keySet, valueSet);
-% 
-% % Save the symmetric log file
-% fileName = extractBetween(pathS1, 'audio/', '.flac');
-% res = strsplit(pathS2, '/');
-% logPath = strcat(commonData.expPath, '/', res{1}, '/', res{2}); 
-% symLogFile = strcat(logPath, '/', commonData.feature, '/', ...
-%     'sensor-', fileName, '.json');
-% 
-% saveJsonFile(symLogFile, output);
+% Save log file
+saveJsonFile(logFilePath, output);
 
 end
-

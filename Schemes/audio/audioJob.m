@@ -1,6 +1,42 @@
 function [] = audioJob(filePath1, filePath2, expPath, tmpPath, localPath)
-%AUDIOJOB Summary of this function goes here
-%   Detailed explanation goes here
+% AUDIOJOB Main script used to generate results for four schemes:
+
+% Schuermann, Dominik, and Stephan Sigg. 
+% "Secure communication based on ambient audio." 
+% IEEE Transactions on mobile computing 12.2 (2013): 358-370.
+%
+% Truong, Hien Thi Thu, et al. 
+% "Comparing and fusing different sensor modalities for relay 
+% attack resistance in zero-interaction authentication." 
+% Pervasive Computing and Communications (PerCom), 
+% 2014 IEEE International Conference on. IEEE, 2014.
+%
+% Miettinen, Markus, et al. 
+% "Context-based zero-interaction pairing and key evolution 
+%for advanced personal devices." Proceedings of the 2014 ACM SIGSAC 
+% conference on computer and communications security. ACM, 2014.
+%
+% Karapanos, Nikolaos, et al. 
+% "Sound-Proof: Usable Two-Factor Authentication Based on Ambient Sound."
+% USENIX Security Symposium. 2015.
+
+%   Input args:
+%   - filePath1 - Full path to the first FLAC audio file (string)
+%   - filePath1 - Full path to the second FLAC audio file (string)
+%   - expPath - Full path to the results, storing Sensor-xx folders (string)
+%   - tmpPath - Full path to a tmp folder, used by Parallel Computing Toolbox
+%   - localPath - Path to the (local) storage to keep many small files for 
+% each chunk computation before they are merged. 
+% Rationale for that: we used this storage on cluster nodes, which 
+% have limited HDD storage, and then copied the merged result for 
+% a pair of sensor back to the large network share. This prevented 
+% fragmentation on the network share and improved the performance 
+% as local storage on cluster nodes is fast. 
+
+%   Output args: None
+
+% Number of workers to be used for computation, ADJUST IT HERE!
+numWorkers = 12;
 
 % Sleep for 1+X seconds to avoid problems when launching many instances
 % at once (See https://de.mathworks.com/matlabcentral/answers/97141-why-am-i-unable-to-start-a-local-matlabpool-from-multiple-matlab-sessions-that-use-a-shared-preferen#comment_181845)
@@ -9,12 +45,7 @@ pause(1+30*rand());
 % Enable parallel execution with Parallel Computing Toolbox
 c = parcluster();
 c.JobStorageLocation = tmpPath;
-p = parpool(c, 12);
-
-%p = gcp('nocreate');
-%if isempty(p)
-%    parpool('local');
-%end
+p = parpool(c, numWorkers);
 
 % Version of the script
 scriptVersion = 'v1.2.3';
@@ -116,6 +147,7 @@ alignS2 = S2(1:alignLen);
     
 % Time lag in sec to bind xcorrDelay computation: we assume devices
 % should be able to sync at some point in time, but not tightly
+% Used values: timeLag = 3 for car and office scenario, 15 for the mobile
 timeLag = 15;
     
 % Find a delay between two 1-hour chunks of two signals
@@ -197,9 +229,9 @@ dataType = 'double';
 
 % Compute different audio features per signal basis:
 % 1. Time-frequency distance - TFD (Paper: Truong et al., ZIA'14)
-% 2. Sound-Proof - SPF (Paper: Karapanos et al., Sound-Proof'15)
-% 3. Audido fingerprinting - AFP (Paper: Sch??rmann and Sigg, Ambient audio'13)
-% 4. Noise fingerprinting - NFP (Paper: Miettinen et al., ZIP'14)
+% 2. SoundProof - SPF (Paper: Karapanos et al., Sound-Proof'15)
+% 3. Audio fingerprint - AFP (Paper: Schuermann and Sigg, Ambient audio'13)
+% 4. Noise fingerprint - NFP (Paper: Miettinen et al., ZIP'14)
 
 % Main loop
 for i = 1:length(timeInterval)
@@ -279,16 +311,20 @@ for i = 1:length(timeInterval)
     % Array of delays between audio pairs in samples computed with xcorr
     audioPairDelay = zeros(nChunks, 1);
 	
-	% The commented part can be used to compute individual dealys between pairs of audio signals. 
-	% In this case we can acheive better alignment between two audio pairs. 
-	% Downside: the computations will take longer because the aligment will happen for all paris: 
-	% function 'alignTwoSignals' called in the individual feature functioins: 'audioFingerprint', 'soundProofXcorr'
-	% and 'timeFreqDistance'. Also, doing this kind of alignment is not realistic in the real deployment
-	% CURRENLY: we do not do the individual audio paris alignment, it can be enabled by 
-	% uncommenting the lines below: 278--288 . The alignment is currently done by finding 
-	% a lag between input audio sequences: S1 and S2 with xcorr (timeLag = 3; lines: 111--119) and shifting them.
-	
-	%%{
+	% The commented part is used to compute individual delays between 
+    % chunks of audio signals. Thus, we achieve better alignment between 
+    % two audio chunks. Downside: the computations will take longer, 
+    % because of the chunkwise alignment: func 'alignTwoSignals' is called 
+    % in the each feature function: 'audioFingerprint', 'soundProofXcorr' 
+    % and 'timeFreqDistance'. Doing such an alignment is not realistic 
+    % in the real-world deployment.
+    
+    % CURRENLY: we do not perform chunkwise alignment, it can be enabled by 
+    % uncommenting lines below: 328--338. The alignment is currently done by 
+    % finding a lag between input audio signals: S1 and S2 with xcorr 
+    % (timeLag = 3 or 15; lines: 152--165) and shifting them.
+    
+	%{
 	% Here time lag should be samller as chunks can be small, e.g. 5 sec.
     % Still not tight synch is assumed
     timeLag = 1.5;
@@ -298,7 +334,7 @@ for i = 1:length(timeInterval)
     parfor j = 1:nChunks
         audioPairDelay(j) = xcorrDelay(sig1{j}, sig2{j}, timeLag, Fs);
     end
-	%%}
+	%}
 	
     % Construct commonData struct
     commonData = struct;
@@ -381,4 +417,3 @@ fprintf('Computations finished\n');
 exit;
 
 end
-
