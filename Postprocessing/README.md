@@ -41,7 +41,7 @@ $ python3 generate_datasets.py ~/data/mobile/ ~/sets/ truong mobile full 15    #
 $ python3 generate_datasets.py ~/data/mobile/ ~/sets/ shrestha mobile full 25  # generate dataset for the full mobile scenario using 25 cores (scheme by Shrestha et al.)
 ```
 
-Here, ~/data is the folder the postprocessed data from car, office or mobile scenario is stored, and ~/sets is folder to store the generated ML datasets.
+Here, ~/data is the folder the postprocessed data from car, office or mobile scenario is stored, and ~/sets is the folder to store the generated ML datasets.
 
 **Note:** By default Truong et al. datasets are generated using a 10sec interval, to generate datasets on a 30sec interval discussed in the paper, set *time_interval = '30sec'* in *get_truong_dataset* function. Other intervals (5sec, 15sec, 1min, 2min) have not been tested, so the correctness of dataset generation on these intervals is not guaranteed! 
 
@@ -52,4 +52,4 @@ Mikhail Fomichev and Max Maass
 
 ## License
 
-The code is licensed GNU General Public License v3.0 - see the [LICENSE.txt](https://dev.seemoo.tu-darmstadt.de/zia/evaluation-public/blob/master/LICENSE.txt) file for details
+The code is licensed under the GNU GPLv3 - see [LICENSE.txt](https://dev.seemoo.tu-darmstadt.de/zia/evaluation-public/blob/master/LICENSE.txt) file for details

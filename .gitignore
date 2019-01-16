@@ -2,3 +2,6 @@ venv
 __pycache__
 results/
 Sensor-*/
+.envrc
+.python-version
+.python-virtualenv
