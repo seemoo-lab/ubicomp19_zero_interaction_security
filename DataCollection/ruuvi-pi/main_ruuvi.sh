@@ -1,5 +1,7 @@
 #!/bin/bash
 
+### Main script to start, maintain and stop the capture of sensor data from RuuviTag
+
 # Add paths
 PATH=$PATH:/bin:/usr/bin:/sbin:/usr/sbin
 
