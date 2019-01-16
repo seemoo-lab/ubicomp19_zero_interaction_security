@@ -98,9 +98,8 @@ target_date=$(date -d "$start_time" +%s)
 
 sleep_seconds=$(( $target_date - $current_date ))
 
-echo "$sleep_seconds"
-
 # Sleep before the start date
+echo "$sleep_seconds"
 sleep $sleep_seconds
 
 echo "We start measuring at: $(date)" 
