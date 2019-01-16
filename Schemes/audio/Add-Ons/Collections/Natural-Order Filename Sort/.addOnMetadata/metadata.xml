@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<addOn>
+  <identifier>e5acc67c-4a80-11e4-9553-005056977bd0</identifier>
+  <displayType>Collection</displayType>
+  <translatedDisplayType>
+    <en_US>Collection</en_US>
+    <ja_JP>コレクション</ja_JP>
+    <ko_KR>컬렉션</ko_KR>
+    <zh_CN>集合</zh_CN>
+  </translatedDisplayType>
+  <name>Natural-Order Filename Sort</name>
+  <author>Stephen Cobeldick</author>
+  <version>1.5</version>
+  <downloadUrl>https://www.mathworks.com/matlabcentral/mlc-downloads/downloads/submissions/47434/versions/8/download/zip?src=addons_ml_desktop_install&amp;profile_id=10730565</downloadUrl>
+  <previewImageUrl>https://www.mathworks.com/responsive_image/160/120/0/0/0/cache/add-ons/image/a9ea098f69301ef2686d208f10f16620.png</previewImageUrl>
+  <installationFolder>Collections</installationFolder>
+</addOn>

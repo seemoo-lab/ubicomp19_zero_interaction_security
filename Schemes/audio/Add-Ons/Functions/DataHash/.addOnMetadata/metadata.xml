@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<addOn>
+  <identifier>e57a3d4b-4a80-11e4-9553-005056977bd0</identifier>
+  <displayType>Function</displayType>
+  <translatedDisplayType>
+    <en_US>Function</en_US>
+    <ja_JP>関数</ja_JP>
+    <ko_KR>함수</ko_KR>
+    <zh_CN>函数</zh_CN>
+  </translatedDisplayType>
+  <name>DataHash</name>
+  <author>Jan Simon</author>
+  <version>1.5</version>
+  <downloadUrl>https://www.mathworks.com/matlabcentral/mlc-downloads/downloads/submissions/31272/versions/10/download/zip?src=addons_ml_desktop_install&amp;profile_id=10730565</downloadUrl>
+  <previewImageUrl>https://www.mathworks.com/responsive_image/160/120/0/0/0/cache/add-ons/image/95034feb05d7409a51796cf7785c009c.png</previewImageUrl>
+  <installationFolder>Functions</installationFolder>
+</addOn>
