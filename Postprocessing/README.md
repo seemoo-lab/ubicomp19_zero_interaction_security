@@ -6,11 +6,12 @@ This folder contains scripts to generate intermediate results such as machine le
 
 The folder contains the following files:
 
-* generate_datasets.py - a script to generate ML datasets for the schemes by Truong et al. (PerCom'14) and Shrestha et al. (FC'14).
+* *generate_datasets.py* - a script to generate ML datasets for the schemes by Truong et al. (PerCom'14) and Shrestha et al. (FC'14).
 
 ### Prerequisites
 
-What things you need to install the software and how to install them
+* *generate_datasets.py* - a script to generate ML datasets for the schemes by Truong et al. (PerCom'14) and Shrestha et al. (FC'14).
+
 
 ```
 Give examples
