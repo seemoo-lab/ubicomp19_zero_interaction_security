@@ -1,3 +1,8 @@
-A0E6F8AF4C83
+# A single MAC address of the Sensortag (replace with a real MAC address!)
+FFFFFFFFFFFF
+
+# Recording duration in s - seconds, m - minutes, h - hours, or d - days
 1m
+
+# Start date and time
 08/07/2017 16:23

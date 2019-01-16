@@ -1,8 +1,8 @@
-# One or several MAC separated by commas (replace with real MAC addresses!)
+# One or several MACs of Ruuvitags separated by commas (replace with real MAC addresses!)
 FF:FF:FF:FF:FF:FF,FF:FF:FF:FF:FF:FF 
 
-# Recording duration
+# Recording duration in s - seconds, m - minutes, h - hours, or d - days
 10s 
 
-# Start time
+# Start date and time
 10/19/2018 12:00 
