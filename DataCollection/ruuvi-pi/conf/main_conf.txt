@@ -1,0 +1,8 @@
+# One or several MAC separated by commas (replace with real MAC addresses!)
+FF:FF:FF:FF:FF:FF,FF:FF:FF:FF:FF:FF 
+
+# Recording duration
+10s 
+
+# Start time
+10/19/2018 12:00 
