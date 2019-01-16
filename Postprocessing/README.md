@@ -1,12 +1,12 @@
 # Postprocessing scripts
 
-This folder contains scripts to generate intermediate results such as machine learning datasets.
+This folder contains scripts to generate intermediate results such as machine learning (ML) datasets.
 
 ## Getting Started
 
 The folder contains the following files:
 
-* generate_datasets.py
+* generate_datasets.py - a script to generate ML datasets for the schemes by Truong et al. (PerCom'14) and Shrestha et al. (FC'14).
 
 ### Prerequisites
 
