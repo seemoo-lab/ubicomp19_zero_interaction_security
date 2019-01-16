@@ -1,10 +1,12 @@
-# Project Title
+# Postprocessing scripts
 
-One Paragraph of project description goes here
+This folder contains scripts to generate intermediate results such as machine learning datasets.
 
 ## Getting Started
 
-These instructions will get you a copy of the project up and running on your local machine for development and testing purposes. See deployment for notes on how to deploy the project on a live system.
+The folder contains the following files:
+
+* generate_datasets.py
 
 ### Prerequisites
 
