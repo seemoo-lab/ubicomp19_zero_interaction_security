@@ -1,6 +1,21 @@
-# Visualization scripts
+# Implementation of audio features
 
-This folder contains scripts to produce visualizations for the paper "Perils of Zero-Interaction Security in the Internet of Things", by Mikhail Fomichev, Max Maass, Lars Almon, Alejandro Molina, Matthias Hollick, in Proceedings of the ACM on Interactive, Mobile, Wearable and Ubiquitous Technologies, vol. 3, Issue 1, 2019. 
+This folder contains implementation of audio features for the paper "Perils of Zero-Interaction Security in the Internet of Things", by Mikhail Fomichev, Max Maass, Lars Almon, Alejandro Molina, Matthias Hollick, in Proceedings of the ACM on Interactive, Mobile, Wearable and Ubiquitous Technologies, vol. 3, Issue 1, 2019. 
+
+The following audio features from the four zero-interaction schemes are implemented:
+
+* *Audio fingerprint (AFP)* [1]
+* *Time-frequency distance (TFD)* [2]
+* *Noise fingerprint (NFP)* [3]
+* *SoundProof (SPF)*  [4]
+
+[1] - Schürmann, Dominik, and Stephan Sigg. "Secure communication based on ambient audio." IEEE Transactions on mobile computing 12.2 (2013): 358-370.
+
+[2] - Truong, Hien Thi Thu, et al. "Comparing and fusing different sensor modalities for relay attack resistance in zero-interaction authentication." Pervasive Computing and Communications (PerCom), 2014 IEEE International Conference on. IEEE, 2014.
+
+[3] - Miettinen, Markus, et al. "Context-based zero-interaction pairing and key evolution for advanced personal devices." Proceedings of the 2014 ACM SIGSAC conference on computer and communications security. ACM, 2014.
+
+[4] - Karapanos, Nikolaos, et al. "Sound-Proof: Usable Two-Factor Authentication Based on Ambient Sound. "USENIX Security Symposium. 2015.
 
 ## Getting Started
 
