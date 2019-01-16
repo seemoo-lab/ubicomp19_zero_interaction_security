@@ -52,4 +52,4 @@ Mikhail Fomichev and Max Maass
 
 ## License
 
-The code is licensed under the GNU GPLv3 - see the [LICENSE.txt](https://dev.seemoo.tu-darmstadt.de/zia/evaluation-public/blob/master/LICENSE.txt) file for details
+The code is licensed under the GNU GPLv3 - see [LICENSE.txt](https://dev.seemoo.tu-darmstadt.de/zia/evaluation-public/blob/master/LICENSE.txt) file for details
