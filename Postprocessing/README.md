@@ -1,12 +1,10 @@
 # Postprocessing scripts
 
-This folder contains scripts to generate intermediate results such as machine learning (ML) datasets.
+This folder contains scripts to generate intermediate results for the paper "Perils of Zero-Interaction Security in the Internet of Things", by Mikhail Fomichev, Max Maass, Lars Almon, Alejandro Molina, Matthias Hollick, in Proceedings of the ACM on Interactive, Mobile, Wearable and Ubiquitous Technologies, vol. 3, Issue 1, 2019. 
 
 ## Getting Started
 
-The folder contains the following files:
-
-* *generate_datasets.py* - a script to generate ML datasets for the schemes by Truong et al. (PerCom'14) and Shrestha et al. (FC'14).
+* *generate_datasets.py* - a script to generate machine learning datasets for the schemes by Truong et al. (PerCom'14) and Shrestha et al. (FC'14).
 
 ### Prerequisites
 
