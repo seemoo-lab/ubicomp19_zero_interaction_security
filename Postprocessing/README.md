@@ -17,17 +17,15 @@ pytz==2018.5
 six==1.11.0
 ```
 
-
-```
-Give examples
-```
-
+**Note:** The script won't direclty work under Windows as it uses Linux built-in commands (see function *merge_and_clean*). The rest of functionlaity works under Windows as well (tested under Windows 10 with Python 3.6.5). 
 
 ### Prerequisites
 
 * *generate_datasets.py* - a script to generate ML datasets for the schemes by Truong et al. (PerCom'14) and Shrestha et al. (FC'14).
 
-
+```
+Give examples
+```
 
 ### Installing
 
