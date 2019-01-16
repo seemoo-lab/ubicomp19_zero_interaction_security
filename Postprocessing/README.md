@@ -4,9 +4,9 @@ This folder contains scripts to generate intermediate results for the paper "Per
 
 ## Getting Started
 
-* **generate_datasets.py** - a script to generate machine learning datasets for the schemes by Truong et al. (PerCom'14) and Shrestha et al. (FC'14).
+* *generate_datasets.py* - a script to generate machine learning datasets for the schemes by Truong et al. (PerCom'14) and Shrestha et al. (FC'14).
 
-The script has been developed and tested under **Ubuntu 16.04.5 LTS (kernel 4.4.0-139, x86_64)** using **Python 3.5.2** with the following requirements:
+The [resulting datasets](https://www.seemoo.tu-darmstadt.de/) were generated with the script under *Ubuntu 16.04.5 LTS (kernel 4.4.0-139, x86_64)* using *Python 3.5.2* with the following requirements:
 
 ```
 glob2==0.6
