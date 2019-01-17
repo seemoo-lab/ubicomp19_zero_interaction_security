@@ -47,13 +47,25 @@ The data collector consists of the following scripts/components:
 
 In our experiments we started the *main.sh* and *watchdog.sh* from crontab as follows:
 
-```
-# The 
+```bash
+# The crontab file is located at /var/spool/cron/crontabs/root
 @reboot /bin/bash /home/pi/main.sh 2>&1 | tee -a /home/pi/out.txt
 @reboot /bin/bash /home/pi/scripts/watchdog.sh 2>&1 | tee -a /home/pi/out.txt
 ```
+Here, */home/pi/out.txt* is a log file to monitor the data collection process. 
+
+**Caution:** For debugging purposes we introduced the following mechanism: if a critical problem or error occur (*touch /boot/1stexp.txt* in the *main.sh*), the Raspberry Pi will shut down, then we will manually inspect the log file (*/home/pi/out.txt*) to resolve the problem. 
+In order to not start the data collection again (because it will destroy old results) we create a watchdog file (*/boot/1stexp.txt*) when a critical error occurs. If this file is created the *main.sh* will always shut down the Raspberry Pi, see the lines in script: 
 
 
+```bash
+# Check if we should shutdown
+if [ -e /boot/1stexp.txt ]; then
+  echo "File exists, exiting..."
+  shutdown -P now
+  exit 1
+fi
+```
 
 **Notes:** how data is stored, ~~NTP~~ ~~how this whole stuff is deployed~~, how to launch it, used software -> requirements (howto)
 
