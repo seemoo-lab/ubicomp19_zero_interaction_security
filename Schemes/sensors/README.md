@@ -35,9 +35,9 @@ Sensor-XX/              # where XX is the sensor number. The scripts support arb
   | + humData           # Humidity data
   | + barData           # Barometric data
   + ble/
-  | + ble.txt.blinded   # WiFi Data with blinded MAC addresses
+  | + ble.txt.blinded   # BLE Data with blinded MAC addresses
   + wifi/
-    + wifi.txt.blinded  # BLE data with blinded MAC addresses
+    + wifi.txt.blinded  # WiFi data with blinded MAC addresses
 ```
 
 The output is saved in a "results" folder. See the individual files for more details.
