@@ -1,4 +1,4 @@
-# Post-processing scripts
+# Preprocessing scripts
 
 This folder contains scripts to generate intermediate results for the paper "Perils of Zero-Interaction Security in the Internet of Things", by Mikhail Fomichev, Max Maass, Lars Almon, Alejandro Molina, Matthias Hollick, in Proceedings of the ACM on Interactive, Mobile, Wearable and Ubiquitous Technologies, vol. 3, Issue 1, 2019. 
 
