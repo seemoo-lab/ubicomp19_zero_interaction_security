@@ -1,3 +1,7 @@
+/*
+The code is used to fetch sensor data from the SensorTag via Bluetooth and store it in a file on the Raspberry Pi
+*/
+
 var util = require('util');
 var async = require('async');
 var SensorTag = require('./index');

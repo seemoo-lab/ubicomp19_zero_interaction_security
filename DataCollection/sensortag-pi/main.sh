@@ -239,11 +239,14 @@ cd ".."
 # Sleep here so that audio, Wi-Fi and BLE captures will stop ~sychronously with nodejs 
 sleep 7
 
-
-# Start audio capture
+# Log the start of audio
 echo "Start audio at: $(date +'%Y-%m-%d %H:%M:%S.%3N')"
 date +'%Y-%m-%d %H:%M:%S.%3N' > $audio_data.time
+
+# Compute the uptime in seconds provided in main_conf file
 uptime_secs=$(python3 scripts/get_uptime.py $uptime)
+
+# Start audio capture
 arecord -t raw -f S16_LE -r16000 -d $uptime_secs -D sysdefault:CARD=1 | flac - -f --endian little --sign signed --channels 1 --bps 16 --sample-rate 16000 -s -c > $audio_data &
 
 # Audio capture command if GPG is used
