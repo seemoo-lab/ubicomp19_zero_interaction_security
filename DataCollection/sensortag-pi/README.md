@@ -72,7 +72,7 @@ The data collection runs for the duration specified in *~/conf/main_conf.txt*, a
 ```
 data/                   # Root folder of the sensor data
   + audio/
-  | + audio             # Encoded audio data
+  | + audio.flac        # Encoded audio data
   | + audio.time        # Time when the audio started
   + ble/
   | + ble.txt           # BLE data
@@ -88,6 +88,10 @@ data/                   # Root folder of the sensor data
     + wifi.txt          # WiFi data
 ```
 
+To make the audio file readable by applications necessary headers must be added like this:
+```bash
+$ sox audio.flac audio_full.flac --show-progress
+```
 
 ## Authors
 
