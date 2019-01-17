@@ -2,18 +2,18 @@
 Reformat data extracted from Samsung Gear S3 watches according to the following structure:
 
 + Sensor-XX/  # Where XX is between 1 and 24
-| + ble/
-| | + ble_capture.txt
-| + wifi/
-| | + wifi_capture.txt
 | + audio/
-| | + XX.flac
+| | + XX.wav
 | | + audio.time
+| + ble/
+| | + ble.txt
 | + sensors/
 | | + accData.txt
 | | + barData.txt
 | | + gyrData.txt
 | | + luxData.txt
+| + wifi/
+| | + wifi.txt
 """
 
 from glob import glob
