@@ -25,7 +25,7 @@ To compute sensor features, the following functions/components are used (a brief
 
 The [results](https://dx.doi.org/10.5281/zenodo.2537721) were generated under *Ubuntu 16.04.4 LTS (kernel 4.4.0-128-generic x86_64)* using Python 3 (the exact version can be found in the results metadata of each generated JSON file) with the libraries as listed in requirements.txt
 
-The scripts expect the data to be in a specific folder structure relative to the script:
+The scripts expect the data to be in a specific folder structure relative to the script (e.g., inside *~/CarExp/* containing folders *Sensor-01* to *Sensor-12* for the car scenario):
 
 ```
 Sensor-XX/              # where XX is the sensor number. The scripts support arbitrary numbers of sensors.
@@ -38,6 +38,11 @@ Sensor-XX/              # where XX is the sensor number. The scripts support arb
   | + ble.txt.blinded   # BLE Data with blinded MAC addresses
   + wifi/
     + wifi.txt.blinded  # WiFi data with blinded MAC addresses
+```
+
+The scripts are lauched without any parameters:
+``` bash
+$ python3 ble_wifi_truong.py
 ```
 
 The output is saved in a "results" folder. See the individual files for more details.
