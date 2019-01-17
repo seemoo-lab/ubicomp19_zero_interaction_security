@@ -19,9 +19,36 @@ The following audio features from the four zero-interaction schemes are implemen
 
 ## Getting Started
 
-To compute audio features, the following functions are used (brief description is provided, see comments inside *.m* files for details):
+To compute audio features, the following functions/components are used (a brief description is provided, see comments inside *.m* files for details):
 
-~~* *plot_error_rates.py* - a script to generate false reject rates (FRRs) with target false accept rates (FARs) plots.~~
+* *audioJob.m* - **a main function** to launch audio feature computations. 
+* *alignTwoSignals.m* - a function to align two discrete (audio) signals. 
+* *audioFingerprint.m* - implementation of the AFP feature. 
+* *binHammingDist.m* - compute a Hamming Distance between two binary vectors.
+* *computeAFP.m* - a wrapper to compute the AFP feature and store the results.
+* *computeNFP.m* - a wrapper to compute the NFP feature and store the results.
+* *computeSPF.m* - a wrapper to compute the SPF feature and store the results.
+* *computeTFD.m* - a wrapper to compute the TFD feature and store the results.
+* *correctBands.m* - a helper function to format the resulting JSON files. 
+* *correctDate.m* - a helper function to format the resulting JSON files. 
+* *loadSignal.m* - a function to load two audio signals from audio files (e.g., *.FLAC); the samplig rate in Hz is set inside the function.  
+* *localMerge.m* - a function to merge resulting JSON files from smaller audio chunks into the final result JSON file. 
+* *maxCrossCorrelation.m* - compute maximum cross-correlation between two normalized descrete (audio) signals. 
+* *noiseFingerprint.m* - implementation of the NFP feature. 
+* *normalizeSignal.m* - energy normalization of a discrete (audio) signal. 
+* *packFingerprintEnergy.m* - a helper function to store metadata for the AFP. 
+* *packNoiseFingerprint.m* - a helper function to format the results of the NFP computation. 
+* *preComputeFilterAFP.m* - precompute the AFP filter bank (produces the *afpFilterBank.mat* file). 
+* *preComputeFilterSPF.m* - precompute the SPF filter bank (produces the *spfFilterBank.mat* file). 
+* *saveJsonFile.m* - store the resluts of audio feature computations in a JSON file. 
+* *saveNoiseLevels.m* - genereate a JSON file containing noise levels of two input audio signals (metadata for the NFP feature).
+* *soundProofXcorr.m* - implementation of the SPF feature. 
+* *thirdOctaveSplitter.m* - split an audio signal into 1/3 octave bands using the *spfFilterBank.mat* filter bank. 
+* *timeFreqDistance.m* - implementation of the TFD feature. 
+* *xcorrDelay.m* - compute a delay between two discrete (audio) signals using MATLAB's *xcorr* function. 
+* *afpFilterBank.mat* - a filter bank necessary for computing the AFP feature (regenerated if is not present in the folder).  
+* *spfFilterBank.mat* - a filter bank necessary for computing the SPF feature (regenerated if is not present in the folder).  
+* *~/Add-Ons* - a folder containing third party utilites used by our code (the licenses are compatible with the GNU GPLv3, see individual folders inside Add-Ons for details). 
 
 The [results of audio feature computations](https://www.seemoo.tu-darmstadt.de/) were generated under *CentOS Linux release 7.5.1804 (kernel 3.10.0-862.9.1.el7.x86_64)* using *MATLAB R2017a (9.2.0.556344) 64-bit (glnxa64)* with the following requirements:
 
@@ -40,6 +67,8 @@ $ mcc -R -nodisplay -T link:exe -v -m audioJob.m -a Add-Ons/Functions/DataHash/c
 $ sudo ./run_audioJob.sh .../matlab/ .../CarExp/Sensor-01/audio/01.flac .../CarExp/Sensor-02/audio/02.flac .../CarExp .../tmp-for-matlab-parallel-toolbox .../local-storage
 
 ```
+**Note:** say about what is the network share and what is the fast local storage
+
 
 Here, ~/json is the folder contaning [JSON files with error rates](https://www.seemoo.tu-darmstadt.de/), and ~/gfx is the folder to store the generated plots.
 
