@@ -59,7 +59,7 @@ $ python3 plot_error_rates.py ~/json/OfficeExp/shrestha/ml/ ~/gfx/ shrestha offi
 $ python3 plot_error_rates.py ~/json/MobileExp/shrestha/ml/ ~/gfx/ shrestha mobile  # generate FRRs with target FARs plots for the mobile scenario
 ```
 
-Here, ~/json is the folder contaning [JSON files with error rates](https://www.seemoo.tu-darmstadt.de/), and ~/gfx is the folder to store the generated plots.
+Here, ~/json is the folder containing  [JSON files with error rates](https://www.seemoo.tu-darmstadt.de/), and ~/gfx is the folder to store the generated plots.
 
 
 ## Authors
