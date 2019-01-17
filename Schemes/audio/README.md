@@ -40,15 +40,15 @@ To compute audio features, the following functions/components are used (a brief 
 * *packNoiseFingerprint.m* - a helper function to format the results of the NFP computation. 
 * *preComputeFilterAFP.m* - precompute the AFP filter bank (produces the *afpFilterBank.mat* file). 
 * *preComputeFilterSPF.m* - precompute the SPF filter bank (produces the *spfFilterBank.mat* file). 
-* *saveJsonFile.m* - store the resluts of audio feature computations in a JSON file. 
-* *saveNoiseLevels.m* - genereate a JSON file containing noise levels of two input audio signals (metadata for the NFP feature).
+* *saveJsonFile.m* - store the results of audio feature computations in a JSON file. 
+* *saveNoiseLevels.m* - generate a JSON file containing noise levels of two input audio signals (metadata for the NFP feature).
 * *soundProofXcorr.m* - implementation of the SPF feature. 
 * *thirdOctaveSplitter.m* - split an audio signal into 1/3 octave bands using the *spfFilterBank.mat* filter bank. 
 * *timeFreqDistance.m* - implementation of the TFD feature. 
 * *xcorrDelay.m* - compute a delay between two discrete (audio) signals using MATLAB's *xcorr* function. 
 * *afpFilterBank.mat* - a filter bank necessary for computing the AFP feature (regenerated if is not present in the folder).  
 * *spfFilterBank.mat* - a filter bank necessary for computing the SPF feature (regenerated if is not present in the folder).  
-* *~/Add-Ons* - a folder containing third party utilites used by our code (the licenses are compatible with the GNU GPLv3, see individual folders inside Add-Ons for details). 
+* *~/Add-Ons* - a folder containing third party utilities used by our code (the licenses are compatible with the GNU GPLv3, see individual folders inside Add-Ons for details). 
 
 The [results of audio feature computations](https://www.seemoo.tu-darmstadt.de/) were generated under *CentOS Linux release 7.5.1804 (kernel 3.10.0-862.9.1.el7.x86_64)* using *MATLAB R2017a (9.2.0.556344) 64-bit (glnxa64)* with the following requirements:
 
