@@ -76,14 +76,16 @@ Here, the first two arguments are full paths to audio files of sensors 05 and 06
 
 ### The audio feature computation using the MATLAB's compiled executable
 
-From the above info, it is easily seen that if many instance of MATLAB are used (we used up to 45 instances simultaneously), it is very easy to run into the licensing issue with the required toolboxes. To overcome that we used a MATLAB Compiler (Version 6.4, R2017a). The compiler allows building a MATLAB executable and running it on any other machine without requiring any license! 
+From the above info, it is easily seen that if many instance of MATLAB are used (we used up to 45 instances simultaneously), it is very easy to run into the licensing issue with the required toolboxes. To overcome this issue we used a MATLAB Compiler (Version 6.4, R2017a)—this toolbox needs to be acquired separately as well. The compiler allows building a MATLAB executable and running it on any other machine without requiring any license! The MATLAB's executable is built and run as follows (tested under *CentOS Linux release 7.5.1804 (kernel 3.10.0-862.9.1.el7.x86_64)* and *Ubuntu 17.10 (kernel 4.13.0-46, x86_64)*): 
 
 ```bash
+# Run this in the folder containing all the *.m files and Add-Ons folder
 $ mcc -R -nodisplay -T link:exe -v -m audioJob.m -a Add-Ons/Functions/DataHash/code/ -a Add-Ons/Collections/Natural-Order/Filename/Sort/code/
 
-$ sudo ./run_audioJob.sh .../matlab/ .../CarExp/Sensor-01/audio/01.flac .../CarExp/Sensor-02/audio/02.flac .../CarExp .../tmp-for-matlab-parallel-toolbox .../local-storage
+# The audio feature computation between sensors 05 and 06 in the mobile scenario
+$ sudo ./run_audioJob.sh .../matlab/ .../MobileExp/Sensor-05/audio/05.flac .../MobileExp/Sensor-06/audio/06.flac .../MobileExp/ .../tmp-for-matlab-parallel-toolbox/ .../local-storage/
 ```
-
+Here, *.../matlab/* points to the instance of MATLAB installed on the machine, the remaining arguments are the same as described above. 
 
 ## Authors
 
