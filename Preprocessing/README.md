@@ -16,7 +16,7 @@ The script was used under *Windows 10 x64* with *Python 3.6.5* and the following
 glob2==0.6
 ```
 
-The script takes the flat input structure in which sensor data is extracted from the Gear S3 smartwatch and reformats the data into the output structure required for further evaluation:
+The script takes the flat input structure in which sensor data is [extracted from the Gear S3 smartwatch](https://www.seemoo.tu-darmstadt.de/) and reformats the data into the output structure required for further evaluation:
 ```bash
 # Reformats the data from the smartwatch to the required stucture and stores it in ~/MobileExp/Sensor-05/
 $ python3 structure-gear-data.py ~/Others ~/MobileExp 5
