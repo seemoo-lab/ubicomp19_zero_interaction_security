@@ -59,18 +59,30 @@ Parallel Computing Toolbox (Version 6.10)
 **Note:** These toolboxes are not part of standard MATLAB distribution and need to be acquired separately. In a standard setup, each instance of MATLAB (i.e., launching *audioJob.m*) requires a license!
 
 
-The script is used as follows:
+The audio feature computation is launched (from a MATLAB command line) as follows:
+
+```bash
+# The audio feature computation between sensors 05 and 06 in the mobile scenario
+>> audioJob(.../MobileExp/Sensor-05/audio/05.flac, .../MobileExp/Sensor-06/audio/06.flac, .../MobileExp/, .../tmp-for-matlab-parallel-toolbox/, .../local-storage/)
+```
+Here, the first two arguments are full paths to audio files of sensors 05 and 06 respectively, *.../MobileExp/* is the folder storing audio files from all sensors (i.e., */Sensor-02* to */Sensor-25* in the mobile scenario), *.../tmp-for-matlab-parallel-toolbox/* is a temporary folder used by MATLAB's Parallel Computing Toolbox, *.../local-storage/* is the local storage (also a temporary folder) useful when the cluster architecture is used for audio feature computations (see the Notes below). 
+
+**Notes:** 
+
+* The *Add-Ons* folder must be added to the MATLAB path as audio feature computation requires third party utilities!
+* All the arguments are mandatory in the *audioJob.m*!
+* The results of the audio feature computations are stored in the individual folder inside the *.../Sensor-XX/audio/* folder (see the output structure [here](https://www.seemoo.tu-darmstadt.de/)).
+* The rationale for *.../local-storage/*: in our computations we used a cluster. Therefore, we stored *.../MobileExp/* (and similar folders for the car and office experiments) on the shared network drive, which was accessible by a number of nodes (each running an instance of *audioJob.m*). Each node had limited HDD storage not suitable for storing all the audio files (especially in the case of the Office scenario). Additionally, we compute audio features on a number of intervals (5sec, 10sec, 30sec, 1min, 2min), resulting in many small result JSON files (e.g., think of a 24h audio recording split into 5sec intervals). With several nodes simultaneously using the network share and writing thousands of small files results in fragmentation issues and easily hits the max number of files limited by the files system. Thus, we leveraged the local storage on each node to store these small files for each interval, merge them into a single JSON file and copy back to the network share (e.g., *.../MobileExp/Sensor-05/audio/* in the above example). 
+
+### The audio feature computation using the MATLAB's compiled executable
+
+From the above info, it is easily seen that if many instance of MATLAB are used (we used up to 45 instances simultaneously), it is very easy to run into the licensing issue with the required toolboxes. To overcome that we used a MATLAB Compiler (Version 6.4, R2017a). The compiler allows building a MATLAB executable and running it on any other machine without requiring any license! 
 
 ```bash
 $ mcc -R -nodisplay -T link:exe -v -m audioJob.m -a Add-Ons/Functions/DataHash/code/ -a Add-Ons/Collections/Natural-Order/Filename/Sort/code/
 
 $ sudo ./run_audioJob.sh .../matlab/ .../CarExp/Sensor-01/audio/01.flac .../CarExp/Sensor-02/audio/02.flac .../CarExp .../tmp-for-matlab-parallel-toolbox .../local-storage
-
 ```
-**Note:** say about what is the network share and what is the fast local storage
-
-
-Here, ~/json is the folder contaning [JSON files with error rates](https://www.seemoo.tu-darmstadt.de/), and ~/gfx is the folder to store the generated plots.
 
 
 ## Authors
