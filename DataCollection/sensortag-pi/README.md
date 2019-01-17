@@ -1,23 +1,37 @@
-# Implementation of audio features
+# Data collector comprised of Rapsberry Pi + SensorTag + USB microphone
 
-This folder contains implementation of audio features for the paper "Perils of Zero-Interaction Security in the Internet of Things", by Mikhail Fomichev, Max Maass, Lars Almon, Alejandro Molina, Matthias Hollick, in Proceedings of the ACM on Interactive, Mobile, Wearable and Ubiquitous Technologies, vol. 3, Issue 1, 2019. 
+This folder contains the codebase used for data collection (audio, sensor data, WiFi and BLE beacons) for the paper "Perils of Zero-Interaction Security in the Internet of Things", by Mikhail Fomichev, Max Maass, Lars Almon, Alejandro Molina, Matthias Hollick, in Proceedings of the ACM on Interactive, Mobile, Wearable and Ubiquitous Technologies, vol. 3, Issue 1, 2019. 
 
-The following audio features from the four zero-interaction schemes are implemented:
+The setup consists of the following hardware:
 
-* *Audio fingerprint (AFP)* [1]
-* *Time-frequency distance (TFD)* [2]
-* *Noise fingerprint (NFP)* [3]
-* *SoundProof (SPF)*  [4]
+* *Raspberry Pi 3 Model B Rev 1.2* with *Raspbian GNU/Linux 9.1 (stretch, 4.9.41-v7+)*
+* *Texas Instruments SensorTag CC2650* with *Firmware Revision 1.40 (Nov 3 2017)*
+* *Samson Go USB microphone*
 
-[1] - Schürmann, Dominik, and Stephan Sigg. "Secure communication based on ambient audio." IEEE Transactions on mobile computing 12.2 (2013): 358-370.
+The SensorTag and microphone are attached to Raspberry Pi via USB ports.
 
-[2] - Truong, Hien Thi Thu, et al. "Comparing and fusing different sensor modalities for relay attack resistance in zero-interaction authentication." Pervasive Computing and Communications (PerCom), 2014 IEEE International Conference on. IEEE, 2014.
+The data collector is used to collect the following sensor modalities:
 
-[3] - Miettinen, Markus, et al. "Context-based zero-interaction pairing and key evolution for advanced personal devices." Proceedings of the 2014 ACM SIGSAC conference on computer and communications security. ACM, 2014.
+| **Hardware**      | **Sensors**       | **Sampling rate**  | **Comments** |
+| ------------- |:-------------:| -----:|:-----------------------:|
+| SensorTag      | Temperature (°C), humidity (%RH), barometric pressure (hPa), luminosity (lux);  movement -> accelerometer (*G* units), gyroscope (*deg/s*), magnetometer (*uT*) | 10 Hz |         The sensor data is sent to Raspberry Pi via Bluetooth             |
+| Raspberry Pi      | Bluetooth low energy (BLE) and WiFi beacons      |   0.1 Hz |  Scan visible BLE and WiFi access points (APs) for 10 seconds     |
+| Samson Go | Raw audio stream (S16_LE, little endian)    |    16 kHz |     Encoded into a lossless .FLAC file using *arecord (v1.1.3)* |
 
-[4] - Karapanos, Nikolaos, et al. "Sound-Proof: Usable Two-Factor Authentication Based on Ambient Sound. "USENIX Security Symposium. 2015.
 
 ## Getting Started
+
+The data collector consists of the following scripts/components:
+
+* *main.sh* - **a main script** to start, maintain and stop the data collection. 
+* *~/nodejs* - a folder containing nodejs functionality to capture sensor data from the SensorTag. The main nodejs script to launch, maintain and stop data collection is *~/nodejs/main.js*. We use a number of third party libraries to implement data acquisition from the SensorTag, the most important one is [node-sensortag](https://github.com/sandeepmistry/node-sensortag), located in  *~/nodejs/lib/*. The remaining third party libraries are located in *~/nodejs/node_modules/*, the versions of used nodejs libraries and their depenencies are summarized in *~/nodejs/package-lock.json*. All used third party libraries are compatable with the GNU GPLv3. 
+* *~/conf* - a folder containing configuration parameter used by the *main.sh*. The most important file is *~/conf/main_conf.txt* containing 1) the MAC address of the SensorTag to be connected to, 2) the duration of the data collection, 3) the date and time to start the data collection. 
+
+
+
+
+**Notes:** how data is stored, how this whole stuff is deployed, how to launch it, used software -> requirements (howto)
+
 
 To compute audio features, the following functions/components are used (a brief description is provided, see comments inside *.m* files for details):
 
