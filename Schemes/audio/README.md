@@ -19,15 +19,17 @@ The following audio features from the four zero-interaction schemes are implemen
 
 ## Getting Started
 
+To compute audio features, the following functions are used (brief description is provided, see comments inside *.m* files for details):
+
 ~~* *plot_error_rates.py* - a script to generate false reject rates (FRRs) with target false accept rates (FARs) plots.~~
 
-The [results of audio feature computations](https://www.seemoo.tu-darmstadt.de/) were generated under ~~*Windows 10 x64*~~ using *MATLAB R2017a* with the following requirements:
+The [results of audio feature computations](https://www.seemoo.tu-darmstadt.de/) were generated under *CentOS Linux release 7.5.1804 (kernel 3.10.0-862.9.1.el7.x86_64)* using *MATLAB R2017a (9.2.0.556344) 64-bit (glnxa64)* with the following requirements:
 
 ```
 Signal Processing Toolbox (Version 7.4)
 Parallel Computing Toolbox (Version 6.10)
 ```
-**Note:** on MATLAB licensing
+**Note:** These toolboxes are not part of standard MATLAB distribution and need to be acquired separately. In a standard setup, each instance of MATLAB (i.e., launching *audioJob.m*) requires a license!
 
 
 The script is used as follows:
