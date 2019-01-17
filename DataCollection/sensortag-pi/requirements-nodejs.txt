@@ -1,0 +1,3 @@
+Used modules: /sensortag-pi/nodejs/node_modules
+
+Dependencies: /sensortag-pi/nodejs/package-lock.json
