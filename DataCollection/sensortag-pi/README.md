@@ -16,7 +16,7 @@ The data collector is used to collect the following sensor modalities:
 | ------------- |:-------------:| -----:|:-----------------------:|
 | SensorTag      | Temperature (°C), humidity (%RH), barometric pressure (hPa), luminosity (lux);  movement -> accelerometer (*G* units), gyroscope (*deg/s*), magnetometer (*uT*) | 10 Hz |         The sensor data is sent to Raspberry Pi via Bluetooth             |
 | Raspberry Pi      | Bluetooth low energy (BLE) and WiFi beacons      |   0.1 Hz |  Scan visible BLE and WiFi access points (APs) for 10 seconds     |
-| Samson Go | Raw audio stream (S16_LE, little endian)    |    16 kHz |     Encoded into a lossless .FLAC file using *arecord (v1.1.3)* |
+| Samson Go | Raw audio stream (S16_LE, little endian)    |    16 kHz |     The audio is encoded into a lossles *.FLAC using *arecord (v1.1.3)*
 
 
 ## Getting Started
@@ -55,7 +55,7 @@ In our experiments we started the *main.sh* and *watchdog.sh* from crontab as fo
 Here, */home/pi/out.txt* is a log file to monitor the data collection process. 
 
 **Caution:** For debugging purposes we introduced the following mechanism: if a critical problem or error occur (*touch /boot/1stexp.txt* in the *main.sh*), the Raspberry Pi will shut down, then we will manually inspect the log file (*/home/pi/out.txt*) to resolve the problem. 
-In order to not start the data collection again (because it will destroy old results) we create a watchdog file (*/boot/1stexp.txt*) when a critical error occurs. If this file is created the *main.sh* will always shut down the Raspberry Pi, see the lines in script: 
+In order not to start the data collection again (because it will destroy old results) we create a watchdog file (*/boot/1stexp.txt*) when a critical error occurs. If this file is created the *main.sh* will always shut down the Raspberry Pi, see the first lines in the script: 
 
 
 ```bash
@@ -67,9 +67,27 @@ if [ -e /boot/1stexp.txt ]; then
 fi
 ```
 
-**Notes:** how data is stored, ~~NTP~~ ~~how this whole stuff is deployed~~, how to launch it, used software -> requirements (howto)
+The data collection runs for the duration specified in *~/conf/main_conf.txt*, after the time is up the Raspberry Pi automatically shuts down. The collected sensor data is stored in the following structure in */home/pi/*:
 
-**Notes:** issues with 1 boot
+```
+data/                   # Root folder of the sensor data
+  + audio/
+  | + audio             # Encoded audio data
+  | + audio.time        # Time when the audio started
+  + ble/
+  | + ble.txt           # BLE data
+  + sensors/
+  | + accData           # Accelerometer data
+  | + barData           # Barometric data
+  | + gyrData           # Gyroscope data
+  | + humData           # Humidity data
+  | + luxData           # Lluminosity data
+  | + magData           # Magnetometer data
+  | + tmpData           # Temperature data
+  + wifi/
+    + wifi.txt          # WiFi data
+```
+
 
 ## Authors
 
