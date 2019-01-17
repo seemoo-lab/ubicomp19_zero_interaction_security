@@ -80,6 +80,7 @@ From the above info, it is easily seen that if many instance of MATLAB are used 
 
 ```bash
 # Run this in the folder containing all the *.m files and Add-Ons folder
+# Two files are generated: a binary "audioJob" and the script "run_audioJob.sh" to run it
 $ mcc -R -nodisplay -T link:exe -v -m audioJob.m -a Add-Ons/Functions/DataHash/code/ -a Add-Ons/Collections/Natural-Order/Filename/Sort/code/
 
 # The audio feature computation between sensors 05 and 06 in the mobile scenario
