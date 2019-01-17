@@ -17,7 +17,7 @@ pytz==2018.5
 six==1.11.0
 ```
 
-**Note:** The script won't direclty work under Windows as it uses Linux built-in commands (see function *merge_and_clean*). The rest of functionlaity works under Windows as well (tested under *Windows 10* with *Python 3.6.5*). 
+**Note:** The script won't direclty work under Windows as it uses Linux built-in commands (see function *merge_and_clean*). The rest of functionlaity works under Windows as well (tested under *Windows 10 x64* with *Python 3.6.5*). 
 
 The script is used as follows:
 
