@@ -43,6 +43,8 @@ Sensor-XX/              # where XX is the sensor number. The scripts support arb
 The scripts are lauched without any parameters:
 ``` bash
 $ python3 ble_wifi_truong.py
+$ python3 lux_miettinen.py
+$ python3 temp_hum_press_shrestha.py
 ```
 
 The output is saved in a "results" folder. See the individual files for more details.
