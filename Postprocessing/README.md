@@ -17,7 +17,7 @@ pytz==2018.5
 six==1.11.0
 ```
 
-**Note:** The script won't direclty work under Windows as it uses Linux built-in commands (see function *merge_and_clean*). The rest of functionlaity works under Windows as well (tested under *Windows 10 x64* with *Python 3.6.5*). 
+**Note:** The script won't directly work under Windows as it uses Linux built-in commands (see function *merge_and_clean*). The rest of functionality works under Windows as well (tested under *Windows 10 x64* with *Python 3.6.5*). 
 
 The script is used as follows:
 
@@ -41,7 +41,7 @@ $ python3 generate_datasets.py ~/data/mobile/ ~/sets/ truong mobile full 15    #
 $ python3 generate_datasets.py ~/data/mobile/ ~/sets/ shrestha mobile full 25  # generate dataset for the full mobile scenario using 25 cores (scheme by Shrestha et al.)
 ```
 
-Here, ~/data is the folder the postprocessed data from car, office or mobile scenario is stored, and ~/sets is the folder to store the generated ML datasets.
+Here, ~/data is the folder the post-processed data from car, office or mobile scenario is stored, and ~/sets is the folder to store the generated ML datasets.
 
 **Note:** By default Truong et al. datasets are generated using a 10sec interval, to generate datasets on a 30sec interval discussed in the paper, set *time_interval = '30sec'* in *get_truong_dataset* function. Other intervals (5sec, 15sec, 1min, 2min) have not been tested, so the correctness of dataset generation on these intervals is not guaranteed! 
 
