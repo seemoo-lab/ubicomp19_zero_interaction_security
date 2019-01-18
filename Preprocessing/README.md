@@ -4,9 +4,13 @@ This folder contains scripts to preprocess the raw sensor data for further evalu
 
 ## Getting Started
 
-* *blind_radio.py* - **TBD**
+* *blind_radio.py* - A script to remove identifying information from the WiFi and BLE recordings
 
-* *lux_outlier_removal.py* - **TBD**
+This script is placed in the base folder of the data directory (with a folder structure following the pattern "Sensor-XX/wifi/wifi.txt" and "Sensor-XX/ble/ble.txt" below it) and iterates through all BLE and WiFi files, replacing the MAC addresses with globally unique numbers to anonymize them. The results are saved to wifi.txt.blinded / ble.txt.blinded. The script does not require any parameters, and has no dependencies aside from `glob`.
+
+* *lux_outlier_removal.py* - A script to remove outliers from the luminosity data
+
+The luminosity sensor on the TI SensorTag has a bug that introduces incorrect readings - readings of "13.6" are interspersed between the legitimate readings. This script removes such readings if they aren't plausible (i.e., it tries to avoid removing legitimate readings with that value by checking if the previous or next reading have the same value). The script also has no parameters, and relies on `glob` to find the files (same folder structure as above). The results are saved to luxData.clean in the same folder as the source file.
 
 * *structure-gear-data.py* - a script to restructure sensor data extracted from a Samsung Gear S3 smartwatch. 
 
