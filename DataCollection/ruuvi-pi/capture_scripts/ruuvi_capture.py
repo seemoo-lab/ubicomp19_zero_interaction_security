@@ -3,10 +3,9 @@ Capture barometric pressure, humidity and temperature from RuuviTag and store th
 
 + MAC-ADDRESS/  # MAC-ADDRESS format: "XX:XX:XX:XX:XX:XX" (capital or lower case)
 | + sensors/
-| | + accData.txt
 | | + barData.txt
-| | + gyrData.txt
-| | + luxData.txt
+| | + humData.txt
+| | + tmpData.txt
 """
 
 import time
