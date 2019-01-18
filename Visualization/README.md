@@ -16,7 +16,7 @@ The last script is a plain python script used to plot the False Reject Rates for
 
 * *plot_error_rates.py* - a script to generate false reject rates (FRRs) with target false accept rates (FARs) plots.
 
-The [resulting plots](https://www.seemoo.tu-darmstadt.de/) were generated with the script under *Windows 10 x64* using *Python 3.6.5* with the following requirements (also tested under *Ubuntu 17.10 (kernel 4.13.0-46, x86_64)* with *Python 3.6.3*):
+The resulting plots (e.g., see the scheme by [Karapanos et al.](https://dx.doi.org/10.5281/zenodo.2537711), other schemes maintain the same structure) were generated with the script under *Windows 10 x64* using *Python 3.6.5* with the following requirements (also tested under *Ubuntu 17.10 (kernel 4.13.0-46, x86_64)* with *Python 3.6.3*):
 
 ```
 cycler==0.10.0
@@ -69,7 +69,7 @@ $ python3 plot_error_rates.py ~/json/OfficeExp/shrestha/ml/ ~/gfx/ shrestha offi
 $ python3 plot_error_rates.py ~/json/MobileExp/shrestha/ml/ ~/gfx/ shrestha mobile  # generate FRRs with target FARs plots for the mobile scenario
 ```
 
-Here, ~/json is the folder containing  [JSON files with error rates](https://www.seemoo.tu-darmstadt.de/), and ~/gfx is the folder to store the generated plots.
+Here, ~/json is the folder containing JSON files with error rates (e.g., see the scheme by [Karapanos et al.](https://dx.doi.org/10.5281/zenodo.2537711), other schemes maintain the same structure), and ~/gfx is the folder to store the generated plots.
 
 
 ## Authors
