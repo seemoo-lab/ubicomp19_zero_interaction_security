@@ -90,6 +90,7 @@ data/                   # Root folder of the sensor data
 
 To make the audio file readable by applications necessary headers must be added like this:
 ```bash
+# Install sox utility
 $ sox audio.flac audio_full.flac --show-progress
 ```
 
