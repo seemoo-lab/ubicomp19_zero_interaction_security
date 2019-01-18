@@ -31,7 +31,7 @@ ruuvitag-sensor==0.11.0
 ## Deployment
 
 * To deploy the collector on a Raspberry Pi (should also work on the most recent Raspbian) first install necessary libraries with dependencies (see *requirements.txt*). Then copy all the content of the *~/ruuvitag-pi* to */home/pi* on the Raspberry Pi. 
-* The RuuviTag should be flashed with *Firmware v1.3.6.1*, which we modified to decrease the tag advertisement interval, thus increasing a sampling rate to 10 Hz. The firmware is modified and loaded as follows:
+* The RuuviTag should be flashed with *Firmware v1.3.6.1*, which we modified to decrease the tag advertisement interval, thus increasing a sampling rate to 10 Hz. The firmware is modified and loaded as follows (tested with *Ubuntu 17.10 (kernel 4.13.0-46, x86_64)* and *Python 3.6.3*):
     * Install the necessary toolchain and download the firmware (*v1.3.6.1*)—use the [official Git](https://github.com/ruuvi/ruuvitag_fw) for that. **Note:** in our experiments the data collection did NOT work with latest firmware at the time, which was *v2.3.0*—so use version *1.3.6.1*!
     * The firmware is compiled by running ```$ sudo make``` inside ```.../ruuvitag_fw-1.3.6.1```.
     * Change the advertisement interval by setting the variable ```MAIN_LOOP_INTERVAL_RAW``` to ```100u``` in the follwoing file: ```.../ruuvitag_fw-1.3.6.1/ruuvi_examples/ruuvi_firmware/bluetooth_application_config.h```, then recompile the firmware.
@@ -77,7 +77,6 @@ The data collection runs for the duration specified in *~/conf/main_conf.txt*, a
 | | + barData.txt  # Barometric pressure data
 | | + humData.txt  # Humidity data
 | | + tmpData.txt  # Temperature data
-"""
 ```
 
 ## Authors
