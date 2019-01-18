@@ -50,7 +50,7 @@ To compute audio features, the following functions/components are used (a brief 
 * *spfFilterBank.mat* - a filter bank necessary for computing the SPF feature (regenerated if is not present in the folder).  
 * *~/Add-Ons* - a folder containing third party utilities used by our code (the licenses are compatible with the GNU GPLv3, see individual folders inside Add-Ons for details). 
 
-The results of audio feature computations (e.g., see the [Car](10.5281/zenodo.2537705) scenario, other scenarios maintain the same structure) were generated under *CentOS Linux release 7.5.1804 (kernel 3.10.0-862.9.1.el7.x86_64)* using *MATLAB R2017a (9.2.0.556344) 64-bit (glnxa64)* with the following requirements:
+The results of audio feature computations (e.g., see the [Car](https://dx.doi.org/10.5281/zenodo.2537705) scenario, other scenarios maintain the same structure) were generated under *CentOS Linux release 7.5.1804 (kernel 3.10.0-862.9.1.el7.x86_64)* using *MATLAB R2017a (9.2.0.556344) 64-bit (glnxa64)* with the following requirements:
 
 ```
 Signal Processing Toolbox (Version 7.4)
@@ -71,7 +71,7 @@ Here, the first two arguments are full paths to audio files of sensors 05 and 06
 
 * The *Add-Ons* folder must be added to the MATLAB path as audio feature computation requires third party utilities!
 * All the arguments are mandatory in the *audioJob.m*!
-* The results of the audio feature computations are stored in the individual folders inside the *.../Sensor-XX/audio/* folder (e.g., see the [Car](10.5281/zenodo.2537705) scenario, other scenarios maintain the same structure).
+* The results of the audio feature computations are stored in the individual folders inside the *.../Sensor-XX/audio/* folder (e.g., see the [Car](https://dx.doi.org/10.5281/zenodo.2537705) scenario, other scenarios maintain the same structure).
 * The rationale for *.../local-storage/*: in our computations we used a cluster. Therefore, we stored *.../MobileExp/* (and similar folders for the car and office experiments) on the shared network drive, which was accessible by a number of nodes (each running an instance of *audioJob.m*). Each node had limited HDD storage not suitable for storing all the audio files (especially in the case of the Office scenario). Additionally, we compute audio features on a number of intervals (5sec, 10sec, 30sec, 1min, 2min), resulting in many small result JSON files (e.g., think of a 24h audio recording split into 5sec intervals). With several nodes simultaneously using the network share and writing thousands of small files results in fragmentation issues and easily hits the max number of files limited by the files system. Thus, we leveraged the local storage on each node to store these small files for each interval, merge them into a single JSON file and copy back to the network share (e.g., *.../MobileExp/Sensor-05/audio/* in the above example). 
 
 ### The audio feature computation using the MATLAB's compiled executable
