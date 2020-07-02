@@ -30,13 +30,15 @@ start_time=""
 
 # Paths: setting
 main_conf="/home/pi/conf/main_conf.txt"
-ruuvi_capture="/home/pi/scripts/ruuvi_capture.py"
+tmp_conf="/home/pi/conf/tmp_conf.txt"
+ruuvi_capture="/home/pi/capture_scripts/ruuvi_capture.py"
 
-# Remove empty lines in main_conf.txt (just in case)
-sed -i '/^$/d' $main_conf
+# Remove empty lines and comments in main_conf.txt (just in case)
+cp $main_conf $tmp_conf
+sed -i 's/#.*$//;/^$/d' $tmp_conf
 
 # Read main_conf.txt into array
-readarray -t conf_arr < $main_conf
+readarray -t conf_arr < $tmp_conf
 
 # Check if we have the correct number of config params
 if [ ${#conf_arr[@]} -ne $conf_size ]; then
@@ -105,7 +107,10 @@ sleep $sleep_seconds
 echo "We start measuring at: $(date)" 
 
 # Start the RuuviTag capture
-sudo -u pi python3 $ruuvi_capture ${macs} ${uptime} /home/pi
+sudo -u pi python3 $ruuvi_capture ${macs} ${uptime} /home/pi >> /dev/null 2>&1
+
+# Remove tmp conf
+rm $tmp_conf
 
 # Create a control file -> no measurement upon the reboot (see crontab)
 touch /boot/1stexp.txt

@@ -41,6 +41,7 @@ scripts_dir="/home/pi/scripts"
 ble_script="/home/pi/scripts/ble_capture.py"
 wifi_script="/home/pi/scripts/wifi_capture.py"
 main_conf="/home/pi/conf/main_conf.txt"
+tmp_conf="/home/pi/conf/tmp_conf.txt"
 nodejs_conf="/home/pi/conf/nodejs_conf.txt"
 
 # Paths: data
@@ -49,11 +50,12 @@ ble_data="/home/pi/data/ble/ble.txt"
 wifi_data="/home/pi/data/wifi/wifi.txt"
 sensor_data="/home/pi/data/sensors"
 
-# Remove empty lines in main_conf.txt (just in case)
-sed -i '/^$/d' $main_conf
+# Remove empty lines and comments in main_conf.txt (just in case)
+cp $main_conf $tmp_conf
+sed -i 's/#.*$//;/^$/d' $tmp_conf
 
 # Read main_conf.txt into array
-readarray -t conf_arr < $main_conf
+readarray -t conf_arr < $tmp_conf
 
 # Check if we have the correct number of config params
 if [ ${#conf_arr[@]} -ne $conf_size ]; then
@@ -260,6 +262,9 @@ python $ble_script "${uptime}" > $ble_data &
 
 # Start Wi-Fi capture
 python $wifi_script "${uptime}" > $wifi_data
+
+# Remove tmp conf
+rm $tmp_conf
 
 # Create a control file -> no measurement upon the reboot (see crontab)
 touch /boot/1stexp.txt
