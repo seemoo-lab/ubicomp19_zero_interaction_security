@@ -76,7 +76,7 @@ Here, the first two arguments are full paths to audio files of sensors 05 and 06
 
 ### The audio feature computation using the MATLAB's compiled executable
 
-From the above info, it is easily seen that if many instance of MATLAB are used (we used up to 45 instances simultaneously), it is very easy to run into the licensing issue with the required toolboxes. To overcome this issue we used a MATLAB Compiler (Version 6.4, R2017a)—this toolbox needs to be acquired separately as well. The compiler allows building a MATLAB executable and running it on any other machine without requiring any license! The MATLAB's executable is built and run as follows (tested under *CentOS Linux release 7.5.1804 (kernel 3.10.0-862.9.1.el7.x86_64)* and *Ubuntu 17.10 (kernel 4.13.0-46, x86_64)*): 
+From the above info, it is easily seen that if many instances of MATLAB are used (we used up to 45 instances simultaneously), it is very easy to run into the licensing issue with the required toolboxes. To overcome this issue we used a MATLAB Compiler (Version 6.4, R2017a)—this toolbox needs to be acquired separately as well. The compiler allows building a MATLAB executable and running it on any other machine without requiring any license! The MATLAB's executable is built and run as follows (tested under *CentOS Linux release 7.5.1804 (kernel 3.10.0-862.9.1.el7.x86_64)* and *Ubuntu 17.10 (kernel 4.13.0-46, x86_64)*): 
 
 ```bash
 # Run this in the folder containing all the *.m files and Add-Ons folder
