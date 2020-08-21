@@ -81,7 +81,7 @@ From the above info, it is easily seen that if many instances of MATLAB are used
 ```bash
 # Run this in the folder containing all the *.m files and Add-Ons folder
 # Two files are generated: a binary "audioJob" and the script "run_audioJob.sh" to run it
-$ mcc -R -nodisplay -T link:exe -v -m audioJob.m -a Add-Ons/Functions/DataHash/code/ -a Add-Ons/Collections/Natural-Order/Filename/Sort/code/
+$ mcc -R -nodisplay -T link:exe -v -m audioJob.m -a Add-Ons/Functions/DataHash/code/ -a Add-Ons/Collections/Natural-Order\ Filename\ Sort/code/
 
 # The audio feature computation between sensors 05 and 06 in the mobile scenario
 $ sudo ./run_audioJob.sh .../matlab/ .../MobileExp/Sensor-05/audio/05.flac .../MobileExp/Sensor-06/audio/06.flac .../MobileExp/ .../tmp-for-matlab-parallel-toolbox/ .../local-storage/
