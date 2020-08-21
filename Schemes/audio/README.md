@@ -86,7 +86,7 @@ $ mcc -R -nodisplay -T link:exe -v -m audioJob.m -a Add-Ons/Functions/DataHash/c
 # The audio feature computation between sensors 05 and 06 in the mobile scenario
 $ sudo ./run_audioJob.sh .../matlab/ .../MobileExp/Sensor-05/audio/05.flac .../MobileExp/Sensor-06/audio/06.flac .../MobileExp/ .../tmp-for-matlab-parallel-toolbox/ .../local-storage/
 ```
-Here, *.../matlab/* points to the instance of MATLAB installed on the machine (e.g., full installation on Ubuntu is */usr/local/MATLAB/R2017a*, runtime environment installation on Ubuntu */usr/local/MATLAB/MATLAB_Runtime/v92*), the remaining arguments are the same as described above. 
+Here, *.../matlab/* points to the instance of MATLAB installed on the machine (e.g., full installation on Ubuntu is */usr/local/MATLAB/R2017a*, runtime environment installation on Ubuntu is */usr/local/MATLAB/MATLAB_Runtime/v92*), the remaining arguments are the same as described above. 
 
 ## Authors
 
